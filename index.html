@@ -8,7 +8,7 @@
     <title>Penyihir vs Kucing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400&family=Handlee&family=Nunito:wght@400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400&family=Handlee&family=Nunito:ital,wght@0,400;1,300&display=swap" rel="stylesheet" />
     <style>
       button, [role="button"] { min-height: 2rem; }
       * { box-sizing: border-box; }
@@ -134,48 +134,11 @@
         gap: 10px;
         flex: none;
       }
-      /* ---------- Banner HUD atas: SATU panel memanjang yang menyatukan kedua
-         sisi HUD (pemain di kiri + boss di kanan) atas permintaan Harith —
-         mengikuti area yang dilingkari hijau pada screenshot acuannya.
-         Panelnya TRANSPARAN: latar game tetap terlihat tembus di baliknya.
-         Dibuat menarik tapi halus — gradasi lembut tembus pandang (ungu
-         penyihir di kiri memudar ke rona hangat boss di kanan), sudut
-         membulat besar, aksen garis tipis 1px yang samar + kilau tipis di
-         tepi atas, dan satu bintang emas kecil di ujung kanan atas.
-         SENGAJA bukan kotak kaku ber-border tebal seperti chip HUD lama:
-         tanpa isian pekat, tanpa shadow berat. Panel digambar ::before
-         dengan z-index -1 (di belakang isi HUD, di dalam konteks tumpuk
-         .hud sendiri), meluber sedikit keluar dari isi HUD sebagai bantalan,
-         dan pointer-events: none supaya tidak pernah mengganggu apa pun.
-         Isi & posisi HUD tidak berubah sama sekali ---------- */
-      .hud::before {
-        content: "";
-        position: absolute;
-        inset: -11px -12px;
-        z-index: -1;
-        border-radius: 26px;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 55%),
-          linear-gradient(90deg, rgba(167,120,255,.20), rgba(110,64,190,.10) 46%, rgba(255,170,110,.15));
-        border: 1px solid rgba(228,204,255,.30);
-        box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.16),
-          inset 0 -8px 16px rgba(20,6,44,.14),
-          0 6px 18px rgba(5,0,16,.22);
-        pointer-events: none;
-      }
-      /* Bintang emas kecil melayang di ujung kanan atas banner — aksen tipis
-         yang halus, senada bintang emas plakat/banner lama */
-      .hud::after {
-        content: "✦";
-        position: absolute;
-        top: -17px; right: 14px;
-        font-size: 11px; line-height: 1;
-        color: var(--gold);
-        text-shadow: 0 0 7px rgba(255,201,77,.85);
-        opacity: .9;
-        pointer-events: none;
-      }
+      /* Banner HUD atas DIBATALKAN atas permintaan Harith: tidak ada panel
+         banner transparan lagi (.hud::before / .hud::after dihapus) — HUD atas
+         kembali seperti sebelumnya, hanya foto bulat + nama + hati di kiri dan
+         nama boss + bar HP setengah + lvl. di kanan, melayang langsung di atas
+         latar tanpa panel apa pun di belakangnya */
       .hud-side { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
       .hud-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
       /* Kolom boss lebarnya mengikuti isi (nama boss) supaya nama tampil utuh
@@ -198,7 +161,8 @@
       .avatar.cat-face img { object-position: 42% 30%; transform: scale(1.35); }
       .avatar.wiz-face img { object-position: 60% 30%; transform: scale(1.5); }
       .hud-name {
-        font-family: "Baloo 2", sans-serif; font-weight: 400; font-size: 16px; line-height: 1.15;
+        /* Nama pemain: Nunito light 300 italic 16px atas permintaan Harith */
+        font-family: "Nunito", sans-serif; font-weight: 300; font-style: italic; font-size: 16px; line-height: 1.15;
         color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 36vw;
         text-shadow: 0 2px 6px rgba(0,0,0,.8), 0 0 14px rgba(0,0,0,.5);
       }
@@ -216,20 +180,26 @@
       .bar > i { display: block; height: 100%; border-radius: 99px; transition: width .45s ease; }
       .bar .hp-fill { background: linear-gradient(90deg, #ff4757, #ff7a5c); width: 100%; }
       .hearts { display: flex; gap: 3px; flex: none; }
-      .hearts svg { width: 23px; height: 23px; }
+      /* Hati penuh: glow merah lembut supaya terlihat menyala (warna pekatnya
+         ada di simbol #i-heart). Hati kosong (.heart-off) menimpa filter ini
+         dengan grayscale, jadi tetap redup tanpa glow seperti sebelumnya */
+      .hearts svg { width: 23px; height: 23px; filter: drop-shadow(0 0 5px rgba(255,20,55,.85)) drop-shadow(0 0 2px rgba(255,80,110,.9)); }
       .hearts .heart-off { opacity: .28; filter: grayscale(1); }
       .boss-name {
         /* Nama boss RATA KANAN, dempet ke foto profil boss (seperti "lvl. N"
            di bawahnya), bukan di ujung jauh kolom */
         display: block; align-self: flex-end; text-align: right; max-width: 100%;
-        font-family: "Baloo 2", sans-serif; font-weight: 400; font-size: 16px; line-height: 1.15;
+        /* Nama boss: Nunito light 300 italic 16px atas permintaan Harith */
+        font-family: "Nunito", sans-serif; font-weight: 300; font-style: italic; font-size: 16px; line-height: 1.15;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         text-shadow: 0 2px 6px rgba(0,0,0,.8), 0 0 14px rgba(0,0,0,.5);
       }
-      .boss-name b { color: #fff; font-weight: 400; }
+      .boss-name b { color: #fff; font-weight: 300; }
       .boss-lvl {
         align-self: flex-end;
-        font-size: 16px; font-weight: 400; color: #fff; line-height: 1.1;
+        /* "lvl. N": Nunito light 300 italic 16px atas permintaan Harith */
+        font-family: "Nunito", sans-serif;
+        font-size: 16px; font-weight: 300; font-style: italic; color: #fff; line-height: 1.1;
         text-shadow: 0 2px 6px rgba(0,0,0,.8), 0 0 14px rgba(0,0,0,.5);
       }
 
@@ -961,7 +931,7 @@
         .cluster { width: min(38vw, 34dvh, 350px); }
         .hud { gap: 12px; }
         .avatar { width: 48px; height: 48px; }
-        .hud-name { font-size: 24px; }
+        .hud-name { font-size: 16px; }
         .boss-name { font-size: 16px; }
         .hearts svg { width: 28px; height: 28px; }
         .slot { width: 28.5px; height: 28.5px; }
@@ -988,7 +958,7 @@
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
       <defs>
         <symbol id="i-heart" viewBox="0 0 24 24">
-          <path fill="#ff5470" stroke="#ff8fa3" stroke-width="1" d="M12 21 C6 16.5 2.5 13 2.5 8.9 C2.5 5.9 4.8 3.5 7.7 3.5 C9.4 3.5 11 4.4 12 5.8 C13 4.4 14.6 3.5 16.3 3.5 C19.2 3.5 21.5 5.9 21.5 8.9 C21.5 13 18 16.5 12 21 Z"/>
+          <path fill="#e60023" stroke="#8f0018" stroke-width="1" d="M12 21 C6 16.5 2.5 13 2.5 8.9 C2.5 5.9 4.8 3.5 7.7 3.5 C9.4 3.5 11 4.4 12 5.8 C13 4.4 14.6 3.5 16.3 3.5 C19.2 3.5 21.5 5.9 21.5 8.9 C21.5 13 18 16.5 12 21 Z"/>
         </symbol>
         <symbol id="i-sound-on" viewBox="0 0 24 24">
           <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
