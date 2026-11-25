@@ -1482,6 +1482,32 @@
         .mantra-part.just-lit, .mantra.complete .mantra-words, .ult-skip, .ult-play { animation: none; }
         * { transition-duration: .01s !important; }
       }
+      /* ================================================================
+         EFEK GERAK KARAKTER DIMATIKAN SEMENTARA (permintaan Harith,
+         2026-11-26): penyihir & boss tampil sebagai gambar DIAM
+         sepenuhnya — tanpa ayunan tongkat + kilau serangan (wizCast /
+         kelas .cast), tanpa goyangan & kilatan kena pukul (catHit /
+         .hit), tanpa goyangan tertawa (catLaugh / .laugh), tanpa
+         lompatan masuk boss (catEnter / .enter), tanpa efek pingsan
+         boss saat kalah (catFaint / .faint), dan tanpa ayunan menang
+         (wizCast / .celebrate).
+         Semua keyframes, aturan status, dan pemanggilan JS-nya SENGAJA
+         TIDAK dihapus — JS tetap memasang/melepas kelas-kelas itu
+         seperti biasa; blok timpaan di paling akhir stylesheet ini
+         yang menetralkannya: animasi sprite dimatikan total, dan
+         filter kilau/flash pada status .hit/.cast/.celebrate
+         dikembalikan ke bayangan tanah biasa milik .sprite img, jadi
+         tidak ada gerak maupun kilau sama sekali.
+         Untuk menghidupkan lagi nanti: hapus blok ini saja.
+         Efek lain TIDAK ikut dimatikan: tombol, slot, sigil, mantra,
+         video ultimate, dan overlay menang/kalah tetap jalan.
+         ================================================================ */
+      .sprite img { animation: none !important; }
+      .sprite.cat.hit img,
+      .sprite.wizard.cast img,
+      .sprite.wizard.celebrate img {
+        filter: drop-shadow(0 6px 9px rgba(5,0,16,.45));
+      }
     </style>
   </head>
   <body>
