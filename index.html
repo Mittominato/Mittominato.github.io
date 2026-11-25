@@ -275,23 +275,29 @@
         position: absolute; bottom: -2%; z-index: 1; height: 14px; border-radius: 50%;
         background: rgba(5,0,14,.55); filter: blur(4px); pointer-events: none;
       }
-      /* Balon percakapan boss: diturunkan ke dasar pulau kastil melayang
-         (±39% dari atas layar, di tengah secara horizontal) atas permintaan
-         Harith — tidak lagi menutupi HUD atas, nama boss, bar HP, atau lvl.
-         Ukurannya kecil saja: font 8px, padding rapat, lebar sempit.
-         Arena mulai tepat di bawah padding atas panggung, jadi top dalam
-         dvh di sini ≈ posisi dari atas layar. */
+      /* Balon percakapan boss: DIJANGKARKAN KE KEPALA BOSS atas permintaan
+         Harith — balon melayang tepat di atas kepala kucing boss, bukan di
+         tengah layar. Nilai left/top di sini hanya cadangan sebelum JS
+         jalan; posisi aslinya dihitung JS (placeBubble di layoutSprites,
+         cara yang sama seperti gugus sigil dijangkarkan ke bola tongkat
+         penyihir): left = tengah kepala sprite boss, top = puncak kepala
+         sprite boss, lalu transform translate(-50%, -100%) menaruh sisi
+         BAWAH balon tepat di titik itu, jadi balon selalu menggantung di
+         atas kepala boss di semua ukuran layar & untuk semua boss.
+         Ukurannya tetap kecil: font 8px, padding rapat, lebar sempit —
+         dan karena kepala boss jauh di bawah HUD atas, balon tidak
+         menutupi HUD atas, nama boss, bar HP, atau lvl. */
       .bubble {
-        position: absolute; top: 39dvh; left: 50%; max-width: min(46%, 190px);
+        position: absolute; top: 34%; left: 82%; max-width: min(46%, 190px);
         background: #fdf7ff; color: #33135e;
         font-weight: 400; font-size: 8px; line-height: 1.35;
         padding: 5px 7px; border-radius: 9px 9px 9px 3px;
         box-shadow: 0 4px 14px rgba(0,0,0,.4);
-        opacity: 0; transform: translate(-50%, -5px) scale(.95);
+        opacity: 0; transform: translate(-50%, calc(-100% + 5px)) scale(.95);
         transition: opacity .22s ease, transform .22s ease;
         pointer-events: none; z-index: 6;
       }
-      .bubble.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      .bubble.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
       .dmg-num {
         position: absolute; font-family: "Baloo 2", sans-serif; font-weight: 400;
         color: #ffd23e; text-shadow: 0 2px 0 #7a2b00, 0 0 12px rgba(255,150,40,.8);
@@ -1597,6 +1603,10 @@
       var bubbleTimer = null;
       function showBubble(text, ms) {
         bubbleEl.textContent = text;
+        /* Jangkar ulang ke kepala boss yang sedang tampil: teks baru bisa
+           mengubah lebar balon (untuk penjepitan tepi arena) dan sprite
+           boss bisa saja baru berganti gambar sejak tata letak terakhir */
+        placeBubble();
         bubbleEl.classList.add("show");
         clearTimeout(bubbleTimer);
         bubbleTimer = setTimeout(function () { bubbleEl.classList.remove("show"); }, ms || 2600);
@@ -2410,6 +2420,40 @@
          selalu rapat di sekitar tongkat di semua ukuran layar. */
       var LEDGE_L = 0.440, LEDGE_R = 0.445, BG_W = 1152, BG_H = 2048;
       var ORB_FX = 0.837, ORB_FY = 0.326;
+      /* Titik kepala tiap sprite boss, dalam pecahan kotak sprite-nya
+         (x = tengah kepala, y = puncak kepala/telinga), terukur dari
+         gambarnya masing-masing — dipakai placeBubble untuk menaruh balon
+         percakapan tepat di atas kepala boss, seperti bola tongkat menjadi
+         jangkar gugus sigil. Indeks mengikuti BOSSES; indeks terakhir
+         untuk sprite mode bebas (cat-pedestal). Boss 1 kepalanya lebih
+         rendah (kilau bintang di atas telinga) dan boss 3 kepalanya di
+         sisi kiri gambar, jadi pecahannya beda dari boss lain */
+      var BOSS_HEAD = [
+        { x: 0.46, y: 0.15 },
+        { x: 0.50, y: 0.02 },
+        { x: 0.30, y: 0.02 },
+        { x: 0.47, y: 0.02 },
+        { x: 0.47, y: 0.02 },
+        { x: 0.47, y: 0.02 }
+      ];
+      /* Balon percakapan melayang tepat di atas kepala boss: titik jangkar
+         dihitung dari kotak sprite kucing yang benar-benar tergambar di
+         layar (relatif terhadap arena), lalu left/top balon ditaruh di
+         titik itu — CSS translate(-50%, -100%) menggantungkan sisi bawah
+         balon di sana. Tengah balon dijepit supaya tidak keluar arena di
+         layar sempit (kepala boss dekat tepi kanan). Jarak 6px di atas
+         puncak kepala supaya balon tidak menempel ke telinga */
+      function placeBubble() {
+        if (!bubbleEl) return;
+        var ar = arena.getBoundingClientRect(), cr = catSprite.getBoundingClientRect();
+        if (!ar.width || !cr.width) return;
+        var h = BOSS_HEAD[Math.min(S.bossIdx, BOSS_HEAD.length - 1)];
+        var cx = cr.left - ar.left + cr.width * h.x;
+        var half = bubbleEl.offsetWidth / 2;
+        if (half > 0) cx = Math.max(half + 4, Math.min(cx, ar.width - half - 4));
+        bubbleEl.style.left = cx + "px";
+        bubbleEl.style.top = (cr.top - ar.top + cr.height * h.y - 6) + "px";
+      }
       var SIGIL_SPOTS = [
         { x: 0.00, y: -0.43 },
         { x: 0.88, y: -0.87 },
@@ -2434,6 +2478,9 @@
         if (shW) shW.style.bottom = (rw - 6) + "px";
         if (shC) shC.style.bottom = (rc - 6) + "px";
         $("ghost").style.bottom = (rc + catSprite.offsetHeight * 0.9) + "px";
+        /* Balon percakapan ikut menempel di atas kepala boss tiap kali
+           tata letak dihitung ulang (muat awal, resize, ganti ukuran layar) */
+        placeBubble();
         /* Gugus sigil di sekitar bola tongkat penyihir: jangkar wadah ditaruh di
            pusat bola tongkat (dari kotak sprite penyihir yang tergambar, relatif
            terhadap arena), lalu tiap sigil digeser ke titik sebarannya — satuan
