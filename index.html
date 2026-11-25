@@ -348,7 +348,8 @@
            (kiri) dan kucing (kanan), supaya kedua karakter tetap terlihat penuh di HP */
         width: min(56%, 330px);
         min-height: 32px;
-        margin-top: 2px;
+        /* Margin atas 2px → 8px: jarak tombol → banner diregangkan lagi */
+        margin-top: 8px;
         display: flex; align-items: center; justify-content: center;
         background: linear-gradient(180deg, #9b4dff 0%, #7c2ce0 52%, #5f1fb8 100%);
         border: 2px solid #d9bdff;
@@ -561,8 +562,9 @@
         position: relative;
         width: 100%; max-width: 720px;
         display: flex; justify-content: center;
-        /* Dinaikkan sedikit (padding atas dikurangi) atas permintaan Harith */
-        padding: 5px 4px 9px;
+        /* Dinaikkan sedikit (padding atas dikurangi) atas permintaan Harith.
+           Padding bawah DITAMBAH (9px → 16px): jarak slot → tombol diregangkan lagi */
+        padding: 5px 4px 16px;
       }
       .slots {
         position: relative; z-index: 1;
@@ -646,7 +648,9 @@
       /* Margin bawah 6dvh yang dulu mengangkat cluster dari dasar layar kini DIHAPUS:
          banner prompt pindah ke paling bawah layar (di bawah cluster), jadi ruang
          lapang di bawah tombol kini diisi banner itu sendiri, bukan margin kosong */
-      .cluster-wrap { flex: none; display: flex; justify-content: center; padding: 4px 0 2px; width: 100%; }
+      /* Padding atas 4px → 6px ikut meregangkan jarak slot → tombol; padding bawah
+         2px → 10px meregangkan jarak tombol → banner (bersama margin-top banner) */
+      .cluster-wrap { flex: none; display: flex; justify-content: center; padding: 6px 0 10px; width: 100%; }
       .cluster {
         position: relative;
         /* Diperkecil lagi atas permintaan Harith: keseluruhan cluster TERMASUK radius
@@ -819,7 +823,7 @@
         .stage { padding-top: calc(10px + env(safe-area-inset-top)); }
         .cluster { width: min(60vw, 30dvh, 300px); }
         .prompt { font-size: 10.5px; padding: 3px 14px; }
-        .prompt-frame { margin-top: 0; width: min(54%, 300px); min-height: 30px; }
+        .prompt-frame { margin-top: 6px; width: min(54%, 300px); min-height: 30px; }
         .ribbon-star { font-size: 17px; }
         .slot { width: 22.5px; height: 22.5px; }
         .slot .slot-img { width: 21px; height: 21px; }
@@ -834,14 +838,17 @@
          arena TIDAK lagi menyerap semua sisa ruang. Tingginya dipatok supaya baris
          slot berhenti tepat di bawah pijakan penyihir & kucing di gambar latar —
          di ketinggian garis hijau pada screenshot acuan Harith (±48% tinggi layar).
-         Kelompok slot → tombol → banner naik bersama sebagai satu kelompok dengan
-         jarak antar ketiganya PERSIS seperti sebelumnya (celah panggung & padding
-         ketiganya tidak berubah, ukuran ketiganya juga tidak berubah); sisa ruang
-         kini tertinggal kosong di BAWAH banner, bukan di arena. Posisi kaki sprite
-         tidak terpengaruh: layoutSprites menghitungnya dari geometri latar,
-         bukan dari tinggi arena. */
+         Kelompok slot → tombol → banner naik bersama sebagai satu kelompok;
+         sisa ruang kini tertinggal kosong di BAWAH banner, bukan di arena.
+         Posisi kaki sprite tidak terpengaruh: layoutSprites menghitungnya dari
+         geometri latar, bukan dari tinggi arena.
+         Penyesuaian lanjutan atas permintaan Harith: kelompok ditarik ke atas
+         SEDIKIT lagi (tinggi arena 37dvh → 34,5dvh) dan jarak antar ketiganya
+         diregangkan lagi (padding bawah .slots-wrap, padding .cluster-wrap, dan
+         margin-top .prompt-frame — lihat aturan masing-masing). Ukuran slot,
+         tombol, dan banner tidak berubah. */
       @media (max-aspect-ratio: 62/100) {
-        .arena { flex: none; height: 37dvh; }
+        .arena { flex: none; height: 34.5dvh; }
       }
       /* Layar sempit: keping HUD diperkecil supaya nama boss tetap dapat ruang */
       @media (max-width: 400px) {
