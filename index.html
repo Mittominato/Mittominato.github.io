@@ -8,7 +8,7 @@
     <title>Penyihir vs Kucing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400&family=Nunito:wght@400&family=Zeyada&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400&family=Handlee&family=Nunito:wght@400&display=swap" rel="stylesheet" />
     <style>
       button, [role="button"] { min-height: 2rem; }
       * { box-sizing: border-box; }
@@ -351,8 +351,8 @@
       .lp-sub { font-size: 8px; font-weight: 400; color: #cdb2ff; letter-spacing: .04em; }
 
       /* ---------- Prompt: TANPA banner/pita lagi atas permintaan Harith — cukup
-         tulisan saja, font tulisan tangan miring 'Zeyada' (Google Fonts), warna
-         putih, ukuran dibesarkan sedikit dari teks banner lama. Semua status
+         tulisan saja, font tulisan tangan 'Handlee' (Google Fonts), warna
+         putih, ukuran tetap 16px di semua layar. Semua status
          prompt (watch / your-turn / good / bad) kini sama-sama putih; status
          giliran dibaca dari isi teksnya, bukan warnanya ---------- */
       .prompt-frame {
@@ -367,8 +367,8 @@
       .prompt {
         padding: 2px 6px;
         text-align: center;
-        font-family: "Zeyada", cursive; font-weight: 400;
-        font-size: 18px;
+        font-family: "Handlee", cursive; font-weight: 400;
+        font-size: 16px;
         line-height: 1.15;
         color: #fff;
         text-shadow: 0 2px 10px rgba(0,0,0,.75), 0 0 22px rgba(0,0,0,.45);
@@ -826,7 +826,7 @@
       @media (max-height: 740px) {
         .stage { padding-top: calc(10px + env(safe-area-inset-top)); }
         .cluster { width: min(60vw, 30dvh, 300px); }
-        .prompt { font-size: 18px; padding: 2px 4px; }
+        .prompt { font-size: 16px; padding: 2px 4px; }
         .prompt-frame { margin-top: 6px; width: min(94%, 520px); min-height: 36px; }
         .slot { width: 22.5px; height: 22.5px; }
         .slot .slot-img { width: 21px; height: 21px; }
@@ -1021,7 +1021,7 @@
       </div>
 
       <!-- Prompt: tulisan saja tanpa banner/pita & tanpa bintang atas permintaan
-           Harith — teks putih font 'Zeyada' di paling bawah layar (di bawah tombol) -->
+           Harith — teks putih font 'Handlee' 16px di paling bawah layar (di bawah tombol) -->
       <div class="prompt-frame">
         <div class="prompt watch" id="prompt" role="status">Siap untuk memulai!</div>
       </div>
