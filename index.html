@@ -712,27 +712,27 @@
         object-fit: contain; display: block;
         position: relative; z-index: 1;
         pointer-events: none;
-        /* Keadaan IDLE sedikit diredupkan atas permintaan Harith: saturasi,
-           kecerahan & kontras diturunkan SEDIKIT saja (saturate .84,
-           brightness .89, contrast .95) supaya tombol yang menyala makin
-           menonjol — warnanya tetap hidup, tidak abu-abu/mati. Peredupan ini
-           STATIS: filter tidak ditransisikan/dianimasikan (transisi .pad
-           hanya transform), jadi filter hanya digambar ulang sekali saat
-           tombol berganti keadaan lit/idle, bukan tiap frame — tetap ringan
-           di HP. Glow STATIS mengikuti siluet segi permata tetap seperti
-           sebelumnya, menempel rapat di sisi-sisi tepi permata */
-        filter: saturate(.84) brightness(.89) contrast(.95)
+        /* Keadaan IDLE tampil NORMAL & TERANG dengan warna penuh seperti
+           semula — tanpa filter peredup sama sekali (peredupan saturate .84 /
+           brightness .89 / contrast .95 yang sempat dipasang sudah DIHAPUS
+           atas permintaan Harith). Glow STATIS mengikuti siluet segi permata
+           tetap seperti sebelumnya, menempel rapat di sisi-sisi tepi permata */
+        filter:
           drop-shadow(0 0 2px color-mix(in srgb, var(--c) 60%, transparent))
           drop-shadow(0 0 5px color-mix(in srgb, var(--c) 35%, transparent))
           drop-shadow(0 0 8px color-mix(in srgb, var(--c) 18%, transparent));
       }
-      /* Saat MENYALA (dan saat ditekan) warna permata kembali PENUH seperti
-         sebelumnya — tanpa peredupan sama sekali; glow statisnya sama persis */
+      /* Saat MENYALA (dan saat ditekan) permata dibuat LEBIH TERANG LAGI dari
+         kondisi normal: brightness 1.25 & saturate 1.15, plus glow statisnya
+         dikuatkan sedikit. Filter ini STATIS: tidak ditransisikan/
+         dianimasikan (transisi .pad hanya transform), jadi filter hanya
+         bertukar sekali saat tombol berganti keadaan lit/idle, bukan tiap
+         frame — tetap ringan di HP */
       .pad.lit .pad-img, .pad:active .pad-img {
-        filter: saturate(1) brightness(1) contrast(1)
-          drop-shadow(0 0 2px color-mix(in srgb, var(--c) 60%, transparent))
-          drop-shadow(0 0 5px color-mix(in srgb, var(--c) 35%, transparent))
-          drop-shadow(0 0 8px color-mix(in srgb, var(--c) 18%, transparent));
+        filter: saturate(1.15) brightness(1.25)
+          drop-shadow(0 0 2px color-mix(in srgb, var(--c) 75%, transparent))
+          drop-shadow(0 0 6px color-mix(in srgb, var(--c) 50%, transparent))
+          drop-shadow(0 0 10px color-mix(in srgb, var(--c) 30%, transparent));
       }
       /* ---------- Cahaya STATIS tiap tombol permata — TANPA animasi sama sekali atas
          permintaan Harith (animasi cahaya di kelima tombol membuat game ngelag di HP):
@@ -760,23 +760,23 @@
         border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
         /* Tanpa filter blur: kelembutan halo datang dari pemberhentian gradasi
            radialnya sendiri, jadi tidak ada lapisan filter yang digambar sama sekali.
-           Di keadaan idle halo statis ini ikut diredupkan sedikit (.85 → .58)
-           mendampingi peredupan gambar permatanya; opacity berubah seketika
-           saat keadaan berganti (tanpa transisi/animasi), jadi tetap ringan */
-        opacity: .58;
+           Halo statis tampil PENUH (.85) di keadaan idle seperti semula —
+           peredupan idle (.58) sudah dihapus bersama peredupan gambarnya */
+        opacity: .85;
       }
-      /* Halo statis kembali penuh saat tombol menyala / ditekan */
+      /* Halo statis tetap penuh saat tombol menyala / ditekan */
       .pad.lit .pad-fx::before, .pad:active .pad-fx::before { opacity: .85; }
       /* Lapisan menyala (lit): glow sewarna tombol + inti putih, digambar SEKALI
          sebagai gradasi statis; yang dianimasikan hanya opacity-nya (murah di
          GPU). Menggantikan cara lama — filter drop-shadow blur besar di tombol
          + brightness di gambarnya — yang digambar ulang tiap frame dan membuat
          urutan menyala & klik tersendat di HP.
-         DIPERINGAN + DITURUNKAN lagi atas permintaan Harith (versi sebelumnya
-         masih ngelag dan halo-nya kelihatan seperti border tegas): tumpukan
-         disederhanakan dari 3 gradasi jadi 2 dengan hentian warna lebih
-         sedikit, area gambar diperkecil (inset -13% → -9%), dan opacity
-         puncak diturunkan jauh (inti putih .5 → .28, warna .58 → .30).
+         DIPERINGAN atas permintaan Harith (versi sebelumnya masih ngelag
+         dan halo-nya kelihatan seperti border tegas): tumpukan disederhanakan
+         dari 3 gradasi jadi 2 dengan hentian warna lebih sedikit dan area
+         gambar diperkecil (inset -13% → -9%). Puncak glow-nya kini NAIK
+         sedikit lagi (inti putih .28 → .42, warna .30 → .45) supaya tombol
+         yang menyala lebih terang & menonjol dari idle yang sudah normal.
          CINCIN halo yang dulu memuncak tajam di satu pita sempit (penyebab
          kesan border) DIGANTI sapuan warna lebar yang memudar perlahan dari
          tengah sampai jauh keluar permata — tidak ada pita, tidak ada tepi:
@@ -784,8 +784,8 @@
       .pad-fx::after {
         content: ""; position: absolute; inset: -9%;
         background:
-          radial-gradient(circle, rgba(255,255,255,.28) 0%, rgba(255,255,255,.08) 34%, transparent 58%),
-          radial-gradient(circle, color-mix(in srgb, var(--c) 30%, transparent) 26%, color-mix(in srgb, var(--c) 17%, transparent) 55%, color-mix(in srgb, var(--c) 8%, transparent) 76%, transparent 94%);
+          radial-gradient(circle, rgba(255,255,255,.42) 0%, rgba(255,255,255,.14) 34%, transparent 58%),
+          radial-gradient(circle, color-mix(in srgb, var(--c) 45%, transparent) 26%, color-mix(in srgb, var(--c) 26%, transparent) 55%, color-mix(in srgb, var(--c) 14%, transparent) 76%, transparent 94%);
         border-radius: 50%;
         opacity: 0;
         transition: opacity .12s ease;
@@ -816,12 +816,12 @@
       .pad.lit {
         transform: scale(1.12);
         z-index: 4;
-        /* Tanpa filter sama sekali saat menyala: beda lit dibaca dari scale
-           1.12 (diperbesar sedikit dari 1.07 atas permintaan Harith; tetap
-           transform saja = murah), glow + sapuan halo lembut yang muncul lewat
-           opacity di .pad-fx::after, sinar matahari berputar di .pad-rays, dan
-           gambar permata yang TIDAK pernah berganti filter (glow statis
-           kecilnya tetap, tidak digambar ulang) */
+        /* Beda lit dibaca dari scale 1.12 (tetap transform saja = murah),
+           glow + sapuan halo lembut yang muncul lewat opacity di
+           .pad-fx::after, sinar matahari berputar di .pad-rays, dan gambar
+           permata yang lebih terang (brightness 1.25 / saturate 1.15 di
+           .pad.lit .pad-img — filter hanya bertukar sekali saat keadaan
+           berganti, tidak ditransisikan per frame) */
       }
       .pad-center.lit { transform: translate(-50%, -50%) scale(1.12); }
       .pad:disabled { cursor: default; }
