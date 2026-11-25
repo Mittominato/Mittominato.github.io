@@ -652,7 +652,18 @@
         width: min(63vw, 30dvh, 360px);
         aspect-ratio: 1 / 1;
         flex: none;
-        filter: drop-shadow(0 14px 30px rgba(5,0,16,.55));
+        /* Bayangan di bawah cluster TIDAK lagi memakai filter drop-shadow pada wadahnya:
+           filter pada elemen induk memaksa seluruh cluster digambar ulang (blur 30px)
+           setiap kali ada tombol di dalamnya yang bergerak/menyala — itu sumber lag
+           utama animasi tombol di HP. Bayangannya kini digambar .cluster::before
+           sebagai gradasi radial statis (sudah jadi, tanpa filter), tampilannya sama */
+        isolation: isolate;
+      }
+      .cluster::before {
+        content: ""; position: absolute; inset: -4%;
+        background: radial-gradient(ellipse 62% 58% at 50% 57%, rgba(5,0,16,.55), rgba(5,0,16,.28) 55%, transparent 72%);
+        z-index: -1;
+        pointer-events: none;
       }
       .pad {
         position: absolute;
@@ -666,7 +677,11 @@
         border-radius: 50%;
         touch-action: manipulation;
         user-select: none; -webkit-user-select: none;
-        transition: transform .1s ease, filter .12s ease;
+        /* Hanya transform yang ditransisikan — transform & opacity murah di GPU HP.
+           Filter SENGAJA tidak ditransisikan/dipakai di tombol: menganimasikan
+           drop-shadow/brightness berarti blur digambar ulang tiap frame = lag */
+        transition: transform .1s ease;
+        will-change: transform;
       }
       .pad-tl { left: 1%; top: 1%; }
       .pad-tr { right: 1%; top: 1%; }
@@ -711,18 +726,35 @@
         content: ""; position: absolute; inset: -3%;
         background: radial-gradient(circle, transparent 52%, color-mix(in srgb, var(--c) 38%, transparent) 68%, color-mix(in srgb, var(--c) 16%, transparent) 80%, transparent 89%);
         border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
-        filter: blur(4px);
+        /* Tanpa filter blur: kelembutan halo datang dari pemberhentian gradasi
+           radialnya sendiri, jadi tidak ada lapisan filter yang digambar sama sekali */
         opacity: .85;
       }
+      /* Lapisan menyala (lit): glow sewarna tombol + inti putih hangat, digambar
+         SEKALI sebagai gradasi statis; yang dianimasikan hanya opacity-nya
+         (murah di GPU). Menggantikan cara lama — filter drop-shadow blur besar
+         di tombol + brightness di gambarnya — yang digambar ulang tiap frame
+         dan membuat urutan menyala & klik tersendat di HP */
+      .pad-fx::after {
+        content: ""; position: absolute; inset: -13%;
+        background: radial-gradient(circle, rgba(255,255,255,.5) 0%, color-mix(in srgb, var(--c) 58%, transparent) 42%, color-mix(in srgb, var(--c) 24%, transparent) 63%, transparent 76%);
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity .12s ease;
+        pointer-events: none;
+      }
+      .pad.lit .pad-fx::after { opacity: 1; }
+      .pad:active .pad-fx::after { opacity: .75; }
       .pad:active { transform: scale(.94); }
       .pad-center:active { transform: translate(-50%, -50%) scale(.94); }
       .pad.lit {
         transform: scale(1.07);
         z-index: 4;
-        filter: drop-shadow(0 0 12px var(--c)) drop-shadow(0 0 26px color-mix(in srgb, var(--c) 60%, transparent));
+        /* Tanpa filter sama sekali saat menyala: beda lit dibaca dari scale,
+           glow opacity di .pad-fx::after, dan gambar permata yang TIDAK pernah
+           berganti filter (glow statis kecilnya tetap, tidak digambar ulang) */
       }
       .pad-center.lit { transform: translate(-50%, -50%) scale(1.07); }
-      .pad.lit .pad-img { filter: brightness(1.5) saturate(1.15); }
       .pad:disabled { cursor: default; }
 
       /* ---------- Overlays ---------- */
