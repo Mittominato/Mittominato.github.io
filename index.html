@@ -392,9 +392,11 @@
       }
       .sigil {
         position: relative;
-        /* Permata sigilnya sendiri diperkecil lagi atas permintaan Harith: tiap sigil ≈9% lebar
-           layar — yang dibuat besar adalah cahaya & percikan sihir di sekelilingnya */
-        width: clamp(33px, 9.2vw, 62px); aspect-ratio: 1 / 1;
+        /* Skala sigil langit diperkecil 2x lagi atas permintaan Harith: tiap sigil kini
+           ≈4,6% lebar layar. Cahaya & percikan sihirnya tetap ada, menyesuaikan ukuran
+           yang lebih kecil (halo & sinar relatif terhadap ukuran sigil, percikan di JS
+           juga diperkecil setengahnya) */
+        width: clamp(17px, 4.6vw, 31px); aspect-ratio: 1 / 1;
         display: grid; place-items: center;
         color: var(--c);
         /* Wadah tumpukan bola sigil: bolanya sendiri tersembunyi sampai pemain menekan tombol yang benar */
@@ -413,13 +415,13 @@
       }
       .sigil.has::before { opacity: 1; }
       .sigil:nth-child(1) { margin-top: 7px; }
-      .sigil:nth-child(2) { width: clamp(36px, 10vw, 68px); margin-top: 0; }
+      .sigil:nth-child(2) { width: clamp(18px, 5vw, 34px); margin-top: 0; }
       .sigil:nth-child(2)::before { inset: -48% -34%; border-radius: 44% 56% 40% 60% / 58% 42% 60% 40%; }
-      .sigil:nth-child(3) { margin-top: 11px; width: clamp(30px, 8.6vw, 57px); }
+      .sigil:nth-child(3) { margin-top: 11px; width: clamp(15px, 4.3vw, 29px); }
       .sigil:nth-child(3)::before { inset: -34% -46%; border-radius: 52% 48% 62% 38% / 42% 58% 46% 54%; }
       .sigil:nth-child(4) { margin-top: 3px; }
       .sigil:nth-child(4)::before { inset: -44% -38%; border-radius: 40% 60% 48% 52% / 56% 44% 58% 42%; }
-      .sigil:nth-child(5) { margin-top: 9px; width: clamp(34px, 9.8vw, 65px); }
+      .sigil:nth-child(5) { margin-top: 9px; width: clamp(17px, 4.9vw, 33px); }
       .sigil:nth-child(5)::before { inset: -36% -50%; border-radius: 60% 40% 44% 56% / 50% 46% 54% 50%; }
       /* Bola sigil: gambar permata yang sudah dipotong mengikuti bentuk segi permatanya
          (assets/sigil-*.webp, transparan) — BUKAN cakram bulat dan bukan kotak.
@@ -432,9 +434,9 @@
         display: grid; place-items: center;
         opacity: 0;
         pointer-events: none;
-        filter: drop-shadow(0 0 5px color-mix(in srgb, var(--c) 85%, transparent))
-          drop-shadow(0 0 16px color-mix(in srgb, var(--c) 50%, transparent))
-          drop-shadow(0 0 30px color-mix(in srgb, var(--c) 28%, transparent));
+        filter: drop-shadow(0 0 3px color-mix(in srgb, var(--c) 85%, transparent))
+          drop-shadow(0 0 9px color-mix(in srgb, var(--c) 50%, transparent))
+          drop-shadow(0 0 17px color-mix(in srgb, var(--c) 28%, transparent));
       }
       .sig-orb img {
         width: 100%; height: 100%; display: block;
@@ -567,16 +569,20 @@
         padding: 1px 4px;
       }
       .slots .hint { color: #d9c8f5; font-size: 12px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
-      /* Slot KOSONG tanpa wadah apa pun: tidak ada kotak, border, lingkaran, atau latar —
-         hanya tanda tanya buram & pudar yang melayang langsung di atas latar.
-         Wadah bulat berbingkai baru muncul saat slot terisi permata (seperti biasa) */
+      /* Slot TANPA wadah apa pun — kosong maupun terisi: tidak ada kotak, border,
+         lingkaran, atau latar. Slot kosong hanya menampilkan tanda tanya buram & pudar
+         yang melayang langsung di atas latar. Slot terisi tampil seperti sigil di
+         langit: permata segi berfaset mengikuti bentuk permatanya (bukan bulat/disk),
+         dikelilingi glow lembut yang mengikuti siluet permata + lapisan sinar berputar
+         + percikan sihir berkelip */
       .slot {
-        width: 38px; height: 38px; border-radius: 50%;
+        position: relative;
+        width: 38px; height: 38px;
         background: transparent;
-        border: 1.5px solid transparent;
+        border: none;
         display: grid; place-items: center;
         color: #5b4390; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 14px;
-        transition: transform .15s ease, border-color .15s ease, background .15s ease;
+        transition: transform .15s ease;
       }
       .slot .q {
         font-size: 21px; line-height: 1;
@@ -585,11 +591,41 @@
         filter: blur(1.1px);
         text-shadow: 0 0 12px rgba(167,120,255,.6);
       }
-      .slot .slot-img { width: 33px; height: 33px; object-fit: cover; border-radius: 50%; display: none; filter: drop-shadow(0 0 5px var(--c)); }
+      /* Permata slot: gambar sigil berbentuk segi permata (assets/sigil-*.webp, transparan),
+         BUKAN cakram bulat. Glow berlapis mengikuti siluet segi permatanya lewat drop-shadow */
+      .slot .slot-img {
+        width: 36px; height: 36px; object-fit: contain; display: none;
+        position: relative; z-index: 1;
+        filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c) 85%, transparent))
+          drop-shadow(0 0 11px color-mix(in srgb, var(--c) 55%, transparent))
+          drop-shadow(0 0 22px color-mix(in srgb, var(--c) 30%, transparent));
+      }
+      /* Lapisan sinar cahaya berputar di belakang permata slot — sama seperti sigil di langit,
+         hanya muncul saat slot terisi */
+      .slot .slot-rays {
+        position: absolute; inset: -62%; z-index: 0; border-radius: 50%;
+        background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 45%, transparent) 0deg 6deg, transparent 6deg 24deg);
+        -webkit-mask-image: radial-gradient(circle, transparent 0 26%, #000 36%, transparent 70%);
+        mask-image: radial-gradient(circle, transparent 0 26%, #000 36%, transparent 70%);
+        animation: sigRaysSpin 16s linear infinite;
+        pointer-events: none;
+        display: none;
+      }
+      /* Percikan sihir berkelip di sekeliling permata slot — sama seperti sigil di langit */
+      .slot .slot-spk {
+        position: absolute; z-index: 2; font-style: normal; line-height: 1;
+        color: var(--c);
+        text-shadow: 0 0 7px var(--c), 0 0 15px var(--c);
+        animation: spkTw 1.5s ease-in-out infinite alternate;
+        pointer-events: none;
+        display: none;
+      }
+      .slot .slot-spk.w { color: #fff; }
       .slot.seen { color: var(--gold); }
       .slot.seen .q { color: var(--gold); opacity: .9; filter: blur(.3px); text-shadow: 0 0 10px rgba(255,201,77,.85); }
-      .slot.filled { border-style: solid; border-color: var(--c); background: rgba(36,16,70,.9); color: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent); transform: scale(1.06); }
+      .slot.filled { color: var(--c); transform: scale(1.08); }
       .slot.filled .slot-img { display: block; }
+      .slot.filled .slot-rays, .slot.filled .slot-spk { display: block; }
       .slot.filled .q { display: none; }
       .slot.wrong { animation: shake .35s ease; }
       .slot.wrong .q { color: #ff8fa3; opacity: .95; filter: blur(.3px); text-shadow: 0 0 10px rgba(255,84,112,.9); }
@@ -710,12 +746,13 @@
         .prompt-frame { margin-top: 0; width: min(64%, 340px); min-height: 34px; }
         .ribbon-star { font-size: 20px; }
         .slot { width: 33px; height: 33px; }
+        .slot .slot-img { width: 31px; height: 31px; }
         .slots { min-height: 31px; }
         .avatar { width: 36px; height: 36px; }
         .xp-pill { width: 76px; }
         .hearts svg { width: 20px; height: 20px; }
         .level-plaque { padding: calc(4px + env(safe-area-inset-top)) 26px 5px; }
-        .sigil { width: clamp(31px, 8.9vw, 48px); }
+        .sigil { width: clamp(16px, 4.5vw, 24px); }
       }
       /* Layar sempit: keping HUD diperkecil supaya nama boss tetap dapat ruang */
       @media (max-width: 400px) {
@@ -740,6 +777,7 @@
         .boss-name { font-size: 16.5px; }
         .hearts svg { width: 28px; height: 28px; }
         .slot { width: 42px; height: 42px; }
+        .slot .slot-img { width: 40px; height: 40px; }
         .card h1 { font-size: 36px; }
         .duel .face { width: 124px; height: 124px; }
       }
@@ -749,6 +787,7 @@
         .bg-fx { display: none; }
         .sigil, .victory .rays { animation: none; }
         .sig-orb .sig-rays, .sig-orb .sig-spk { animation: none; }
+        .slot .slot-rays, .slot .slot-spk { animation: none; }
         .level-plaque, .level-plaque::before, .level-plaque::after { animation: none; }
         .arena.shake, .slot.wrong { animation: none; }
         * { transition-duration: .01s !important; }
@@ -1102,10 +1141,29 @@
       /* ---------- Slots ---------- */
       function buildSlots(n) {
         slotsEl.innerHTML = "";
+        /* Percikan sihir di sekeliling permata slot terisi — posisi & ritme sama seperti
+           percikan sigil di langit, ukurannya menyesuaikan slot */
+        var SSPK = [
+          { l: "-14%", t: "-12%", s: 11, d: "0s",    w: false },
+          { l: "86%",  t: "-16%", s: 8,  d: ".45s",  w: true  },
+          { l: "102%", t: "36%",  s: 12, d: ".2s",   w: false },
+          { l: "72%",  t: "96%",  s: 8,  d: ".7s",   w: true  },
+          { l: "2%",   t: "100%", s: 9,  d: ".55s",  w: false },
+          { l: "-22%", t: "52%",  s: 8,  d: ".9s",   w: true  }
+        ];
         for (var k = 0; k < n; k++) {
           var d = document.createElement("div");
           d.className = "slot";
-          d.innerHTML = '<span class="q">?</span><img class="slot-img" alt="" />';
+          d.innerHTML = '<span class="slot-rays"></span><span class="q">?</span><img class="slot-img" alt="" />';
+          SSPK.forEach(function (p) {
+            var sp = document.createElement("i");
+            sp.className = "slot-spk" + (p.w ? " w" : "");
+            sp.textContent = "✦";
+            sp.style.left = p.l; sp.style.top = p.t;
+            sp.style.fontSize = p.s + "px";
+            sp.style.animationDelay = p.d;
+            d.appendChild(sp);
+          });
           slotsEl.appendChild(d);
         }
       }
@@ -1124,7 +1182,9 @@
         var d = slotsEl.children[k]; if (!d) return;
         d.className = "slot filled";
         d.style.setProperty("--c", RUNES[runeIdx].color);
-        d.querySelector(".slot-img").src = RUNES[runeIdx].img;
+        /* Slot terisi memakai potongan berbentuk segi permata (sigil) seperti sigil di
+           langit — bukan gambar rune bulat */
+        d.querySelector(".slot-img").src = RUNES[runeIdx].sigil;
       }
       function slotWrong(k) {
         var d = slotsEl.children[k]; if (!d) return;
@@ -1212,14 +1272,15 @@
         var rays = document.createElement("div");
         rays.className = "sig-rays";
         o.insertBefore(rays, o.firstChild);
+        /* Ukuran percikan diperkecil setengahnya mengikuti skala sigil yang kini 2x lebih kecil */
         var SPK = [
-          { l: "-16%", t: "-14%", s: 19, d: "0s",    w: false },
-          { l: "84%",  t: "-20%", s: 14, d: ".45s",  w: true  },
-          { l: "103%", t: "34%",  s: 21, d: ".2s",   w: false },
-          { l: "74%",  t: "97%",  s: 13, d: ".7s",   w: true  },
-          { l: "0%",   t: "103%", s: 16, d: ".55s",  w: false },
-          { l: "-25%", t: "50%",  s: 13, d: ".9s",   w: true  },
-          { l: "42%",  t: "-27%", s: 12, d: "1.05s", w: false }
+          { l: "-16%", t: "-14%", s: 10, d: "0s",    w: false },
+          { l: "84%",  t: "-20%", s: 8,  d: ".45s",  w: true  },
+          { l: "103%", t: "34%",  s: 11, d: ".2s",   w: false },
+          { l: "74%",  t: "97%",  s: 7,  d: ".7s",   w: true  },
+          { l: "0%",   t: "103%", s: 8,  d: ".55s",  w: false },
+          { l: "-25%", t: "50%",  s: 7,  d: ".9s",   w: true  },
+          { l: "42%",  t: "-27%", s: 6,  d: "1.05s", w: false }
         ];
         SPK.forEach(function (p) {
           var sp = document.createElement("i");
