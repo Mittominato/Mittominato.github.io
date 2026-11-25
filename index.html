@@ -1709,9 +1709,28 @@
          jadi setStatus kini tidak melakukan apa-apa (pemanggilnya tetap sama) */
       function setStatus(main, small) {}
       function lightPad(i, on) { pads[i].classList.toggle("lit", on); }
-      function flashPad(i, ms) {
+      /* ---------- Durasi nyala tombol: SATU ketentuan untuk demo & tekanan pemain ----------
+         Jeda demo dihitung dengan rumus yang sama seperti sebelumnya (makin
+         tinggi ronde/boss makin cepat), dan tombol menyala selama 66% jeda
+         itu — persis seperti yang showSequence pakai selama ini. Tekanan
+         pemain memakai durasi yang SAMA lewat litPressMs(), jadi rasa
+         menonton demo dan menekan tombol konsisten. */
+      function demoGap() { return Math.max(300, 640 - S.round * 28 - Math.min(S.bossIdx, 4) * 34); }
+      function litPressMs() { return Math.round(demoGap() * 0.66); }
+      /* Kunci input selama animasi nyala tekanan pemain berjalan: tekanan
+         berikutnya diabaikan sampai nyala selesai (lihat pendengar click
+         tombol di bagian Input) */
+      var pressLock = false;
+      /* Nyala tekanan pemain SELALU memutar penuh dengan durasi TETAP
+         (litPressMs): kelas lit dipasang di sini dan hanya dilepas oleh
+         timer ini — pointerup / lepasnya jari TIDAK bisa memotong nyala
+         lebih awal (gaya :active hanya efek tekan sesaat dan kalah oleh
+         gaya .lit selama kelasnya terpasang). Kunci input dibuka lagi
+         oleh timer yang sama, tepat saat nyala selesai */
+      function flashPad(i) {
+        pressLock = true;
         lightPad(i, true);
-        setTimeout(function () { lightPad(i, false); }, ms || 200);
+        setTimeout(function () { lightPad(i, false); pressLock = false; }, litPressMs());
       }
 
       /* ---------- HUD ---------- */
@@ -2162,7 +2181,7 @@
         setStatus("Hafalkan urutannya!", S.seq.length + " mantra akan menyala");
         slotReset();
         resetSigils();
-        var gap = Math.max(300, 640 - S.round * 28 - Math.min(S.bossIdx, 4) * 34);
+        var gap = demoGap();
         if (!(await sleep(620, id))) return;
         for (var k = 0; k < S.seq.length; k++) {
           if (id !== S.run) return;
@@ -2339,10 +2358,13 @@
       pads.forEach(function (pad) {
         pad.addEventListener("click", function () {
           var i = parseInt(pad.getAttribute("data-i"), 10);
-          if (S.phase !== "input" || S.paused) return;
+          /* Tekanan diabaikan selama animasi nyala tekanan sebelumnya
+             masih berjalan (pressLock) — pemain baru bisa menekan lagi
+             setelah nyala itu selesai penuh */
+          if (S.phase !== "input" || S.paused || pressLock) return;
           var id = S.run;
           playRune(i);
-          flashPad(i, 190);
+          flashPad(i);
           if (i === S.seq[S.inputIdx]) {
             collectSigil(i);
             burstAtEl(sigilEls[i], RUNES[i].color, 8);
