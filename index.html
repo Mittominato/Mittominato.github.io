@@ -2641,47 +2641,11 @@
           (function (el2, a) { a.onfinish = function () { el2.remove(); }; })(sp, anim);
         }
       }
-      /* Awan mantra + bintang menyapu dari penyihir ke kucing, seperti serangan di video */
-      function spellCloud() {
-        return new Promise(function (resolve) {
-          if (reducedMotion) { resolve(); return; }
-          var ar = arena.getBoundingClientRect();
-          var cloud = document.createElement("div");
-          cloud.className = "spellcloud";
-          var puffs = [[6, 18, 46], [30, 4, 58], [55, 14, 52], [76, 6, 44], [20, 30, 40], [48, 32, 46], [70, 28, 38]];
-          puffs.forEach(function (p) {
-            var d = document.createElement("div");
-            d.className = "puff";
-            d.style.left = p[0] + "%"; d.style.top = p[1] + "%";
-            d.style.width = p[2] + "px"; d.style.height = p[2] + "px";
-            cloud.appendChild(d);
-          });
-          for (var k = 0; k < 9; k++) {
-            var st = document.createElement("span");
-            st.className = "cstar";
-            st.textContent = "✦";
-            st.style.left = (Math.random() * 92) + "%";
-            st.style.top = (Math.random() * 62) + "%";
-            st.style.fontSize = (11 + Math.random() * 12) + "px";
-            st.style.color = RUNES[k % RUNES.length].color;
-            cloud.appendChild(st);
-          }
-          /* Awan berangkat dari bola tongkat penyihir dan menyapu sampai ke kucing */
-          var wrC = wizSprite.getBoundingClientRect(), crC = catSprite.getBoundingClientRect();
-          var oxC = wrC.left - ar.left + wrC.width * 0.70, oyC = wrC.top - ar.top + wrC.height * 0.30;
-          cloud.style.left = oxC + "px";
-          cloud.style.top = Math.max(0, oyC - 30) + "px";
-          fxLayer.appendChild(cloud);
-          var travel = Math.max(60, (crC.left - ar.left + crC.width * 0.35) - oxC);
-          var anim = cloud.animate([
-            { transform: "translateX(0) scale(.55)", opacity: 0 },
-            { transform: "translateX(" + travel * 0.25 + "px) scale(.95)", opacity: 1, offset: 0.3 },
-            { transform: "translateX(" + travel + "px) scale(1.25)", opacity: .95, offset: 0.82 },
-            { transform: "translateX(" + travel * 1.06 + "px) scale(1.5)", opacity: 0 }
-          ], { duration: 620, easing: "cubic-bezier(.3,.6,.4,1)" });
-          anim.onfinish = function () { cloud.remove(); resolve(); };
-        });
-      }
+      /* spellCloud() — awan mantra lama yang menyapu dari penyihir ke
+         kucing — SUDAH DIHAPUS (permintaan Harith, 2026-11-26): fungsi
+         bekas desain serangan per ronde itu sudah tidak pernah dipanggil
+         lagi sejak sistem mantra, jadi dihapus sekalian supaya tidak ada
+         sisa code serangan lama yang tertinggal */
       /* Perayaan VICTORY: plakat emas + sinar + hujan bintang + hantu kucing, seperti akhir video */
       function victoryFx() {
         var v = $("victory");
@@ -2916,9 +2880,19 @@
         sfxComplete();
         wizSprite.classList.add("cast");
         setTimeout(function () { wizSprite.classList.remove("cast"); }, 550);
-        castParticles();
+        /* BEKAS CODE LAMA SUDAH DIHAPUS (permintaan Harith, 2026-11-26):
+           castParticles() TIDAK lagi dipanggil di sini. Dulu semburan
+           partikel sewarna dari bola tongkat meluncur menyeberangi arena
+           ke badan boss pada SETIAP ronde benar — sisa desain damage
+           per ronde sebelum sistem mantra. Di mode cerita itu terlihat
+           seperti sigil meluncur ke boss padahal belum waktunya: kini
+           ronde benar di mode cerita HANYA menerbangkan slot ke mantra,
+           dan TIDAK ada apa pun yang meluncur ke boss sampai rentetan
+           sigil setelah video ultimate. castParticles() hanya masih
+           dipanggil di cabang mode bebas di bawah (serangan per ronde
+           memang desain mode bebas, tidak berubah) */
         setPrompt("Mantra berhasil!", "good");
-        setStatus("Combo sempurna!", "Mantra meluncur ke " + currentBoss().name);
+        setStatus("Combo sempurna!", story ? "Slot terbang menuju mantra" : "Mantra meluncur ke " + currentBoss().name);
         /* Fungsi ini kini dipanggil SETELAH animasi nyala tombol terakhir
            selesai (lihat handlePadPress): urutan lengkapnya berurutan —
            tombol selesai dulu, BARU karakter berefek, BARU efek lanjutannya.
@@ -2957,7 +2931,11 @@
           nextRound(id);
           return;
         }
-        /* MODE BEBAS (tidak berubah): fase bersinar 600ms, lalu hentaman */
+        /* MODE BEBAS (tidak berubah): semburan partikel mantra dari
+           tongkat ke boss (castParticles — di mode cerita panggilan ini
+           sudah dihapus, lihat catatan di atas), fase bersinar 600ms,
+           lalu hentaman */
+        castParticles();
         shineSigils(true);
         if (!(await sleep(600, id))) { shineSigils(false); return; }
         shineSigils(false);
