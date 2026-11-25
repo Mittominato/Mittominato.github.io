@@ -1601,16 +1601,15 @@
       }
       function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
       var bubbleTimer = null;
-      function showBubble(text, ms) {
-        bubbleEl.textContent = text;
-        /* Jangkar ulang ke kepala boss yang sedang tampil: teks baru bisa
-           mengubah lebar balon (untuk penjepitan tepi arena) dan sprite
-           boss bisa saja baru berganti gambar sejak tata letak terakhir */
-        placeBubble();
-        bubbleEl.classList.add("show");
-        clearTimeout(bubbleTimer);
-        bubbleTimer = setTimeout(function () { bubbleEl.classList.remove("show"); }, ms || 2600);
-      }
+      /* Balon percakapan boss DIMATIKAN atas permintaan Harith (26 Nov 2026):
+         boss tidak bicara dulu sama sekali — tidak ada balon intro, salah
+         tekan, kena hit, atau menang/kalah. Semua kode balon (elemen,
+         gaya .bubble, placeBubble, teks dialog boss) sengaja DIBIARKAN
+         tersimpan supaya bisa dipakai lagi saat Harith mendesain sendiri;
+         showBubble kini tidak melakukan apa-apa, jadi tidak ada panggilan
+         mana pun yang bisa memunculkan balon. Untuk menghidupkan lagi,
+         kembalikan isi fungsi ini seperti semula. */
+      function showBubble(text, ms) {}
       function setPrompt(text, cls) { promptEl.textContent = text; promptEl.className = "prompt " + (cls || "watch"); }
       /* Bar bawah sudah dihilangkan atas permintaan: teks status tidak lagi ditampilkan,
          jadi setStatus kini tidak melakukan apa-apa (pemanggilnya tetap sama) */
