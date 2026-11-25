@@ -246,12 +246,18 @@
       .sprite.wizard { left: -6px; height: min(46%, 8.25dvh); }
       .sprite.cat { right: -6px; height: min(72%, 12dvh); }
       .sprite img { height: 100%; width: auto; display: block; }
-      .sprite.cat.hit img { animation: catHit .45s ease; }
+      /* Sama seperti wizCast: kilatan kena-hit TIDAK lagi dianimasikan di
+         keyframes (filter yang dianimasikan = gambar ulang sprite tiap
+         frame selama .45s). Filternya kini statis selama kelas .hit
+         terpasang — nilai mendekati puncak kilatan lama (brightness 2.1 /
+         saturate .4) — dan keyframes hanya menggerakkan transform, jadi
+         goyangan kena hentamannya mulus di kompositor */
+      .sprite.cat.hit img { animation: catHit .45s ease; filter: brightness(1.9) saturate(.45); }
       @keyframes catHit {
-        0% { transform: translateX(0) rotate(0); filter: brightness(1); }
-        25% { transform: translateX(12px) rotate(3deg); filter: brightness(2.1) saturate(.4); }
-        55% { transform: translateX(-6px) rotate(-2deg); filter: brightness(1.4); }
-        100% { transform: translateX(0) rotate(0); filter: brightness(1); }
+        0% { transform: translateX(0) rotate(0); }
+        25% { transform: translateX(12px) rotate(3deg); }
+        55% { transform: translateX(-6px) rotate(-2deg); }
+        100% { transform: translateX(0) rotate(0); }
       }
       .sprite.cat.laugh img { animation: catLaugh .5s ease; }
       @keyframes catLaugh {
@@ -265,11 +271,21 @@
       }
       .sprite.cat.enter img { animation: catEnter .55s cubic-bezier(.2,1.6,.4,1); }
       @keyframes catEnter { from { transform: translateY(46px) scale(.7); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-      .sprite.wizard.cast img { animation: wizCast .5s ease; }
+      /* Kilau cast TIDAK lagi dianimasikan di dalam keyframes (perbaikan
+         nge-frame fase bersinar): keyframes yang menganimasikan filter
+         memaksa sprite digambar ulang tiap frame, dan animasi ini berjalan
+         BERSAMAAN persis dengan fase sigil bersinar sebelum hentaman.
+         Kini filternya STATIS selama kelas .cast terpasang (satu kali gambar
+         ulang saat kelas dipasang & dilepas, nilai puncak yang sama seperti
+         keyframe 35% dulu) dan keyframes hanya menggerakkan transform —
+         murah di kompositor. Tampilannya tetap: penyihir menyala ungu
+         sambil menyentak maju, hanya ramp naik-turun kilaunya yang kini
+         menyala penuh selama ayunan */
+      .sprite.wizard.cast img { animation: wizCast .5s ease; filter: brightness(1.5) drop-shadow(0 0 14px #b26bff); }
       @keyframes wizCast {
-        0% { transform: translateX(0); filter: brightness(1); }
-        35% { transform: translateX(9px); filter: brightness(1.5) drop-shadow(0 0 14px #b26bff); }
-        100% { transform: translateX(0); filter: brightness(1); }
+        0% { transform: translateX(0); }
+        35% { transform: translateX(9px); }
+        100% { transform: translateX(0); }
       }
       .ground-shadow {
         position: absolute; bottom: -2%; z-index: 1; height: 14px; border-radius: 50%;
@@ -522,15 +538,21 @@
       /* Semua bola bersinar bersama sesaat sebelum menghentak boss.
          Filter sinar kini juga menempel pada gambar permata, BUKAN wadahnya —
          wadah harus tetap tanpa filter (lihat .sig-orb) supaya grupnya tidak
-         digambar ulang tiap frame; nilai cahayanya sama seperti sebelumnya */
-      .sigil.shine { animation: shinePulse .45s ease; }
+         digambar ulang tiap frame; nilai cahayanya sama seperti sebelumnya.
+         DENYUT membesarnya TIDAK lagi animasi CSS pada wadah .sigil
+         (perbaikan nge-frame fase bersinar): .sigil tidak terpromosi ke
+         lapis kompositor dan subtree-nya berisi halo blur(10px) (::before)
+         plus gambar-gambar ber-drop-shadow besar di bawah ini, jadi
+         menganimasikan transform padanya memaksa SELURUH subtree digambar
+         ulang di utas utama TIAP frame selama .45s — itulah patah-patah
+         yang terlihat tepat sebelum hentaman. Denyutnya kini dijalankan
+         JS (shineSigils) sebagai animasi WAAPI transform pada tiap
+         .sig-orb — lapis kompositornya sendiri, mekanisme yang sama
+         seperti animasi muncul & hentaman yang sudah mulus. Kelas .shine
+         di sini kini HANYA menukar filter gambar (satu kali gambar ulang
+         statis saat kelas dipasang/dilepas, bukan per frame) */
       .sigil.shine .sig-orb img {
         filter: brightness(1.85) drop-shadow(0 0 16px var(--c)) drop-shadow(0 0 36px var(--c));
-      }
-      @keyframes shinePulse {
-        0% { transform: scale(1); }
-        40% { transform: scale(1.13); }
-        100% { transform: scale(1); }
       }
       /* ---------- Hantu kecil si kucing & perayaan VICTORY seperti akhir video ---------- */
       .ghost {
@@ -582,8 +604,10 @@
         position: absolute; top: -4%; z-index: 7; pointer-events: none;
         clip-path: polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%);
       }
-      /* Saat menang pun penyihir tidak melompat — tetap menapak, hanya mengayunkan tongkatnya */
-      .sprite.wizard.celebrate img { animation: wizCast .55s ease 3; }
+      /* Saat menang pun penyihir tidak melompat — tetap menapak, hanya mengayunkan tongkatnya.
+         Memakai keyframes wizCast yang sama; kilau ungunya kini filter statis
+         selama kelas terpasang, sama seperti .cast (lihat wizCast) */
+      .sprite.wizard.celebrate img { animation: wizCast .55s ease 3; filter: brightness(1.5) drop-shadow(0 0 14px #b26bff); }
       /* Awan mantra yang menyapu dari penyihir ke kucing saat serangan */
       .spellcloud { position: absolute; z-index: 5; pointer-events: none; width: 34%; height: 64px; }
       .spellcloud .puff {
@@ -1773,7 +1797,16 @@
       }
 
       /* ---------- HUD ---------- */
+      /* Jumlah hati terakhir yang digambar: drawHud dipanggil pada SETIAP
+         tekanan benar, dan membangun ulang tiga SVG hati dari nol di frame
+         yang sama dengan mulainya denyut tombol ikut menyumbang patahan
+         frame pertama. Bila jumlah hati tidak berubah, gambar ulangnya
+         dilewati — hati hanya berubah saat salah tekan / naik level /
+         mulai ulang, dan di semua momen itu nilainya memang berganti */
+      var lastHeartsDrawn = -1;
       function drawHearts() {
+        if (S.hearts === lastHeartsDrawn) return;
+        lastHeartsDrawn = S.hearts;
         var h = $("hearts"); h.innerHTML = "";
         for (var k = 0; k < 3; k++) {
           var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -2031,9 +2064,29 @@
           ], { duration: 430, easing: "cubic-bezier(.2,1.6,.4,1)", fill: "forwards" });
         }
       }
-      /* Semua bola yang terkumpul bersinar bersama */
+      /* Semua bola yang terkumpul bersinar bersama.
+         Denyut membesarnya dijalankan di sini sebagai animasi WAAPI
+         transform pada TIAP bola (puncak 1.13 di 40%, total 450ms — sama
+         seperti denyut CSS lama), BUKAN lagi animasi CSS pada wadah
+         .sigil: wadah itu tidak terkomposit dan subtree-nya berisi halo
+         blur + gambar ber-drop-shadow, jadi denyut padanya digambar ulang
+         utas utama tiap frame dan terlihat nge-frame. Bola punya lapis
+         kompositor sendiri (will-change), jadi denyut ini jalan di GPU
+         seperti animasi muncul & hentamannya. Tanpa fill: begitu denyut
+         selesai, bola kembali ke transform tumpukannya (fill forwards
+         animasi muncul / gaya inline) tanpa lompatan */
       function shineSigils(on) {
         sigilEls.forEach(function (d) { d.classList.toggle("shine", on); });
+        if (on && !reducedMotion) {
+          allOrbs().forEach(function (o) {
+            var lvl = parseInt(o.dataset.lvl || "0", 10);
+            o.animate([
+              { transform: stackTf(lvl, 1) },
+              { transform: stackTf(lvl, 1.13), offset: 0.4 },
+              { transform: stackTf(lvl, 1) }
+            ], { duration: 450, easing: "ease" });
+          });
+        }
       }
       /* Bola-bola melesat menghentak boss, lalu lenyap */
       function slamSigils() {
@@ -2394,33 +2447,58 @@
       }
 
       /* ---------- Input ---------- */
+      /* Logika satu tekanan tombol, dipakai bersama oleh pointerdown,
+         klik cadangan, dan keyboard.
+         Tekanan diabaikan selama animasi nyala tekanan sebelumnya
+         masih berjalan (pressLock) — pemain baru bisa menekan lagi
+         setelah nyala itu selesai penuh */
+      function handlePadPress(i) {
+        if (S.phase !== "input" || S.paused || pressLock) return;
+        var id = S.run;
+        playRune(i);
+        flashPad(i);
+        if (i === S.seq[S.inputIdx]) {
+          collectSigil(i);
+          burstAtEl(sigilEls[i], RUNES[i].color, 8);
+          slotFill(S.inputIdx, i);
+          S.inputIdx++;
+          S.score += 10;
+          drawHud();
+          if (S.inputIdx >= S.seq.length) roundComplete(id);
+          else setStatus("Betul! Lanjut…", (S.seq.length - S.inputIdx) + " mantra lagi");
+        } else {
+          wrongPress(id, i);
+        }
+      }
       pads.forEach(function (pad) {
-        pad.addEventListener("click", function () {
-          var i = parseInt(pad.getAttribute("data-i"), 10);
-          /* Tekanan diabaikan selama animasi nyala tekanan sebelumnya
-             masih berjalan (pressLock) — pemain baru bisa menekan lagi
-             setelah nyala itu selesai penuh */
-          if (S.phase !== "input" || S.paused || pressLock) return;
-          var id = S.run;
-          playRune(i);
-          flashPad(i);
-          if (i === S.seq[S.inputIdx]) {
-            collectSigil(i);
-            burstAtEl(sigilEls[i], RUNES[i].color, 8);
-            slotFill(S.inputIdx, i);
-            S.inputIdx++;
-            S.score += 10;
-            drawHud();
-            if (S.inputIdx >= S.seq.length) roundComplete(id);
-            else setStatus("Betul! Lanjut…", (S.seq.length - S.inputIdx) + " mantra lagi");
-          } else {
-            wrongPress(id, i);
-          }
+        var i = parseInt(pad.getAttribute("data-i"), 10);
+        /* Tekanan ditangani pada pointerdown, BUKAN click (perbaikan
+           tombol terasa nge-frame saat ditekan): click baru terpicu saat
+           jari DILEPAS, jadi dalam satu ketukan transisi ukuran tombol
+           sempat ditargetkan ulang tiga kali — mengecil oleh :active saat
+           jari menyentuh, kembali saat jari lepas, lalu membesar oleh
+           .lit dari click — dan tiap penargetan ulang mematahkan
+           kecepatan geraknya di tengah jalan, terlihat seperti frame
+           rendah. Dengan pointerdown, .lit dipasang pada frame yang sama
+           dengan :active (dan .lit menang menurut urutan gaya), jadi
+           denyutnya SATU gerakan utuh: membesar penuh selama litPressMs
+           lalu mengecil lagi, tanpa patahan di tengah */
+        pad.addEventListener("pointerdown", function (e) {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          handlePadPress(i);
+        });
+        /* Klik cadangan hanya untuk aktivasi tanpa pointerdown
+           (keyboard / teknologi bantu / klik programatik — detail 0).
+           Klik sungguhan dari mouse/sentuh (detail > 0) selalu didahului
+           pointerdown yang sudah menangani tekanan ini, jadi dilewati
+           supaya tidak dobel */
+        pad.addEventListener("click", function (e) {
+          if (e.detail === 0) handlePadPress(i);
         });
       });
       document.addEventListener("keydown", function (e) {
         var map = { "1": 0, "2": 1, "3": 2, "4": 3, "5": 4 };
-        if (e.key in map && S.phase === "input" && !S.paused) pads[map[e.key]].click();
+        if (e.key in map) handlePadPress(map[e.key]);
       });
 
       /* ---------- Layar penuh ---------- */
