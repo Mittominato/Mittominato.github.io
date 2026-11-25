@@ -8,10 +8,22 @@
     <title>Penyihir vs Kucing</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:ital,wght@0@400;0@600;0@700;0@800;1@600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       button, [role="button"] { min-height: 2rem; }
       * { box-sizing: border-box; }
+      /* Gaya teks piksel (sesuai contoh Harith): font Pixelify Sans di semua teks game,
+         tanpa perataan antialias, bayangan gelap tegas #120824 supaya kontras di atas
+         latar ungu. Ukuran font di seluruh game memakai kelipatan 8px (8/16/24/32/40/64)
+         agar piksel font tidak pecah. Diterapkan global lewat body di bawah (semua teks
+         mewarisi), dan kelas ini tersedia untuk teks yang butuh ditegaskan ulang */
+      .pixel-text {
+        font-family: "Pixelify Sans", sans-serif;
+        -webkit-font-smoothing: none;
+        font-smooth: never;
+        font-size: 16px;
+        text-shadow: 0px 2px 0px #120824;
+      }
       :root {
         --bg0: #0c0518;
         --panel: #1d0c38;
@@ -34,7 +46,10 @@
         margin: 0;
         background: var(--bg0);
         color: var(--ink);
-        font-family: "Nunito", system-ui, sans-serif;
+        font-family: "Pixelify Sans", system-ui, sans-serif;
+        -webkit-font-smoothing: none;
+        font-smooth: never;
+        text-shadow: 0px 2px 0px #120824;
         -webkit-tap-highlight-color: transparent;
         overflow: hidden;
       }
@@ -146,7 +161,7 @@
       .avatar.cat-face img { object-position: 42% 30%; transform: scale(1.35); }
       .avatar.wiz-face img { object-position: 60% 30%; transform: scale(1.5); }
       .lv-block { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-      .lv-name { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 16px; line-height: 1; }
+      .lv-name { font-family: "Pixelify Sans", sans-serif; font-weight: 800; font-size: 16px; line-height: 1; }
       /* Pil XP seperti di mockup: teks "0 / 100 XP" di dalam pil berbingkai,
          isian ungu berlari di belakang teksnya mengikuti progres XP */
       .xp-pill {
@@ -164,7 +179,7 @@
       }
       .xp-pill-text {
         position: relative; z-index: 1; display: block; text-align: center;
-        font-size: 10.5px; font-weight: 800; color: #eadcff; line-height: 14px;
+        font-size: 8px; font-weight: 700; color: #eadcff; line-height: 16px;
       }
       .bar {
         height: 9px; border-radius: 99px;
@@ -180,7 +195,7 @@
       .hearts svg { width: 23px; height: 23px; }
       .hearts .heart-off { opacity: .28; filter: grayscale(1); }
       .boss-block { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-      .boss-name { display: block; font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .boss-name { display: block; font-family: "Pixelify Sans", sans-serif; font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .boss-name b { color: var(--gold); font-weight: 800; }
 
       /* ---------- Arena ---------- */
@@ -253,7 +268,7 @@
       .bubble {
         position: absolute; top: clamp(72px, 15%, 96px); right: 10px; max-width: 62%;
         background: #fdf7ff; color: #33135e;
-        font-weight: 800; font-size: 13.5px; line-height: 1.3;
+        font-weight: 700; font-size: 16px; line-height: 1.3;
         padding: 8px 11px; border-radius: 13px 13px 13px 3px;
         box-shadow: 0 4px 14px rgba(0,0,0,.4);
         opacity: 0; transform: translateY(-5px) scale(.95);
@@ -262,7 +277,7 @@
       }
       .bubble.show { opacity: 1; transform: translateY(0) scale(1); }
       .dmg-num {
-        position: absolute; font-family: "Baloo 2", sans-serif; font-weight: 800;
+        position: absolute; font-family: "Pixelify Sans", sans-serif; font-weight: 800;
         color: #ffd23e; text-shadow: 0 2px 0 #7a2b00, 0 0 12px rgba(255,150,40,.8);
         pointer-events: none; z-index: 5;
       }
@@ -334,8 +349,8 @@
       }
       .level-plaque::before { left: -17px; }
       .level-plaque::after { right: -17px; }
-      .lp-title { font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: clamp(17px, 3vw, 21px); color: #fff; display: block; }
-      .lp-sub { font-size: 11.5px; font-weight: 800; color: #cdb2ff; letter-spacing: .04em; }
+      .lp-title { font-family: "Pixelify Sans", sans-serif; font-weight: 700; font-size: clamp(16px, 3vw, 24px); color: #fff; display: block; }
+      .lp-sub { font-size: 8px; font-weight: 700; color: #cdb2ff; letter-spacing: .04em; }
 
       /* ---------- Prompt banner: PITA ungu seperti di mockup malam — pita lebar
          bergradasi ungu dengan ekor terlipat di kiri-kanan, bintang emas besar di
@@ -379,7 +394,7 @@
       .prompt {
         padding: 4px 18px;
         text-align: center;
-        font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: clamp(11px, 1.8vw, 13.5px);
+        font-family: "Pixelify Sans", sans-serif; font-weight: 700; font-size: clamp(8px, 1.8vw, 16px);
         text-shadow: 0 2px 8px rgba(0,0,0,.6);
       }
       .prompt.watch { color: #e9d5ff; }
@@ -527,8 +542,8 @@
       @keyframes raysSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
       .victory .v-text {
         position: relative;
-        font-family: "Baloo 2", sans-serif; font-weight: 800;
-        font-size: clamp(38px, 11vw, 64px);
+        font-family: "Pixelify Sans", sans-serif; font-weight: 800;
+        font-size: clamp(40px, 12vw, 64px);
         letter-spacing: .04em;
         color: #ffd23e;
         text-shadow: 0 3px 0 #8a4d00, 0 0 26px rgba(255,180,40,.85), 0 6px 22px rgba(0,0,0,.55);
@@ -572,7 +587,7 @@
         min-height: 23px;
         padding: 1px 4px;
       }
-      .slots .hint { color: #d9c8f5; font-size: 12px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+      .slots .hint { color: #d9c8f5; font-size: 16px; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
       /* Slot TANPA wadah apa pun — kosong maupun terisi: tidak ada kotak, border,
          lingkaran, atau latar. Slot kosong hanya menampilkan tanda tanya buram & pudar
          yang melayang langsung di atas latar. Slot terisi tampil seperti sigil di
@@ -586,11 +601,11 @@
         background: transparent;
         border: none;
         display: grid; place-items: center;
-        color: #5b4390; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 14px;
+        color: #5b4390; font-family: "Pixelify Sans", sans-serif; font-weight: 700; font-size: 16px;
         transition: transform .15s ease;
       }
       .slot .q {
-        font-size: 14px; line-height: 1;
+        font-size: 16px; line-height: 1;
         color: rgba(203,178,255,.52);
         opacity: .55;
         filter: blur(1.1px);
@@ -797,25 +812,25 @@
         box-shadow: 0 18px 50px rgba(0,0,0,.6);
         max-height: 92dvh; overflow-y: auto;
       }
-      .card h1 { font-family: "Baloo 2", sans-serif; font-size: 30px; margin: 2px 0 2px; line-height: 1.1; }
+      .card h1 { font-family: "Pixelify Sans", sans-serif; font-size: 32px; margin: 2px 0 2px; line-height: 1.1; }
       .card h1 .vs { color: var(--gold); }
-      .card .sub { color: var(--muted); font-weight: 700; font-size: 14px; margin: 0 0 14px; }
+      .card .sub { color: var(--muted); font-weight: 700; font-size: 16px; margin: 0 0 14px; }
       .duel { display: flex; align-items: flex-end; justify-content: center; gap: 6px; margin: 4px 0 12px; }
       .duel .face { width: 104px; height: 104px; border-radius: 16px; background: #150829; border: 1.5px solid var(--line-soft); overflow: hidden; }
       .duel .face img { width: 100%; height: 100%; object-fit: cover; }
       .duel .face.wiz img { object-position: 58% 30%; }
       .duel .face.catf img { object-position: 42% 28%; transform: scale(1.1); }
-      .duel .swords { font-family: "Baloo 2", sans-serif; font-weight: 800; color: var(--gold); font-size: 15px; padding-bottom: 40px; }
+      .duel .swords { font-family: "Pixelify Sans", sans-serif; font-weight: 700; color: var(--gold); font-size: 16px; padding-bottom: 40px; }
       .howto { text-align: left; margin: 0 auto 16px; max-width: 300px; display: flex; flex-direction: column; gap: 8px; }
-      .howto li { list-style: none; display: flex; gap: 9px; font-size: 13.5px; font-weight: 600; color: #e6dbff; line-height: 1.4; }
+      .howto li { list-style: none; display: flex; gap: 9px; font-size: 16px; font-weight: 600; color: #e6dbff; line-height: 1.4; }
       .howto ul { margin: 0; padding: 0; display: contents; }
       .howto .n {
         flex: none; width: 22px; height: 22px; border-radius: 50%;
-        background: #8b3dff; color: #fff; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 13px;
+        background: #8b3dff; color: #fff; font-family: "Pixelify Sans", sans-serif; font-weight: 700; font-size: 16px;
         display: grid; place-items: center; margin-top: 1px;
       }
       .cta {
-        font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 19px;
+        font-family: "Pixelify Sans", sans-serif; font-weight: 700; font-size: 24px;
         background: linear-gradient(180deg, #a55eff, #7c2ce0);
         color: #fff; border: 2px solid #c99aff; border-radius: 14px;
         padding: 12px 26px; cursor: pointer; width: 100%;
@@ -827,14 +842,14 @@
       .cta.ghost { background: #241046; border-color: var(--line); box-shadow: none; font-size: 16px; margin-top: 9px; }
       .stats { display: flex; gap: 8px; margin: 0 0 16px; }
       .stats .stat { flex: 1; background: #150829; border: 1px solid var(--line-soft); border-radius: 12px; padding: 9px 4px; }
-      .stats .stat b { font-family: "Baloo 2", sans-serif; font-size: 20px; display: block; color: var(--gold); line-height: 1.1; }
-      .stats .stat span { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; color: var(--muted); }
+      .stats .stat b { font-family: "Pixelify Sans", sans-serif; font-size: 24px; display: block; color: var(--gold); line-height: 1.1; }
+      .stats .stat span { font-size: 8px; font-weight: 700; letter-spacing: .05em; color: var(--muted); }
       .card .big-emoji { font-size: 44px; line-height: 1; }
 
       @media (max-height: 740px) {
         .stage { padding-top: calc(10px + env(safe-area-inset-top)); }
         .cluster { width: min(60vw, 30dvh, 300px); }
-        .prompt { font-size: 10.5px; padding: 3px 14px; }
+        .prompt { font-size: 8px; padding: 3px 14px; }
         .prompt-frame { margin-top: 6px; width: min(54%, 300px); min-height: 30px; }
         .ribbon-star { font-size: 17px; }
         .slot { width: 22.5px; height: 22.5px; }
@@ -869,7 +884,7 @@
         .avatar { width: 38px; height: 38px; }
         .xp-pill { width: 76px; }
         .hearts svg { width: 20px; height: 20px; }
-        .boss-name { font-size: 12.5px; }
+        .boss-name { font-size: 16px; }
       }
       /* Layar lebar (desktop / tablet / HP landscape): HUD jadi satu baris penuh, arena makin luas */
       @media (min-width: 760px) {
@@ -879,14 +894,14 @@
         .hud { gap: 12px; }
         .hud-chip { padding: 8px 12px; gap: 10px; }
         .avatar { width: 48px; height: 48px; }
-        .lv-name { font-size: 20px; }
+        .lv-name { font-size: 24px; }
         .xp-pill { width: 98px; height: 19px; }
-        .xp-pill-text { line-height: 16px; font-size: 11.5px; }
-        .boss-name { font-size: 16.5px; }
+        .xp-pill-text { line-height: 16px; font-size: 8px; }
+        .boss-name { font-size: 16px; }
         .hearts svg { width: 28px; height: 28px; }
         .slot { width: 28.5px; height: 28.5px; }
         .slot .slot-img { width: 27px; height: 27px; }
-        .card h1 { font-size: 36px; }
+        .card h1 { font-size: 40px; }
         .duel .face { width: 124px; height: 124px; }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -1402,7 +1417,8 @@
         /* Angka damage melayang tepat di atas kepala kucing, di mana pun kucing berdiri */
         var arD = arena.getBoundingClientRect(), crD = catSprite.getBoundingClientRect();
         el.style.top = Math.max(0, crD.top - arD.top - 18) + "px";
-        el.style.fontSize = (24 + Math.min(18, amount)) + "px";
+        /* Ukuran angka damage dibulatkan ke kelipatan 8px (24/32/40) supaya piksel font tidak pecah */
+        el.style.fontSize = (24 + 8 * Math.min(2, Math.floor(amount / 9))) + "px";
         fxLayer.appendChild(el);
         var anim = el.animate([
           { transform: "translateY(6px) scale(.7)", opacity: 0 },
