@@ -222,7 +222,9 @@
         min-height: 150px;
         overflow: visible;
       }
-      .arena.shake { animation: shake .4s ease; }
+      /* Efek GETAR LAYAR saat salah tekan SUDAH DIHAPUS atas permintaan
+         Harith (terasa mengganggu): arena tidak lagi bergoyang sama sekali
+         saat gagal. Keyframes shake di bawah kini hanya dipakai .slot.wrong */
       @keyframes shake {
         0%,100% { transform: translateX(0); }
         20% { transform: translateX(-7px); }
@@ -236,7 +238,7 @@
          bottom:0 di sini hanya cadangan sebelum JS jalan.
          Karakter diam menapak — TANPA animasi melayang/idle sama sekali.
          Satu-satunya animasi penyihir adalah ayunan tongkat (.cast) saat urutan benar. */
-      .sprite { position: absolute; bottom: 0; z-index: 2; pointer-events: none; filter: drop-shadow(0 6px 9px rgba(5,0,16,.45)); }
+      .sprite { position: absolute; bottom: 0; z-index: 2; pointer-events: none; }
       /* Skala karakter: penyihir diperkecil 2x dari skala mockup atas permintaan Harith
          (sosoknya kini ≈8% tinggi layar), sedangkan kucing/boss TETAP seperti mockup
          (≈14% tinggi layar) — jadi boss kini jelas lebih besar dari penyihir.
@@ -245,14 +247,26 @@
          dan dibatasi % arena supaya tidak pernah keluar dari arena di layar pendek */
       .sprite.wizard { left: -6px; height: min(46%, 8.25dvh); }
       .sprite.cat { right: -6px; height: min(72%, 12dvh); }
-      .sprite img { height: 100%; width: auto; display: block; }
+      /* Bayangan tanah drop-shadow kini menempel di IMG, BUKAN lagi di wadah
+         .sprite (perbaikan nge-frame efek serangan karakter): selama filter
+         itu ada di wadah, SETIAP animasi transform pada img di dalamnya
+         (wizCast, catHit, catLaugh, catEnter) memaksa seluruh grup filter —
+         gambar karakter besar + bayangannya — digambar ulang di utas utama
+         TIAP frame, dan itulah patah-patah pada ayunan serangan penyihir &
+         reaksi kena-hit boss. Kini img membawa filternya sendiri (statis),
+         jadi transform-nya jalan murni di kompositor seperti sigil.
+         Konsekuensinya: filter status (.cast/.celebrate/.hit/faint) MENIMPA
+         filter img, jadi nilai drop-shadow tanah yang sama disisipkan juga
+         di filter-filter itu supaya bayangannya tidak hilang saat status
+         aktif — tampilan akhir sama persis seperti sebelumnya */
+      .sprite img { height: 100%; width: auto; display: block; filter: drop-shadow(0 6px 9px rgba(5,0,16,.45)); }
       /* Sama seperti wizCast: kilatan kena-hit TIDAK lagi dianimasikan di
          keyframes (filter yang dianimasikan = gambar ulang sprite tiap
          frame selama .45s). Filternya kini statis selama kelas .hit
          terpasang — nilai mendekati puncak kilatan lama (brightness 2.1 /
          saturate .4) — dan keyframes hanya menggerakkan transform, jadi
          goyangan kena hentamannya mulus di kompositor */
-      .sprite.cat.hit img { animation: catHit .45s ease; filter: brightness(1.9) saturate(.45); }
+      .sprite.cat.hit img { animation: catHit .45s ease; filter: brightness(1.9) saturate(.45) drop-shadow(0 6px 9px rgba(5,0,16,.45)); }
       @keyframes catHit {
         0% { transform: translateX(0) rotate(0); }
         25% { transform: translateX(12px) rotate(3deg); }
@@ -267,7 +281,7 @@
       }
       .sprite.cat.faint img { animation: catFaint .8s ease forwards; }
       @keyframes catFaint {
-        to { transform: translateY(16px) rotate(7deg); opacity: .25; filter: grayscale(.7); }
+        to { transform: translateY(16px) rotate(7deg); opacity: .25; filter: grayscale(.7) drop-shadow(0 6px 9px rgba(5,0,16,.45)); }
       }
       .sprite.cat.enter img { animation: catEnter .55s cubic-bezier(.2,1.6,.4,1); }
       @keyframes catEnter { from { transform: translateY(46px) scale(.7); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
@@ -280,8 +294,14 @@
          keyframe 35% dulu) dan keyframes hanya menggerakkan transform —
          murah di kompositor. Tampilannya tetap: penyihir menyala ungu
          sambil menyentak maju, hanya ramp naik-turun kilaunya yang kini
-         menyala penuh selama ayunan */
-      .sprite.wizard.cast img { animation: wizCast .5s ease; filter: brightness(1.5) drop-shadow(0 0 14px #b26bff); }
+         menyala penuh selama ayunan.
+         Akar patah-patah yang tersisa justru di WADAH sprite: filter
+         drop-shadow tanah dulu menempel di .sprite, jadi transform img di
+         dalamnya menggambar ulang grup filter itu tiap frame — kini
+         bayangan itu pindah ke img (lihat .sprite img), dan filter .cast
+         ini menyisipkan nilai bayangan tanah yang sama di belakang kilau
+         ungunya supaya bayangan tidak hilang selama ayunan */
+      .sprite.wizard.cast img { animation: wizCast .5s ease; filter: brightness(1.5) drop-shadow(0 0 14px #b26bff) drop-shadow(0 6px 9px rgba(5,0,16,.45)); }
       @keyframes wizCast {
         0% { transform: translateX(0); }
         35% { transform: translateX(9px); }
@@ -606,8 +626,13 @@
       }
       /* Saat menang pun penyihir tidak melompat — tetap menapak, hanya mengayunkan tongkatnya.
          Memakai keyframes wizCast yang sama; kilau ungunya kini filter statis
-         selama kelas terpasang, sama seperti .cast (lihat wizCast) */
-      .sprite.wizard.celebrate img { animation: wizCast .55s ease 3; filter: brightness(1.5) drop-shadow(0 0 14px #b26bff); }
+         selama kelas terpasang, sama seperti .cast (lihat wizCast).
+         Ayunannya kini SEKALI saja, bukan 3x: pengulangan 3x dulu terbaca
+         sebagai efek GETAR pada karakter saat victory dan terasa mengganggu
+         atas penilaian Harith — satu ayunan mulus yang sama seperti serangan
+         biasa, tanpa getaran. Filter menyisipkan bayangan tanah seperti
+         .cast supaya bayangan tidak hilang selama kelas terpasang */
+      .sprite.wizard.celebrate img { animation: wizCast .55s ease; filter: brightness(1.5) drop-shadow(0 0 14px #b26bff) drop-shadow(0 6px 9px rgba(5,0,16,.45)); }
       /* Awan mantra yang menyapu dari penyihir ke kucing saat serangan */
       .spellcloud { position: absolute; z-index: 5; pointer-events: none; width: 34%; height: 64px; }
       .spellcloud .puff {
@@ -1263,7 +1288,7 @@
         .slot .slot-rays, .slot .slot-spk { animation: none; }
         .pad.lit .pad-rays { animation: none; }
         .level-plaque, .level-plaque::before, .level-plaque::after { animation: none; }
-        .arena.shake, .slot.wrong { animation: none; }
+        .slot.wrong { animation: none; }
         * { transition-duration: .01s !important; }
       }
     </style>
@@ -2313,16 +2338,16 @@
         castParticles();
         setPrompt("Mantra berhasil! Serang!", "good");
         setStatus("Combo sempurna!", "Mantra meluncur ke " + currentBoss().name);
-        /* Fase efek jawaban benar DIPISAH supaya tidak serentak & berat:
-           (1) bola sigil terkumpul bersinar bersama + badan penyihir bercahaya
-               (wizCast di atas) — cahaya tampil penuh 500ms;
-           (2) JEDA 1000ms — sigil TETAP bercahaya (kelas .shine masih terpasang),
-               belum bergerak sama sekali;
-           (3) baru melesat menghentak boss dengan gerakan lambat -> cepat
+        /* Fase efek jawaban benar DIPISAH supaya tidak serentak & berat,
+           dan masa sigilnya DIPERPENDEK jadi total 600ms atas permintaan
+           Harith (sebelumnya 500ms bersinar + jeda 1000ms = 1500ms):
+           (1) bola sigil terkumpul bersinar bersama + badan penyihir
+               bercahaya (wizCast di atas) — total 600ms, denyut WAAPI
+               shineSigils (450ms) tuntas di dalamnya;
+           (2) baru melesat menghentak boss dengan gerakan lambat -> cepat
                (ease-in di slamSigils). */
         shineSigils(true);
-        if (!(await sleep(500, id))) { shineSigils(false); return; }
-        if (!(await sleep(1000, id))) { shineSigils(false); return; }
+        if (!(await sleep(600, id))) { shineSigils(false); return; }
         shineSigils(false);
         await slamSigils();
         if (id !== S.run) return;
@@ -2388,7 +2413,9 @@
         sfxWrong();
         vanishSigils();
         slotWrong(S.inputIdx);
-        if (!reducedMotion) { arena.classList.remove("shake"); void arena.offsetWidth; arena.classList.add("shake"); }
+        /* Getar layar (arena.shake) saat gagal SUDAH DIHAPUS atas permintaan
+           Harith — terasa mengganggu; arena & karakter kini diam, hanya slot
+           yang salah yang bergoyang kecil + kucing tertawa */
         catAnim("laugh", 520);
         showBubble(pick([currentBoss().taunt, "Itu " + RUNES[pressedIdx].name + ", bukan gilirannya!", "Wkwk, salah urutan!"]), 2400);
         setPrompt("Yah, salah urutan!", "bad");
