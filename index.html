@@ -712,12 +712,15 @@
         object-fit: contain; display: block;
         position: relative; z-index: 1;
         pointer-events: none;
-        /* Keadaan IDLE tampil NORMAL & TERANG dengan warna penuh seperti
-           semula — tanpa filter peredup sama sekali (peredupan saturate .84 /
-           brightness .89 / contrast .95 yang sempat dipasang sudah DIHAPUS
-           atas permintaan Harith). Glow STATIS mengikuti siluet segi permata
-           tetap seperti sebelumnya, menempel rapat di sisi-sisi tepi permata */
-        filter:
+        /* Keadaan IDLE tampil REDUP seperti versi sebelumnya atas permintaan
+           Harith: filter saturate(.84) brightness(.89) contrast(.95) pada
+           gambar permata, dipadukan halo statis yang juga redup (.58, lihat
+           .pad-fx::before) — supaya kontras dengan tombol yang MENYALA
+           (brightness 1.25 / saturate 1.15 + glow penuh) tetap setinggi
+           sekarang. Filter ini STATIS, hanya bertukar sekali saat keadaan
+           berubah. Glow STATIS mengikuti siluet segi permata tetap seperti
+           sebelumnya, menempel rapat di sisi-sisi tepi permata */
+        filter: saturate(.84) brightness(.89) contrast(.95)
           drop-shadow(0 0 2px color-mix(in srgb, var(--c) 60%, transparent))
           drop-shadow(0 0 5px color-mix(in srgb, var(--c) 35%, transparent))
           drop-shadow(0 0 8px color-mix(in srgb, var(--c) 18%, transparent));
@@ -760,9 +763,10 @@
         border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
         /* Tanpa filter blur: kelembutan halo datang dari pemberhentian gradasi
            radialnya sendiri, jadi tidak ada lapisan filter yang digambar sama sekali.
-           Halo statis tampil PENUH (.85) di keadaan idle seperti semula —
-           peredupan idle (.58) sudah dihapus bersama peredupan gambarnya */
-        opacity: .85;
+           Halo statis tampil REDUP (.58) di keadaan idle, kembali seperti
+           versi sebelumnya — saat tombol menyala / ditekan halo tetap penuh
+           (.85) supaya kontras menyala vs idle tetap setinggi sekarang */
+        opacity: .58;
       }
       /* Halo statis tetap penuh saat tombol menyala / ditekan */
       .pad.lit .pad-fx::before, .pad:active .pad-fx::before { opacity: .85; }
@@ -776,7 +780,7 @@
          dari 3 gradasi jadi 2 dengan hentian warna lebih sedikit dan area
          gambar diperkecil (inset -13% → -9%). Puncak glow-nya kini NAIK
          sedikit lagi (inti putih .28 → .42, warna .30 → .45) supaya tombol
-         yang menyala lebih terang & menonjol dari idle yang sudah normal.
+         yang menyala lebih terang & menonjol dari idle yang kini redup lagi.
          CINCIN halo yang dulu memuncak tajam di satu pita sempit (penyebab
          kesan border) DIGANTI sapuan warna lebar yang memudar perlahan dari
          tengah sampai jauh keluar permata — tidak ada pita, tidak ada tepi:
