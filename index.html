@@ -93,7 +93,7 @@
       .stage > .bg-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
       .bg-fx canvas { display: block; width: 100%; height: 100%; }
       /* Lebar konten permainan: melebar mengikuti layar, tidak lagi terkunci 480px */
-      .hud, .bottombar { width: 100%; max-width: 880px; }
+      .hud { width: 100%; max-width: 880px; }
       .slots { width: 100%; max-width: 720px; }
 
       /* ---------- HUD: bagian 2 tampilan atas — BUKAN satu panel besar.
@@ -340,39 +340,41 @@
       .prompt-frame {
         flex: none;
         position: relative;
-        width: min(100%, 560px);
-        min-height: 56px;
+        /* Jauh lebih kecil & sempit dari sebelumnya: duduk di tengah, di antara penyihir
+           (kiri) dan kucing (kanan), supaya kedua karakter tetap terlihat penuh di HP */
+        width: min(68%, 400px);
+        min-height: 38px;
         margin-top: 2px;
         display: flex; align-items: center; justify-content: center;
         background: linear-gradient(180deg, #9b4dff 0%, #7c2ce0 52%, #5f1fb8 100%);
         border: 2px solid #d9bdff;
-        border-radius: 12px;
+        border-radius: 10px;
         box-shadow: 0 6px 20px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -8px 16px rgba(43,10,90,.45), 0 0 18px rgba(139,61,255,.35);
       }
       /* Ekor pita terlipat di belakang ujung kiri & kanan */
       .prompt-frame::before, .prompt-frame::after {
-        content: ""; position: absolute; top: 34%; height: 74%; width: 30px;
+        content: ""; position: absolute; top: 34%; height: 74%; width: 22px;
         background: linear-gradient(180deg, #5b21b6, #42137f);
         z-index: -1;
       }
-      .prompt-frame::before { left: -14px; clip-path: polygon(0 0, 100% 10%, 100% 90%, 0 100%, 26% 50%); }
-      .prompt-frame::after { right: -14px; clip-path: polygon(100% 0, 0 10%, 0 90%, 100% 100%, 74% 50%); }
+      .prompt-frame::before { left: -10px; clip-path: polygon(0 0, 100% 10%, 100% 90%, 0 100%, 26% 50%); }
+      .prompt-frame::after { right: -10px; clip-path: polygon(100% 0, 0 10%, 0 90%, 100% 100%, 74% 50%); }
       .ribbon-star {
-        position: absolute; left: -13px; top: 50%;
+        position: absolute; left: -10px; top: 50%;
         transform: translateY(-54%) rotate(-12deg);
-        font-size: 36px; line-height: 1; color: var(--gold);
+        font-size: 24px; line-height: 1; color: var(--gold);
         text-shadow: 0 2px 0 #a35b00, 0 0 14px rgba(255,201,77,.85);
         pointer-events: none; z-index: 2;
       }
       .ribbon-star.small {
-        left: auto; right: -9px;
+        left: auto; right: -7px;
         transform: translateY(-38%) rotate(14deg);
-        font-size: 20px;
+        font-size: 14px;
       }
       .prompt {
-        padding: 8px 34px;
+        padding: 5px 22px;
         text-align: center;
-        font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: clamp(15px, 2.4vw, 19px);
+        font-family: "Baloo 2", sans-serif; font-weight: 700; font-size: clamp(12px, 2vw, 15px);
         text-shadow: 0 2px 8px rgba(0,0,0,.6);
       }
       .prompt.watch { color: #e9d5ff; }
@@ -425,10 +427,16 @@
         display: grid; place-items: center;
         opacity: 0;
         pointer-events: none;
+        /* Mask lingkaran: gambar sigil aslinya persegi penuh (potongan gambar permata),
+           dipotong jadi permata bulat seperti tombolnya — tanpa sudut kotak, tanpa latar kotak */
+        border-radius: 50%;
+        overflow: hidden;
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 60%, transparent),
+          0 0 14px color-mix(in srgb, var(--c) 45%, transparent);
       }
       .sig-orb img {
-        width: 112%; height: 112%; display: block;
-        object-fit: contain;
+        width: 100%; height: 100%; display: block;
+        object-fit: cover;
         position: relative; z-index: 1;
       }
       /* Semua bola bersinar bersama sesaat sebelum menghentak boss */
@@ -561,7 +569,7 @@
         color: #5b4390; font-family: "Baloo 2", sans-serif; font-weight: 800; font-size: 14px;
         transition: transform .15s ease, border-color .15s ease, background .15s ease;
       }
-      .slot .slot-img { width: 33px; height: 33px; object-fit: contain; display: none; filter: drop-shadow(0 0 5px var(--c)); }
+      .slot .slot-img { width: 33px; height: 33px; object-fit: cover; border-radius: 50%; display: none; filter: drop-shadow(0 0 5px var(--c)); }
       .slot.seen { border-style: solid; border-color: rgba(160,120,255,.8); background: rgba(36,16,70,.85); color: var(--gold); }
       .slot.filled { border-style: solid; border-color: var(--c); background: rgba(36,16,70,.9); color: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent); transform: scale(1.06); }
       .slot.filled .slot-img { display: block; }
@@ -622,36 +630,6 @@
       .pad.lit .pad-img { filter: brightness(1.5) saturate(1.15); }
       .pad:disabled { cursor: default; }
 
-      /* ---------- Bottom bar ---------- */
-      .bottombar {
-        flex: none;
-        display: flex; align-items: center; gap: 9px;
-        background: linear-gradient(180deg, rgba(44,21,80,.82), rgba(26,10,48,.82));
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        border: 1.5px solid rgba(139,92,246,.55);
-        border-radius: 16px;
-        padding: 9px 12px;
-        box-shadow: 0 6px 24px rgba(0,0,0,.5);
-      }
-      .status { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
-      .status small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 700; }
-      .score-chip {
-        flex: none; text-align: center;
-        background: #150829; border: 1px solid var(--line-soft);
-        border-radius: 10px; padding: 4px 10px;
-      }
-      .score-chip b { font-family: "Baloo 2", sans-serif; font-size: 17px; color: var(--gold); display: block; line-height: 1.05; }
-      .score-chip span { font-size: 9.5px; font-weight: 800; letter-spacing: .08em; color: var(--muted); }
-      .icon-btn {
-        flex: none; width: 42px; height: 42px; border-radius: 12px;
-        border: 1.5px solid var(--line); background: #241046; color: var(--ink);
-        font-size: 18px; cursor: pointer; display: grid; place-items: center;
-        touch-action: manipulation;
-      }
-      .icon-btn:active { transform: scale(.93); }
-      .icon-btn svg { width: 21px; height: 21px; }
-
       /* ---------- Overlays ---------- */
       .overlay {
         position: absolute; inset: 0; z-index: 20;
@@ -710,9 +688,9 @@
       @media (max-height: 740px) {
         .stage { padding-top: calc(10px + env(safe-area-inset-top)); }
         .cluster { width: min(68vw, 34dvh, 320px); }
-        .prompt { font-size: 13.5px; }
-        .prompt-frame { margin-top: 0; width: min(100%, 480px); min-height: 48px; }
-        .ribbon-star { font-size: 29px; }
+        .prompt { font-size: 11.5px; padding: 4px 16px; }
+        .prompt-frame { margin-top: 0; width: min(64%, 340px); min-height: 34px; }
+        .ribbon-star { font-size: 20px; }
         .slot { width: 33px; height: 33px; }
         .slots { min-height: 31px; }
         .avatar { width: 36px; height: 36px; }
@@ -887,21 +865,6 @@
         </div>
       </div>
 
-      <!-- Bottom bar -->
-      <section class="bottombar">
-        <div class="status" id="statusText">Siap untuk memulai!<small>Tekan tombol Mulai di layar pembuka</small></div>
-        <div class="score-chip"><b id="scoreNum">0</b><span>SKOR</span></div>
-        <button type="button" class="icon-btn" id="soundBtn" aria-label="Matikan suara">
-          <svg aria-hidden="true"><use href="#i-sound-on" id="soundUse"/></svg>
-        </button>
-        <button type="button" class="icon-btn" id="pauseBtn" aria-label="Jeda">
-          <svg aria-hidden="true"><use href="#i-pause" id="pauseUse"/></svg>
-        </button>
-        <button type="button" class="icon-btn" id="fsBtn" aria-label="Layar penuh">
-          <svg aria-hidden="true"><use href="#i-expand" id="fsUse"/></svg>
-        </button>
-      </section>
-
       <!-- Start overlay -->
       <div class="overlay" id="startOverlay">
         <div class="card">
@@ -1023,7 +986,7 @@
       var $ = function (id) { return document.getElementById(id); };
       var pads = Array.prototype.slice.call(document.querySelectorAll(".pad"));
       var arena = $("arena"), promptEl = $("prompt"), slotsEl = $("slots"),
-          statusEl = $("statusText"), bubbleEl = $("bubble"),
+          bubbleEl = $("bubble"),
           catSprite = $("catSprite"), wizSprite = $("wizardSprite"), fxLayer = $("fxLayer");
       var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -1084,11 +1047,9 @@
         bubbleTimer = setTimeout(function () { bubbleEl.classList.remove("show"); }, ms || 2600);
       }
       function setPrompt(text, cls) { promptEl.textContent = text; promptEl.className = "prompt " + (cls || "watch"); }
-      function setStatus(main, small) {
-        statusEl.innerHTML = "";
-        statusEl.appendChild(document.createTextNode(main));
-        if (small) { var s = document.createElement("small"); s.textContent = small; statusEl.appendChild(s); }
-      }
+      /* Bar bawah sudah dihilangkan atas permintaan: teks status tidak lagi ditampilkan,
+         jadi setStatus kini tidak melakukan apa-apa (pemanggilnya tetap sama) */
+      function setStatus(main, small) {}
       function lightPad(i, on) { pads[i].classList.toggle("lit", on); }
       function flashPad(i, ms) {
         lightPad(i, true);
@@ -1111,7 +1072,6 @@
         $("levelNum").textContent = S.level;
         $("xpNum").textContent = S.xp;
         $("xpFill").style.width = S.xp + "%";
-        $("scoreNum").textContent = S.score.toLocaleString("id-ID");
         $("hpFill").style.width = (S.bossMax ? Math.max(0, S.bossHp) / S.bossMax * 100 : 100) + "%";
         drawHearts();
       }
@@ -1649,10 +1609,14 @@
 
       /* ---------- Layar penuh ---------- */
       function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+      /* Tombol layar-penuh/suara/jeda dulu tinggal di bar bawah yang kini dihilangkan;
+         ikon & pendengar kejadiannya dijaga supaya tidak error tanpa elemen-elemen itu */
       function updateFsIcon() {
+        var use = $("fsUse"), btn = $("fsBtn");
+        if (!use || !btn) return;
         var fs = isFullscreen();
-        $("fsUse").setAttribute("href", fs ? "#i-compress" : "#i-expand");
-        $("fsBtn").setAttribute("aria-label", fs ? "Keluar dari layar penuh" : "Layar penuh");
+        use.setAttribute("href", fs ? "#i-compress" : "#i-expand");
+        btn.setAttribute("aria-label", fs ? "Keluar dari layar penuh" : "Layar penuh");
       }
       function enterFullscreen() {
         if (isFullscreen()) return;
@@ -1669,10 +1633,11 @@
       }
       document.addEventListener("fullscreenchange", updateFsIcon);
       document.addEventListener("webkitfullscreenchange", updateFsIcon);
-      $("fsBtn").addEventListener("click", toggleFullscreen);
+      var fsBtnEl = $("fsBtn");
+      if (fsBtnEl) fsBtnEl.addEventListener("click", toggleFullscreen);
 
       /* ---------- Controls ---------- */
-      function updatePauseIcon() { $("pauseUse").setAttribute("href", S.paused ? "#i-play" : "#i-pause"); }
+      function updatePauseIcon() { var u = $("pauseUse"); if (u) u.setAttribute("href", S.paused ? "#i-play" : "#i-pause"); }
       $("startBtn").addEventListener("click", function () { enterFullscreen(); startGame(false); });
       $("againBtn").addEventListener("click", function () { startGame(false); });
       $("endlessBtn").addEventListener("click", function () {
@@ -1687,10 +1652,11 @@
         drawHud();
         setTimeout(function () { if (id === S.run) nextRound(id); }, 1000);
       });
-      $("soundBtn").addEventListener("click", function () {
+      var soundBtnEl = $("soundBtn");
+      if (soundBtnEl) soundBtnEl.addEventListener("click", function () {
         S.muted = !S.muted;
         $("soundUse").setAttribute("href", S.muted ? "#i-sound-off" : "#i-sound-on");
-        $("soundBtn").setAttribute("aria-label", S.muted ? "Nyalakan suara" : "Matikan suara");
+        soundBtnEl.setAttribute("aria-label", S.muted ? "Nyalakan suara" : "Matikan suara");
         if (!S.muted) playRune(0);
       });
       function setPaused(p) {
@@ -1699,7 +1665,8 @@
         updatePauseIcon();
         $("pauseOverlay").classList.toggle("hidden", !p);
       }
-      $("pauseBtn").addEventListener("click", function () { setPaused(!S.paused); });
+      var pauseBtnEl = $("pauseBtn");
+      if (pauseBtnEl) pauseBtnEl.addEventListener("click", function () { setPaused(!S.paused); });
       $("resumeBtn").addEventListener("click", function () { setPaused(false); });
       $("quitBtn").addEventListener("click", function () {
         S.run++;
