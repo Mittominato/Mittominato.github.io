@@ -134,6 +134,48 @@
         gap: 10px;
         flex: none;
       }
+      /* ---------- Banner HUD atas: SATU panel memanjang yang menyatukan kedua
+         sisi HUD (pemain di kiri + boss di kanan) atas permintaan Harith —
+         mengikuti area yang dilingkari hijau pada screenshot acuannya.
+         Panelnya TRANSPARAN: latar game tetap terlihat tembus di baliknya.
+         Dibuat menarik tapi halus — gradasi lembut tembus pandang (ungu
+         penyihir di kiri memudar ke rona hangat boss di kanan), sudut
+         membulat besar, aksen garis tipis 1px yang samar + kilau tipis di
+         tepi atas, dan satu bintang emas kecil di ujung kanan atas.
+         SENGAJA bukan kotak kaku ber-border tebal seperti chip HUD lama:
+         tanpa isian pekat, tanpa shadow berat. Panel digambar ::before
+         dengan z-index -1 (di belakang isi HUD, di dalam konteks tumpuk
+         .hud sendiri), meluber sedikit keluar dari isi HUD sebagai bantalan,
+         dan pointer-events: none supaya tidak pernah mengganggu apa pun.
+         Isi & posisi HUD tidak berubah sama sekali ---------- */
+      .hud::before {
+        content: "";
+        position: absolute;
+        inset: -11px -12px;
+        z-index: -1;
+        border-radius: 26px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,0) 55%),
+          linear-gradient(90deg, rgba(167,120,255,.20), rgba(110,64,190,.10) 46%, rgba(255,170,110,.15));
+        border: 1px solid rgba(228,204,255,.30);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.16),
+          inset 0 -8px 16px rgba(20,6,44,.14),
+          0 6px 18px rgba(5,0,16,.22);
+        pointer-events: none;
+      }
+      /* Bintang emas kecil melayang di ujung kanan atas banner — aksen tipis
+         yang halus, senada bintang emas plakat/banner lama */
+      .hud::after {
+        content: "✦";
+        position: absolute;
+        top: -17px; right: 14px;
+        font-size: 11px; line-height: 1;
+        color: var(--gold);
+        text-shadow: 0 0 7px rgba(255,201,77,.85);
+        opacity: .9;
+        pointer-events: none;
+      }
       .hud-side { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
       .hud-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
       /* Kolom boss lebarnya mengikuti isi (nama boss) supaya nama tampil utuh
