@@ -2804,17 +2804,17 @@
           ctx.fill();
         }
 
-        var last = 0;
         function frame(ts) {
           var t = ts / 1000;
-          /* Gambar ulang maksimal ~15fps: aliran air & kunang-kunang tetap terlihat
-             mengalir dan beterbangan, tapi beban CPU/GPU HP berkurang setengahnya */
-          if (ts - last >= 66) {
-            last = ts;
-            ctx.clearRect(0, 0, view.w, view.h);
-            FALLS.forEach(function (f) { drawFall(f, t); });
-            flies.forEach(function (fl) { drawFly(fl, t); });
-          }
+          /* Gambar ulang di SETIAP frame requestAnimationFrame (full 60fps mengikuti
+             refresh rate layar): tidak ada lagi gate 66ms/~15fps, jadi aliran air &
+             kunang-kunang bergerak sehalus layar. Posisi dihitung dari waktu absolut,
+             jadi kecepatannya sama seperti sebelumnya — hanya gerakannya yang halus.
+             Batas DPR 1.5 dan jumlah garis aliran/kunang-kunang yang sudah diringankan
+             tetap dipertahankan supaya biaya gambar per frame tetap ringan. */
+          ctx.clearRect(0, 0, view.w, view.h);
+          FALLS.forEach(function (f) { drawFall(f, t); });
+          flies.forEach(function (fl) { drawFly(fl, t); });
           requestAnimationFrame(frame);
         }
         resize();
