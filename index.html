@@ -2088,7 +2088,11 @@
           });
         }
       }
-      /* Bola-bola melesat menghentak boss, lalu lenyap */
+      /* Bola-bola melesat menghentak boss, lalu lenyap.
+         Gerakannya LAMBAT -> CEPAT (ease-in kuat): mulai perlahan lalu makin
+         cepat sampai menghantam boss — bukan langsung cepat / linear.
+         Durasi diperpanjang 380 -> 540ms supaya rampung percepatannya
+         terasa, tetap animasi WAAPI transform di lapis GPU seperti sebelumnya */
       function slamSigils() {
         return new Promise(function (resolve) {
           var orbs = allOrbs();
@@ -2108,7 +2112,7 @@
               { transform: "translate(" + startTx + "px," + startTy + "px) scale(" + off.s + ")", opacity: 1 },
               { transform: "translate(" + dx + "px," + dy + "px) scale(.45) rotate(20deg)", opacity: .9, offset: 0.8 },
               { transform: "translate(" + dx + "px," + dy + "px) scale(.15)", opacity: 0 }
-            ], { duration: 380, delay: k * 45, easing: "cubic-bezier(.5,0,.8,.4)", fill: "forwards" });
+            ], { duration: 540, delay: k * 45, easing: "cubic-bezier(.55,0,1,.65)", fill: "forwards" });
             anim.onfinish = function () { if (++done === orbs.length) { resetSigils(); resolve(); } };
           });
         });
@@ -2309,9 +2313,16 @@
         castParticles();
         setPrompt("Mantra berhasil! Serang!", "good");
         setStatus("Combo sempurna!", "Mantra meluncur ke " + currentBoss().name);
-        /* Semua bola sigil yang terkumpul bersinar bersama, lalu melesat menghentak boss */
+        /* Fase efek jawaban benar DIPISAH supaya tidak serentak & berat:
+           (1) bola sigil terkumpul bersinar bersama + badan penyihir bercahaya
+               (wizCast di atas) — cahaya tampil penuh 500ms;
+           (2) JEDA 1000ms — sigil TETAP bercahaya (kelas .shine masih terpasang),
+               belum bergerak sama sekali;
+           (3) baru melesat menghentak boss dengan gerakan lambat -> cepat
+               (ease-in di slamSigils). */
         shineSigils(true);
         if (!(await sleep(500, id))) { shineSigils(false); return; }
+        if (!(await sleep(1000, id))) { shineSigils(false); return; }
         shineSigils(false);
         await slamSigils();
         if (id !== S.run) return;
