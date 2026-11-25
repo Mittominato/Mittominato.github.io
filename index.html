@@ -741,17 +741,21 @@
          (murah di GPU). Menggantikan cara lama — filter drop-shadow blur besar
          di tombol + brightness di gambarnya — yang digambar ulang tiap frame
          dan membuat urutan menyala & klik tersendat di HP.
-         DIPERKUAT atas permintaan Harith supaya urutan gampang diingat: lapisan
-         kini jauh lebih besar (inset -26%), inti putihnya pekat dan jelas di
-         tengah, dan pita warna sewarna tombolnya lebih tebal & lebih terang —
-         tombol yang menyala benar-benar menonjol dari yang diam. Tetap murah:
-         perkuatnya lewat ukuran & kecerahan gradasi STATIS ini saja, tanpa
-         filter yang dianimasikan sama sekali */
+         Kekuatannya versi yang lebih lembut (versi penguatan sempat dicoba lalu
+         dikembalikan atas permintaan Harith karena terlalu mencolok): lapisan
+         glow inset -13%, inti putih opacity .5, pita warna sewarna tombol .58.
+         DITAMBAH efek HALO: lapisan gradasi ketiga di tumpukan yang sama berupa
+         CINCIN cahaya lembut sewarna tombol yang mengelilingi permata (tengahnya
+         transparan, pitanya memuncak tepat di luar siluet permata lalu memudar)
+         — cukup sebagai penanda tombol mana yang menyala, bukan kilatan terang.
+         Halo ikut muncul lewat opacity lapisan ini saja: tetap gradasi statis
+         tanpa filter berat yang dianimasikan, jadi tetap murah di GPU HP */
       .pad-fx::after {
-        content: ""; position: absolute; inset: -26%;
+        content: ""; position: absolute; inset: -13%;
         background:
-          radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,255,255,.65) 17%, rgba(255,255,255,.18) 32%, transparent 46%),
-          radial-gradient(circle, color-mix(in srgb, var(--c) 82%, transparent) 36%, color-mix(in srgb, var(--c) 55%, transparent) 56%, color-mix(in srgb, var(--c) 26%, transparent) 72%, transparent 86%);
+          radial-gradient(circle, rgba(255,255,255,.5) 0%, rgba(255,255,255,.34) 17%, rgba(255,255,255,.09) 32%, transparent 46%),
+          radial-gradient(circle, transparent 58%, color-mix(in srgb, var(--c) 46%, transparent) 71%, color-mix(in srgb, var(--c) 19%, transparent) 83%, transparent 94%),
+          radial-gradient(circle, color-mix(in srgb, var(--c) 58%, transparent) 36%, color-mix(in srgb, var(--c) 39%, transparent) 56%, color-mix(in srgb, var(--c) 18%, transparent) 72%, transparent 86%);
         border-radius: 50%;
         opacity: 0;
         transition: opacity .12s ease;
@@ -762,14 +766,14 @@
       .pad:active { transform: scale(.94); }
       .pad-center:active { transform: translate(-50%, -50%) scale(.94); }
       .pad.lit {
-        transform: scale(1.16);
+        transform: scale(1.07);
         z-index: 4;
         /* Tanpa filter sama sekali saat menyala: beda lit dibaca dari scale
-           yang kini lebih besar (1.07 → 1.16, tetap transform saja = murah),
-           glow opacity di .pad-fx::after, dan gambar permata yang TIDAK pernah
+           1.07 (tetap transform saja = murah), glow + cincin halo yang muncul
+           lewat opacity di .pad-fx::after, dan gambar permata yang TIDAK pernah
            berganti filter (glow statis kecilnya tetap, tidak digambar ulang) */
       }
-      .pad-center.lit { transform: translate(-50%, -50%) scale(1.16); }
+      .pad-center.lit { transform: translate(-50%, -50%) scale(1.07); }
       .pad:disabled { cursor: default; }
 
       /* ---------- Overlays ---------- */
