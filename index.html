@@ -864,17 +864,33 @@
          arena TIDAK lagi menyerap semua sisa ruang. Tingginya dipatok supaya baris
          slot berhenti tepat di bawah pijakan penyihir & kucing di gambar latar —
          di ketinggian garis hijau pada screenshot acuan Harith (±48% tinggi layar).
-         Kelompok slot → tombol → banner naik bersama sebagai satu kelompok;
-         sisa ruang kini tertinggal kosong di BAWAH banner, bukan di arena.
+         (Riwayat: saat itu kelompok slot → tombol → banner dinaikkan bersama
+         sebagai satu kelompok dan sisa ruang tertinggal kosong di BAWAH
+         banner — arah ini kemudian dibalik lagi, lihat paragraf terbaru di
+         bawah.)
          Posisi kaki sprite tidak terpengaruh: layoutSprites menghitungnya dari
          geometri latar, bukan dari tinggi arena.
          Penyesuaian lanjutan atas permintaan Harith: kelompok ditarik ke atas
          SEDIKIT lagi (tinggi arena 37dvh → 34,5dvh) dan jarak antar ketiganya
          diregangkan lagi (padding bawah .slots-wrap, padding .cluster-wrap, dan
          margin-top .prompt-frame — lihat aturan masing-masing). Ukuran slot,
-         tombol, dan banner tidak berubah. */
+         tombol, dan banner tidak berubah.
+         Penyesuaian TERBARU atas permintaan Harith (membalik arah sebelumnya):
+         kelompok itu ternyata terlalu naik — tombol & teks prompt duduk di
+         tengah layar dengan ruang kosong besar di bawahnya. Kini arena TIDAK
+         lagi dipatok 34,5dvh: arena kembali menyerap SEMUA sisa ruang layar
+         (flex: 1 1 auto, dengan 34,5dvh hanya sebagai tinggi minimum), jadi
+         kelompok slot → tombol → teks prompt terdorong turun jauh ke dasar
+         layar sebagai satu kesatuan. Jarak antar ketiganya TIDAK berubah
+         (gap panggung + padding/margin masing-masing tetap), ukuran slot,
+         tombol, dan teks prompt tetap, dan teks prompt kini berakhir tepat
+         di atas padding bawah panggung (10px + safe-area) — hanya menyisakan
+         sedikit jarak ke tepi bawah, tanpa ruang kosong besar lagi.
+         Posisi kaki sprite & gugus sigil tidak terpengaruh: layoutSprites
+         menghitungnya dari geometri latar relatif terhadap dasar arena,
+         jadi penyihir, boss, dan sigil tetap di tempatnya semula. */
       @media (max-aspect-ratio: 62/100) {
-        .arena { flex: none; height: 34.5dvh; }
+        .arena { flex: 1 1 auto; height: auto; min-height: 34.5dvh; }
       }
       /* Layar sempit: foto HUD diperkecil supaya nama boss tetap dapat ruang */
       @media (max-width: 400px) {
