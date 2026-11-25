@@ -704,8 +704,20 @@
         user-select: none; -webkit-user-select: none;
         /* Hanya transform yang ditransisikan — transform & opacity murah di GPU HP.
            Filter SENGAJA tidak ditransisikan/dipakai di tombol: menganimasikan
-           drop-shadow/brightness berarti blur digambar ulang tiap frame = lag */
-        transition: transform .1s ease;
+           drop-shadow/brightness berarti blur digambar ulang tiap frame = lag.
+           Durasi & kurva transisi DIUBAH atas permintaan Harith (.1s ease →
+           .24s cubic-bezier(.22,1,.36,1)): transisi .1s hanya berisi ±6 frame
+           pada layar 60Hz, jadi langkah membesar (lit, scale 1.12) dan
+           mengecilnya kelihatan patah-patah seperti frame rate rendah —
+           apalagi di HP yang sebagian frame-nya terlewat. .24s berisi ±14
+           frame dengan kurva easeOutQuint: gerakannya deras di awal (tombol
+           tetap terasa responsif saat ditekan) lalu mendarat halus, jadi
+           tiap langkah ukurannya kecil & rapat dan terlihat mulus. Di ronde
+           tercepat durasi nyala (litPressMs ±198ms) memang sedikit lebih
+           pendek dari .24s, jadi tombol tidak sempat diam di ukuran penuh —
+           ia membesar lalu langsung mengecil lagi sebagai satu denyut halus
+           yang menyambung, bukan dua gerakan patah */
+        transition: transform .24s cubic-bezier(.22, 1, .36, 1);
         will-change: transform;
       }
       .pad-tl { left: 1%; top: 1%; }
@@ -803,7 +815,11 @@
           radial-gradient(circle, color-mix(in srgb, var(--c) 45%, transparent) 26%, color-mix(in srgb, var(--c) 26%, transparent) 55%, color-mix(in srgb, var(--c) 14%, transparent) 76%, transparent 94%);
         border-radius: 50%;
         opacity: 0;
-        transition: opacity .12s ease;
+        /* Durasi disamakan dengan transisi transform .pad (.24s, kurva sama)
+           supaya cahaya menyala memudar masuk SELARAS dengan membesarnya
+           tombol — sebelumnya .12s, cahayanya menyambar penuh sebelum
+           ukurannya selesai bergerak dan ikut terasa patah */
+        transition: opacity .24s cubic-bezier(.22, 1, .36, 1);
         pointer-events: none;
       }
       .pad.lit .pad-fx::after { opacity: 1; }
@@ -821,7 +837,10 @@
         -webkit-mask-image: radial-gradient(circle, transparent 0 30%, #000 42%, transparent 72%);
         mask-image: radial-gradient(circle, transparent 0 30%, #000 42%, transparent 72%);
         opacity: 0;
-        transition: opacity .12s ease;
+        /* Sama seperti .pad-fx::after: durasi & kurva diselaraskan dengan
+           transisi transform .pad (.24s) supaya sinar muncul bersamaan
+           dengan membesarnya tombol, bukan menyambar lebih dulu */
+        transition: opacity .24s cubic-bezier(.22, 1, .36, 1);
         pointer-events: none;
       }
       .pad.lit .pad-rays { opacity: 1; animation: sigRaysSpin 24s linear infinite; }
