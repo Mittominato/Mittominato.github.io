@@ -859,11 +859,12 @@
          lembutnya mengikuti siluet gambar lewat drop-shadow, bukan kotak.
          Ukuran menyesuaikan layar HP seperti kartu sebelumnya: dibatasi lebar
          layar, tinggi layar (rasio gambar 2:3), dan lebar maksimum kartu lama.
-         Lebar DIPERKECIL lagi atas permintaan Harith (94vw → 80vw) supaya
-         kiri-kanan kartu ada ruang lega yang lebar, tidak mepet tepi layar ---------- */
+         Lebar DIPERKECIL lagi atas permintaan Harith (94vw → 80vw, lalu
+         diperbesar sedikit jadi 85vw) supaya kiri-kanan kartu ada ruang
+         lega yang lebar, tidak mepet tepi layar ---------- */
       .tutorial-card {
         position: relative;
-        width: min(430px, 80vw, calc((100dvh - 44px) * 2 / 3));
+        width: min(430px, 85vw, calc((100dvh - 44px) * 2 / 3));
         flex: none;
         transition: opacity .38s ease, transform .38s ease;
       }
@@ -903,7 +904,7 @@
          transparan, kotak statistiknya KOSONG dan teks deskripsinya sudah
          dihapus dari gambarnya) ditampilkan UTUH tanpa latar kotak apa pun
          di belakangnya, sama seperti kartu tutorial. Skala & aturannya SAMA
-         seperti pop-up tutorial atas permintaan Harith: lebar ±80% layar,
+         seperti pop-up tutorial atas permintaan Harith: lebar ±85% layar,
          rata tengah, dan dibatasi tinggi layar (rasio gambar 3:4) supaya
          atas-bawahnya juga menyisakan ruang lega — tidak pernah memenuhi
          layar. Nilai statistik LIVE dari game ditulis JS ke tiga .go-stat
@@ -912,7 +913,7 @@
          ditaruh tombol transparan (.go-play) persis seperti .tut-play ---------- */
       .gameover-card {
         position: relative;
-        width: min(430px, 80vw, calc((100dvh - 44px) * 3 / 4));
+        width: min(430px, 85vw, calc((100dvh - 44px) * 3 / 4));
         flex: none;
         container-type: inline-size;
       }
