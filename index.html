@@ -830,6 +830,19 @@
         .level-plaque { padding: calc(4px + env(safe-area-inset-top)) 26px 5px; }
         .sigil { width: clamp(16px, 4.5vw, 24px); }
       }
+      /* Layar potret (kondisi yang sama seperti pemetaan tebing di layoutSprites):
+         arena TIDAK lagi menyerap semua sisa ruang. Tingginya dipatok supaya baris
+         slot berhenti tepat di bawah pijakan penyihir & kucing di gambar latar —
+         di ketinggian garis hijau pada screenshot acuan Harith (±48% tinggi layar).
+         Kelompok slot → tombol → banner naik bersama sebagai satu kelompok dengan
+         jarak antar ketiganya PERSIS seperti sebelumnya (celah panggung & padding
+         ketiganya tidak berubah, ukuran ketiganya juga tidak berubah); sisa ruang
+         kini tertinggal kosong di BAWAH banner, bukan di arena. Posisi kaki sprite
+         tidak terpengaruh: layoutSprites menghitungnya dari geometri latar,
+         bukan dari tinggi arena. */
+      @media (max-aspect-ratio: 62/100) {
+        .arena { flex: none; height: 37dvh; }
+      }
       /* Layar sempit: keping HUD diperkecil supaya nama boss tetap dapat ruang */
       @media (max-width: 400px) {
         .hud { gap: 5px; }
