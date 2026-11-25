@@ -736,14 +736,22 @@
            radialnya sendiri, jadi tidak ada lapisan filter yang digambar sama sekali */
         opacity: .85;
       }
-      /* Lapisan menyala (lit): glow sewarna tombol + inti putih hangat, digambar
+      /* Lapisan menyala (lit): glow sewarna tombol + inti putih terang, digambar
          SEKALI sebagai gradasi statis; yang dianimasikan hanya opacity-nya
          (murah di GPU). Menggantikan cara lama — filter drop-shadow blur besar
          di tombol + brightness di gambarnya — yang digambar ulang tiap frame
-         dan membuat urutan menyala & klik tersendat di HP */
+         dan membuat urutan menyala & klik tersendat di HP.
+         DIPERKUAT atas permintaan Harith supaya urutan gampang diingat: lapisan
+         kini jauh lebih besar (inset -26%), inti putihnya pekat dan jelas di
+         tengah, dan pita warna sewarna tombolnya lebih tebal & lebih terang —
+         tombol yang menyala benar-benar menonjol dari yang diam. Tetap murah:
+         perkuatnya lewat ukuran & kecerahan gradasi STATIS ini saja, tanpa
+         filter yang dianimasikan sama sekali */
       .pad-fx::after {
-        content: ""; position: absolute; inset: -13%;
-        background: radial-gradient(circle, rgba(255,255,255,.5) 0%, color-mix(in srgb, var(--c) 58%, transparent) 42%, color-mix(in srgb, var(--c) 24%, transparent) 63%, transparent 76%);
+        content: ""; position: absolute; inset: -26%;
+        background:
+          radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,255,255,.65) 17%, rgba(255,255,255,.18) 32%, transparent 46%),
+          radial-gradient(circle, color-mix(in srgb, var(--c) 82%, transparent) 36%, color-mix(in srgb, var(--c) 55%, transparent) 56%, color-mix(in srgb, var(--c) 26%, transparent) 72%, transparent 86%);
         border-radius: 50%;
         opacity: 0;
         transition: opacity .12s ease;
@@ -754,13 +762,14 @@
       .pad:active { transform: scale(.94); }
       .pad-center:active { transform: translate(-50%, -50%) scale(.94); }
       .pad.lit {
-        transform: scale(1.07);
+        transform: scale(1.16);
         z-index: 4;
-        /* Tanpa filter sama sekali saat menyala: beda lit dibaca dari scale,
+        /* Tanpa filter sama sekali saat menyala: beda lit dibaca dari scale
+           yang kini lebih besar (1.07 → 1.16, tetap transform saja = murah),
            glow opacity di .pad-fx::after, dan gambar permata yang TIDAK pernah
            berganti filter (glow statis kecilnya tetap, tidak digambar ulang) */
       }
-      .pad-center.lit { transform: translate(-50%, -50%) scale(1.07); }
+      .pad-center.lit { transform: translate(-50%, -50%) scale(1.16); }
       .pad:disabled { cursor: default; }
 
       /* ---------- Overlays ---------- */
