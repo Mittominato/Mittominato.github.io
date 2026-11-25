@@ -122,7 +122,7 @@
          diberi bayangan gelap lembut supaya tetap terbaca langsung di atas latar ---------- */
       .hud {
         position: absolute;
-        top: calc(84px + env(safe-area-inset-top));
+        top: calc(70px + env(safe-area-inset-top));
         left: 50%;
         transform: translateX(-50%);
         width: calc(100% - 2 * var(--pad-x));
@@ -369,6 +369,10 @@
         min-height: 40px;
         /* Margin atas 8px: jarak tombol → teks prompt tetap seperti jarak ke banner dulu */
         margin-top: 8px;
+        /* Margin bawah 14px: seluruh kelompok kontrol (slot, tombol permata,
+           teks prompt) terangkat ~14px dari bawah layar; arena menyusut
+           karenanya, jarak antar ketiga elemen dan ukurannya tidak berubah */
+        margin-bottom: 14px;
         display: flex; align-items: center; justify-content: center;
       }
       .prompt {
@@ -873,7 +877,7 @@
       .card .big-emoji { font-size: 44px; line-height: 1; }
 
       @media (max-height: 740px) {
-        .hud { top: calc(64px + env(safe-area-inset-top)); }
+        .hud { top: calc(52px + env(safe-area-inset-top)); }
         .cluster { width: min(60vw, 30dvh, 300px); }
         .prompt { font-size: 16px; padding: 2px 4px; }
         .prompt-frame { margin-top: 6px; width: min(94%, 520px); min-height: 36px; }
