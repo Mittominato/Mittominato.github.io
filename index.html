@@ -643,12 +643,15 @@
          bercahaya + simbol di tengah + pil label gelap yang sudah menyatu di gambarnya,
          jadi tidak ada label HTML tambahan. Hijau = Komet beneran (kepala bulat + ekor
          melengkung), beda jelas dari Bintang ungu. */
-      .cluster-wrap { flex: none; display: flex; justify-content: center; padding: 4px 0 2px; width: 100%; margin-bottom: 6dvh; }
+      /* Margin bawah 6dvh yang dulu mengangkat cluster dari dasar layar kini DIHAPUS:
+         banner prompt pindah ke paling bawah layar (di bawah cluster), jadi ruang
+         lapang di bawah tombol kini diisi banner itu sendiri, bukan margin kosong */
+      .cluster-wrap { flex: none; display: flex; justify-content: center; padding: 4px 0 2px; width: 100%; }
       .cluster {
         position: relative;
         /* Diperkecil lagi atas permintaan Harith: keseluruhan cluster TERMASUK radius
            cahayanya kini muat di dalam kotak merah acuannya di screenshot (±68% lebar
-           layar), dan duduk lebih ke atas (lihat margin-bottom .cluster-wrap) */
+           layar). Cluster duduk di antara baris slot (atas) dan banner (bawah) */
         width: min(63vw, 30dvh, 360px);
         aspect-ratio: 1 / 1;
         flex: none;
@@ -959,15 +962,8 @@
         <div id="fxLayer"></div>
       </section>
 
-      <!-- Prompt: banner pita ungu seperti mockup malam, bintang emas di sisinya,
-           teks prompt berganti-ganti di tengah pita -->
-      <div class="prompt-frame">
-        <span class="ribbon-star" aria-hidden="true">★</span>
-        <div class="prompt watch" id="prompt" role="status">Siap untuk memulai!</div>
-        <span class="ribbon-star small" aria-hidden="true">★</span>
-      </div>
-
-      <!-- Sequence slots: deretan slot sigil melayang tanpa lingkaran sihir di belakangnya -->
+      <!-- Sequence slots: deretan slot sigil melayang tanpa lingkaran sihir di belakangnya.
+           Baris slot kini PALING ATAS dari kelompok kontrol (di atas tombol) atas permintaan Harith -->
       <div class="slots-wrap">
         <div class="slots" id="slots" aria-label="Kartu urutan mantra">
           <span class="hint">Kartu urutan mantra akan muncul di sini</span>
@@ -975,7 +971,7 @@
       </div>
 
       <!-- Spell cluster: 5 tombol permata glossy berkumpul pola dadu-5 — 4 sudut + Kristal di tengah,
-           label nama sudah menyatu di gambar tiap permata -->
+           label nama sudah menyatu di gambar tiap permata. Cluster duduk tepat di bawah baris slot -->
       <div class="cluster-wrap">
         <div class="cluster" id="cluster" role="group" aria-label="Tombol mantra">
           <button type="button" class="pad pad-tl" data-i="0" style="--c:#b26bff;" aria-label="Mantra Bintang">
@@ -999,6 +995,16 @@
             <span class="pad-fx" aria-hidden="true"></span>
           </button>
         </div>
+      </div>
+
+      <!-- Prompt: banner pita ungu seperti mockup malam, bintang emas di sisinya,
+           teks prompt berganti-ganti di tengah pita. Banner kini PALING BAWAH layar
+           (di bawah tombol) atas permintaan Harith, supaya tombol lebih terlihat
+           dan tidak ada gangguan di atas tombol -->
+      <div class="prompt-frame">
+        <span class="ribbon-star" aria-hidden="true">★</span>
+        <div class="prompt watch" id="prompt" role="status">Siap untuk memulai!</div>
+        <span class="ribbon-star small" aria-hidden="true">★</span>
       </div>
 
       <!-- Start overlay -->
