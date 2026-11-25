@@ -2338,9 +2338,13 @@
         castParticles();
         setPrompt("Mantra berhasil! Serang!", "good");
         setStatus("Combo sempurna!", "Mantra meluncur ke " + currentBoss().name);
-        /* Fase efek jawaban benar DIPISAH supaya tidak serentak & berat,
-           dan masa sigilnya DIPERPENDEK jadi total 600ms atas permintaan
-           Harith (sebelumnya 500ms bersinar + jeda 1000ms = 1500ms):
+        /* Fungsi ini kini dipanggil SETELAH animasi nyala tombol terakhir
+           selesai (lihat handlePadPress): urutan lengkapnya berurutan —
+           tombol selesai dulu, BARU karakter berefek, BARU sigil meluncur.
+           Fase efek jawaban benar di sini DIPISAH supaya tidak serentak &
+           berat, dan masa sigilnya DIPERPENDEK jadi total 600ms atas
+           permintaan Harith (sebelumnya 500ms bersinar + jeda 1000ms =
+           1500ms):
            (1) bola sigil terkumpul bersinar bersama + badan penyihir
                bercahaya (wizCast di atas) — total 600ms, denyut WAAPI
                shineSigils (450ms) tuntas di dalamnya;
@@ -2502,7 +2506,25 @@
           S.inputIdx++;
           S.score += 10;
           drawHud();
-          if (S.inputIdx >= S.seq.length) roundComplete(id);
+          if (S.inputIdx >= S.seq.length) {
+            /* Tekanan TERAKHIR yang benar: urutan efeknya KINI BERURUTAN,
+               tidak lagi serentak (permintaan Harith — dulu wizCast jalan
+               BERSAMAAN dengan tekanan tombol terakhir, tumpang tindih
+               dengan animasi nyala tombolnya):
+               (1) tombol terakhir dibiarkan SELESAI dulu — animasi nyala
+                   tekanan (litPressMs, diputar flashPad di atas) jalan
+                   sampai habis TANPA efek karakter apa pun;
+               (2) BARU roundComplete jalan: penyihir berefek (wizCast —
+                   cahaya kontras terang + ayunan tongkat) + sigil bersinar;
+               (3) BARU sigil meluncur menghentak boss (di dalam
+                   roundComplete, setelah jendela shine 600ms).
+               Fase langsung dikunci "busy" supaya tidak ada tekanan lain
+               yang masuk selama menunggu nyala tombol selesai; timer
+               flashPad yang terdaftar lebih dulu melepas kelas lit tepat
+               sebelum timer ini memanggil roundComplete */
+            S.phase = "busy";
+            setTimeout(function () { if (id === S.run) roundComplete(id); }, litPressMs());
+          }
           else setStatus("Betul! Lanjut…", (S.seq.length - S.inputIdx) + " mantra lagi");
         } else {
           wrongPress(id, i);
