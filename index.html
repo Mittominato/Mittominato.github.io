@@ -382,11 +382,17 @@
       .prompt.good { color: var(--green); }
       .prompt.bad { color: #ff8fa3; }
 
-      /* ---------- Deretan sigil bercahaya di langit arena (penunjuk urutan seperti di video) ---------- */
+      /* ---------- Deretan sigil bercahaya (penunjuk urutan seperti di video) ---------- */
       /* Tanpa kotak & tanpa border: tiap simbol diam di halo cahayanya sendiri,
-         jarak lega, ukuran & posisi naik-turun tidak seragam supaya tidak terlihat seperti baris slot */
+         jarak lega, ukuran & posisi naik-turun tidak seragam supaya tidak terlihat seperti baris slot.
+         Baris ini DITURUNKAN dari langit dekat bulan ke ketinggian pangkal pulau kastil
+         melayang (permukaan rumput pulau di gambar latar, pecahan y ≈ 0,29): posisi
+         pastinya dihitung JS (layoutSprites) mengikuti geometri background-size: cover
+         gambar latar — sama seperti penempatan penyihir & kucing — jadi sigil selalu
+         duduk di ketinggian pulau itu di semua ukuran layar; nilai top di sini hanya
+         cadangan sebelum JS jalan */
       .sigils {
-        position: absolute; top: 2px; left: 50%; transform: translateX(-50%);
+        position: absolute; top: 46%; left: 50%; transform: translateX(-50%);
         display: flex; gap: clamp(8px, 2.6vw, 30px); align-items: flex-start;
         z-index: 3; pointer-events: none;
       }
@@ -1962,8 +1968,15 @@
          background-position panggung, lalu menaruh kaki tiap sprite tepat di atasnya —
          tidak ada pijakan dobel, tidak ada karakter melayang. Bayangan tanah dan hantu
          kucing ikut digeser mengikutinya. Di layar lebar (lanskap) tebing tidak terlihat
-         utuh, jadi karakter kembali menapak di dasar arena seperti sebelumnya. */
+         utuh, jadi karakter kembali menapak di dasar arena seperti sebelumnya.
+         Fungsi yang sama juga menurunkan baris sigil: pangkal pulau kastil melayang
+         (permukaan rumput pulau, tempat jalan batu di depan pintu kastil) berada di
+         ±29,8% tinggi gambar, jadi puncak baris sigil ditaruh di pecahan 0,29 gambar
+         latar — sigil melayang tepat di ketinggian pulau itu, di antara penyihir dan
+         kucing, di atas banner & tombol permata. Hasilnya dibatasi supaya baris sigil
+         tidak pernah keluar dari arena di layar lebar/pendek. */
       var LEDGE_L = 0.440, LEDGE_R = 0.445, BG_W = 1152, BG_H = 2048;
+      var SIGIL_Y = 0.29;
       function layoutSprites() {
         var sr = $("stage").getBoundingClientRect(), ar = arena.getBoundingClientRect();
         var posY = window.innerWidth >= 760 ? 0.16 : 0.5;
@@ -1981,6 +1994,15 @@
         if (shW) shW.style.bottom = (rw - 6) + "px";
         if (shC) shC.style.bottom = (rc - 6) + "px";
         $("ghost").style.bottom = (rc + catSprite.offsetHeight * 0.9) + "px";
+        /* Baris sigil diturunkan ke ketinggian pangkal pulau kastil: petakan pecahan
+           SIGIL_Y gambar latar ke layar dengan rumus cover yang sama, ubah ke koordinat
+           relatif terhadap puncak arena, lalu batasi di dalam arena */
+        var sig = $("sigils");
+        if (sig) {
+          var sTop = (offY + SIGIL_Y * dispH) - (ar.top - sr.top);
+          var sMax = Math.max(0, ar.height - 58);
+          sig.style.top = Math.min(Math.max(sTop, 0), sMax) + "px";
+        }
       }
       window.addEventListener("resize", layoutSprites);
       window.addEventListener("load", layoutSprites);
