@@ -1166,7 +1166,7 @@
       /* ---------- Overlay video ULTIMATE (mode cerita saja) ----------
          Lapisan fullscreen di atas papan (z-index 30: di atas hitung mundur
          15 & overlay menu 20, di bawah layar loading 999). Videonya file
-         terpisah "ultimate.mp4" di samping index.html (BUKAN di assets/),
+         terpisah "ultimate-v2.mp4" di samping index.html (BUKAN di assets/),
          LANDSCAPE 16:9 seperti YouTube — TIDAK di-crop jadi potret:
          video tampil selebar layar di tengah, dan area atas-bawahnya diisi
          latar game (bg-castle) yang di-blur (.ult-bg). Setelah video mulai
@@ -1634,7 +1634,7 @@
 
       <!-- Overlay video ULTIMATE (mode cerita): muncul fullscreen saat mantra
            satu boss lengkap, sebelum rentetan sigil menghantam boss. Videonya
-           file terpisah "ultimate.mp4" di samping index.html — SENGAJA bukan
+           file terpisah "ultimate-v2.mp4" di samping index.html — SENGAJA bukan
            di assets/ dan bukan data URI: file itu dideploy berdampingan di
            GitHub Pages & preview VPS. preload="auto" memuatnya di latar
            belakang sejak game dibuka supaya langsung jalan saat dibutuhkan;
@@ -1649,7 +1649,7 @@
            rentetan sigil tanpa macet -->
       <div class="ult-overlay hidden" id="ultOverlay" role="button" aria-label="Video ultimate — ketuk untuk lewati">
         <div class="ult-bg" aria-hidden="true"></div>
-        <video id="ultVideo" src="ultimate.mp4" preload="auto" muted playsinline webkit-playsinline></video>
+        <video id="ultVideo" src="ultimate-v2.mp4" preload="auto" muted playsinline webkit-playsinline></video>
         <button type="button" class="ult-play" id="ultPlayBtn"><span class="ult-play-ic" aria-hidden="true">▶</span> Putar Ultimate</button>
         <div class="ult-skip">Ketuk untuk lewati</div>
       </div>
@@ -2747,7 +2747,7 @@
       }
       /* Video ultimate: janji yang selesai saat video berakhir, dilewati
          pemain (ketuk overlay SETELAH video jalan), ATAU gagal dimuat.
-         FALLBACK WAJIB: file "ultimate.mp4" adalah file terpisah di samping
+         FALLBACK WAJIB: file "ultimate-v2.mp4" adalah file terpisah di samping
          index.html — di tempat file itu tidak ada (mis. tautan share), video
          ditandai rusak sejak awal dan fungsi ini langsung selesai tanpa
          menampilkan overlay, jadi game lanjut ke rentetan sigil tanpa macet
@@ -3320,7 +3320,7 @@
       drawHud();
       layoutSprites();
       /* Video ultimate dimuat di latar belakang sejak game dibuka
-         (preload="auto" pada elemennya). Bila file "ultimate.mp4" tidak
+         (preload="auto" pada elemennya). Bila file "ultimate-v2.mp4" tidak
          ada atau gagal dimuat di tempat game ini dibuka, tandai rusak
          sejak awal supaya playUltimate melewatinya tanpa menampilkan
          overlay sama sekali */
