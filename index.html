@@ -725,16 +725,24 @@
       .slot.filled .q { display: none; }
       .slot.wrong { animation: shake .35s ease; }
       .slot.wrong .q { color: #ff8fa3; opacity: .95; filter: blur(.3px); text-shadow: 0 0 10px rgba(255,84,112,.9); }
-      /* Ronde cerita BERHASIL: slot terisi BERCAHAYA dulu (permata jauh lebih
-         terang + membesar sedikit, sinarnya menyala penuh), lalu permatanya
-         terbang satu per satu ke mantra (lihat .slot-flyer & flySlotToMantra
-         di JS) dan slotnya kembali kosong/redup (.spent) */
+      /* Ronde cerita BERHASIL: slot terisi BERCAHAYA dulu bersamaan (permata
+         jauh lebih terang + membesar sedikit, sinarnya menyala penuh), lalu
+         semua slot MENGECIL BERSAMAAN jadi setengah ukuran (.fly-shrink),
+         lalu permatanya terbang SERENTAK ke mantra (lihat .slot-flyer &
+         flySlotToMantra di JS) dan slotnya kembali kosong/redup (.spent) */
       .slot.fly-glow { transform: scale(1.32); z-index: 2; }
       .slot.fly-glow .slot-img {
         filter: brightness(1.65) saturate(1.2)
           drop-shadow(0 0 4px var(--c))
           drop-shadow(0 0 12px var(--c))
           drop-shadow(0 0 22px color-mix(in srgb, var(--c) 65%, transparent));
+      }
+      /* Fase mengecil bersamaan: setengah dari ukuran slot terisi saat ini
+         (.slot.filled = scale(1.08) → setengahnya .54), transisi transform
+         .slot diperpanjang khusus fase ini supaya mengecilnya halus */
+      .slot.fly-shrink {
+        transform: scale(.54);
+        transition: transform .3s ease;
       }
       .slot.spent .q { opacity: .3; }
       /* Permata terbang dari slot menuju mantra: elemen fixed di atas semua
@@ -2686,12 +2694,14 @@
       /* ---------- Slot terbang ke mantra (mode cerita) ----------
          Pengganti peran gugus sigil pengorbit tongkat saat satu ronde
          berhasil: (1) semua slot terisi ronde itu BERCAHAYA bersamaan,
-         (2) lalu permatanya terbang SATU PER SATU — jejak & ledakan
-         percikan sewarna permatanya seperti firework — menuju bagian
-         mantra yang akan menyala, (3) animasinya ditunggu sampai TUNTAS;
-         pemanggil (roundComplete) BARU mengisi/menyalakan mantra setelah
-         fungsi ini selesai. Elemen terbangnya fixed di atas papan dan
-         digerakkan WAAPI transform saja (GPU), ringan di HP */
+         (2) lalu semua slot itu MENGECIL BERSAMAAN jadi setengah ukuran,
+         (3) lalu permatanya terbang SERENTAK (bersamaan, bukan satu per
+         satu) — jejak & ledakan percikan sewarna permatanya seperti
+         firework — menuju bagian mantra yang akan menyala, (4) animasinya
+         ditunggu sampai SEMUA permata tiba; pemanggil (roundComplete)
+         BARU mengisi/menyalakan mantra setelah fungsi ini selesai.
+         Elemen terbangnya fixed di atas papan dan digerakkan WAAPI
+         transform saja (GPU), ringan di HP */
       function flySpark(x, y, color, big) {
         var sp = document.createElement("div");
         sp.className = "fly-spark";
@@ -2732,9 +2742,12 @@
             var arc = -Math.sin(p * Math.PI) * 34;
             flySpark(sx + dx * p + (Math.random() - .5) * 10, sy + dy * p + arc + (Math.random() - .5) * 10, r.color, false);
           }, 55);
+          /* Permata berangkat dari ukuran slot yang sudah mengecil
+             (setengah ukuran), membesar sedikit di tengah lintasan,
+             lalu menyusut lagi saat masuk ke mantra */
           var anim = flyer.animate([
-            { transform: "translate(0,0) scale(1) rotate(0deg)", opacity: 1 },
-            { transform: "translate(" + dx * .5 + "px," + (dy * .5 - 34) + "px) scale(1.18) rotate(10deg)", opacity: 1, offset: .55 },
+            { transform: "translate(0,0) scale(.55) rotate(0deg)", opacity: 1 },
+            { transform: "translate(" + dx * .5 + "px," + (dy * .5 - 34) + "px) scale(.85) rotate(10deg)", opacity: 1, offset: .55 },
             { transform: "translate(" + dx + "px," + dy + "px) scale(.5) rotate(22deg)", opacity: .95 }
           ], { duration: durMs, easing: "cubic-bezier(.3,.55,.35,1)", fill: "forwards" });
           anim.onfinish = function () {
@@ -2757,26 +2770,27 @@
         /* Targetnya: bagian mantra yang akan menyala oleh ronde ini */
         var spans = $("mantraWords").querySelectorAll(".mantra-part");
         var target = spans[S.mantraLit] || $("mantra");
-        /* Durasi awal per penerbangan menyesuaikan panjang urutan, supaya
-           ronde panjang (sampai 15 slot) total animasinya tetap wajar */
+        /* Durasi penerbangan menyesuaikan panjang urutan, supaya ronde
+           panjang (sampai 15 slot) total animasinya tetap wajar. Semua
+           permata terbang dengan durasi yang SAMA karena serentak */
         var n = filled.length;
-        var dur0 = n <= 5 ? 460 : (n <= 10 ? 350 : 270);
-        /* (2) Satu per satu: permata terbang, slotnya langsung kosong.
-           Tiap penerbangan berikutnya MAKIN CEPAT dari sebelumnya:
-           durasinya menyusut bertahap dari dur0 (slot pertama) sampai
-           150ms (slot terakhir) — mulai lambat, makin cepat seiring
-           selesai, sesuai permintaan Harith */
-        for (var j = 0; j < filled.length; j++) {
-          if (id !== S.run) return false;
-          var slotEl = slotsEl.children[filled[j]];
-          var ft = n > 1 ? j / (n - 1) : 0;
-          var dur = Math.round(dur0 + (150 - dur0) * ft);
-          var fly = flySlotToMantra(slotEl, S.seq[filled[j]], target, dur);
-          slotEl.classList.remove("fly-glow", "filled");
+        var dur = n <= 5 ? 520 : (n <= 10 ? 460 : 400);
+        /* (2) Semua slot mengecil BERSAMAAN jadi setengah ukuran
+           (.fly-shrink, scale .54) — ditunggu sampai mengecilnya tuntas */
+        filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-shrink"); });
+        if (!(await sleep(320, id))) return false;
+        /* (3) Semua permata terbang SERENTAK menuju mantra; slotnya
+           langsung kosong bersamaan. Ditunggu sampai SEMUA tiba —
+           mantra baru terisi oleh pemanggil setelah ini selesai */
+        var flights = filled.map(function (k) {
+          var slotEl = slotsEl.children[k];
+          var fly = flySlotToMantra(slotEl, S.seq[k], target, dur);
+          slotEl.classList.remove("fly-glow", "fly-shrink", "filled");
           slotEl.classList.add("spent");
           slotEl.querySelector(".q").textContent = "?";
-          await fly;
-        }
+          return fly;
+        });
+        await Promise.all(flights);
         return id === S.run;
       }
 
@@ -2884,8 +2898,9 @@
            tombol selesai dulu, BARU karakter berefek, BARU efek lanjutannya.
            Sesudah itu, per mode:
            - MODE CERITA: TIDAK ada hentaman & TIDAK ada damage. Slot
-             terisi ronde ini BERCAHAYA, lalu permatanya terbang satu per
-             satu seperti firework menuju mantra (slotFlightToMantra);
+             terisi ronde ini BERCAHAYA bersamaan, lalu mengecil bersamaan
+             jadi setengah ukuran, lalu permatanya terbang SERENTAK
+             seperti firework menuju mantra (slotFlightToMantra);
              mantra BARU terisi setelah animasi itu selesai seluruhnya —
              satu bagian mantra menyala (lihat cabang story di bawah).
            - MODE BEBAS: tidak berubah — fase bersinar total 600ms (bola
@@ -2895,8 +2910,9 @@
         if (story) {
           S.score += S.seq.length * 25 + 50;
           gainXp(dmg);
-          /* Slot bercahaya → permata terbang satu per satu ke mantra →
-             animasi ditunggu tuntas → BARU mantra terisi di bawah ini */
+          /* Slot bercahaya bersamaan → mengecil bersamaan → permata
+             terbang serentak ke mantra → animasi ditunggu tuntas →
+             BARU mantra terisi di bawah ini */
           if (!(await slotFlightToMantra(id))) return;
           /* Satu bagian mantra aktif: kata barunya menyala emas + bar
              progres maju. HP boss TIDAK berubah sama sekali di sini */
