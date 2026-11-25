@@ -1078,6 +1078,18 @@
          tidak lagi muncul. */
       var LOCKED_BOSS_FROM = BOSSES.length;
       var FREE_NAMES = ["Kucing Meme Legendaris", "Kucing Viral", "Kucing Sejuta Umat", "Kucing Sultan", "Kucing Tanpa Nama"];
+      /* Rencana ronde tiap level (mode cerita): tiap angka adalah panjang urutan
+         mantra di satu ronde, dan ronde dimainkan berurutan sesuai daftar ini.
+         Boss kalah tepat setelah ronde terakhir selesai.
+         L1: 3 slot 2x · L2: 3 slot 1x + 4 slot 2x · L3: 4 slot 2x + 5 slot 1x
+         L4: 5 slot 2x + 6 slot 2x · L5: 6 slot 2x + 7 slot 3x */
+      var LEVEL_PLANS = [
+        [3, 3],
+        [3, 4, 4],
+        [4, 4, 5],
+        [5, 5, 6, 6],
+        [6, 6, 7, 7, 7]
+      ];
 
       var $ = function (id) { return document.getElementById(id); };
       var pads = Array.prototype.slice.call(document.querySelectorAll(".pad"));
@@ -1579,7 +1591,12 @@
       async function nextRound(id) {
         S.round++;
         S.bestRound = Math.max(S.bestRound, S.round);
-        var len = 2 + Math.min(S.bossIdx, 4) + S.round + (S.cycle - 1);
+        /* Mode cerita: panjang urutan mengikuti rencana ronde level ini.
+           Mode bebas: rumus lama (urutan terus memanjang) tidak diubah. */
+        var plan = (!S.endless && S.bossIdx < BOSSES.length) ? LEVEL_PLANS[S.bossIdx] : null;
+        var len = plan
+          ? plan[Math.min(S.round - 1, plan.length - 1)]
+          : 2 + Math.min(S.bossIdx, 4) + S.round + (S.cycle - 1);
         S.seq = [];
         for (var k = 0; k < len; k++) S.seq.push(Math.floor(Math.random() * RUNES.length));
         buildSlots(len);
@@ -1612,7 +1629,15 @@
       }
       async function roundComplete(id) {
         S.phase = "busy";
+        /* Mode cerita: damage dibagi dari sisa HP boss ke ronde-ronde yang tersisa
+           di rencana level ini, jadi tiap ronde tuntas mengurangi HP dan boss jatuh
+           tepat di ronde terakhir — tidak lebih awal, tidak lebih lambat.
+           Mode bebas: damage lama (panjang urutan x 2) tidak diubah. */
         var dmg = S.seq.length * 2;
+        if (!S.endless && S.bossIdx < BOSSES.length) {
+          var roundsLeft = Math.max(1, LEVEL_PLANS[S.bossIdx].length - (S.round - 1));
+          dmg = Math.min(S.bossHp, Math.ceil(S.bossHp / roundsLeft));
+        }
         sfxComplete();
         wizSprite.classList.add("cast");
         setTimeout(function () { wizSprite.classList.remove("cast"); }, 550);
