@@ -696,10 +696,25 @@
         object-fit: contain; display: block;
         position: relative; z-index: 1;
         pointer-events: none;
-        /* Glow STATIS mengikuti siluet segi permata — DIPERKECIL lagi atas permintaan
-           Harith: cahayanya kini hanya menutupi sisi-sisi tepi permata supaya tombol
-           tidak kelihatan menempel, tidak melebar keluar siluetnya sama sekali */
-        filter: drop-shadow(0 0 2px color-mix(in srgb, var(--c) 60%, transparent))
+        /* Keadaan IDLE sedikit diredupkan atas permintaan Harith: saturasi,
+           kecerahan & kontras diturunkan SEDIKIT saja (saturate .84,
+           brightness .89, contrast .95) supaya tombol yang menyala makin
+           menonjol — warnanya tetap hidup, tidak abu-abu/mati. Peredupan ini
+           STATIS: filter tidak ditransisikan/dianimasikan (transisi .pad
+           hanya transform), jadi filter hanya digambar ulang sekali saat
+           tombol berganti keadaan lit/idle, bukan tiap frame — tetap ringan
+           di HP. Glow STATIS mengikuti siluet segi permata tetap seperti
+           sebelumnya, menempel rapat di sisi-sisi tepi permata */
+        filter: saturate(.84) brightness(.89) contrast(.95)
+          drop-shadow(0 0 2px color-mix(in srgb, var(--c) 60%, transparent))
+          drop-shadow(0 0 5px color-mix(in srgb, var(--c) 35%, transparent))
+          drop-shadow(0 0 8px color-mix(in srgb, var(--c) 18%, transparent));
+      }
+      /* Saat MENYALA (dan saat ditekan) warna permata kembali PENUH seperti
+         sebelumnya — tanpa peredupan sama sekali; glow statisnya sama persis */
+      .pad.lit .pad-img, .pad:active .pad-img {
+        filter: saturate(1) brightness(1) contrast(1)
+          drop-shadow(0 0 2px color-mix(in srgb, var(--c) 60%, transparent))
           drop-shadow(0 0 5px color-mix(in srgb, var(--c) 35%, transparent))
           drop-shadow(0 0 8px color-mix(in srgb, var(--c) 18%, transparent));
       }
@@ -728,9 +743,14 @@
         background: radial-gradient(circle, transparent 52%, color-mix(in srgb, var(--c) 38%, transparent) 68%, color-mix(in srgb, var(--c) 16%, transparent) 80%, transparent 89%);
         border-radius: 58% 42% 55% 45% / 48% 56% 44% 52%;
         /* Tanpa filter blur: kelembutan halo datang dari pemberhentian gradasi
-           radialnya sendiri, jadi tidak ada lapisan filter yang digambar sama sekali */
-        opacity: .85;
+           radialnya sendiri, jadi tidak ada lapisan filter yang digambar sama sekali.
+           Di keadaan idle halo statis ini ikut diredupkan sedikit (.85 → .58)
+           mendampingi peredupan gambar permatanya; opacity berubah seketika
+           saat keadaan berganti (tanpa transisi/animasi), jadi tetap ringan */
+        opacity: .58;
       }
+      /* Halo statis kembali penuh saat tombol menyala / ditekan */
+      .pad.lit .pad-fx::before, .pad:active .pad-fx::before { opacity: .85; }
       /* Lapisan menyala (lit): glow sewarna tombol + inti putih, digambar SEKALI
          sebagai gradasi statis; yang dianimasikan hanya opacity-nya (murah di
          GPU). Menggantikan cara lama — filter drop-shadow blur besar di tombol
