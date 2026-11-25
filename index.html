@@ -466,14 +466,26 @@
         display: grid; place-items: center;
         opacity: 0;
         pointer-events: none;
-        filter: drop-shadow(0 0 3px color-mix(in srgb, var(--c) 85%, transparent))
-          drop-shadow(0 0 9px color-mix(in srgb, var(--c) 50%, transparent))
-          drop-shadow(0 0 17px color-mix(in srgb, var(--c) 28%, transparent));
+        /* Wadah bola SENGAJA tanpa filter (perbaikan ng-frame): filter drop-shadow
+           di wadah ini membentuk grup filter, jadi sinar yang berputar & percikan
+           yang berkelip di dalamnya memaksa SELURUH grup (3 lapis drop-shadow di
+           area ±3x bola) digambar ulang tiap frame untuk tiap bola yang menumpuk —
+           di HP itu tidak terkejar, sigil di langit terlihat patah-patah dan
+           hentaman ke boss ikut tersendat karena elemen yang sama yang terbang.
+           Glow kini menempel pada gambar permatanya saja (statis, digambar sekali),
+           dan wadah dipromosikan jadi lapis kompositor sendiri (will-change)
+           supaya muncul/melesat/hilangnya digerakkan GPU lewat transform murni */
+        will-change: transform;
       }
       .sig-orb img {
         width: 100%; height: 100%; display: block;
         object-fit: contain;
         position: relative; z-index: 1;
+        /* Glow berlapis mengikuti siluet segi permata — nilai sama seperti saat
+           menempel di wadah dulu, tampilannya tidak berubah */
+        filter: drop-shadow(0 0 3px color-mix(in srgb, var(--c) 85%, transparent))
+          drop-shadow(0 0 9px color-mix(in srgb, var(--c) 50%, transparent))
+          drop-shadow(0 0 17px color-mix(in srgb, var(--c) 28%, transparent));
       }
       /* Cahaya tebal seperti percikan sihir di sekeliling tiap bola sigil: lapisan sinar
          cahaya berputar pelan yang jauh lebih besar dari permatanya, ditambah percikan
@@ -484,8 +496,11 @@
         background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--c) 52%, transparent) 0deg 6deg, transparent 6deg 22deg);
         -webkit-mask-image: radial-gradient(circle, transparent 0 23%, #000 33%, transparent 69%);
         mask-image: radial-gradient(circle, transparent 0 23%, #000 33%, transparent 69%);
-        /* Putaran diperlambat (18s → 36s) agar lebih hemat di HP; tampilannya sama */
+        /* Putaran diperlambat (18s → 36s) agar lebih hemat di HP; tampilannya sama.
+           will-change: putarannya kini jalan sebagai transform kompositor di
+           lapisnya sendiri, bukan memicu gambar ulang grup tiap frame */
         animation: sigRaysSpin 36s linear infinite;
+        will-change: transform;
         pointer-events: none;
       }
       @keyframes sigRaysSpin { to { transform: rotate(360deg); } }
@@ -493,8 +508,10 @@
         position: absolute; z-index: 2; font-style: normal; line-height: 1;
         color: var(--c);
         text-shadow: 0 0 9px var(--c), 0 0 20px var(--c);
-        /* Kelip diperlambat (1.5s → 2.6s) agar lebih hemat di HP */
+        /* Kelip diperlambat (1.5s → 2.6s) agar lebih hemat di HP.
+           will-change: kelipnya (transform + opacity) jalan di kompositor */
         animation: spkTw 2.6s ease-in-out infinite alternate;
+        will-change: transform, opacity;
         pointer-events: none;
       }
       .sig-orb .sig-spk.w { color: #fff; }
@@ -502,9 +519,12 @@
         from { opacity: .2; transform: scale(.55) rotate(-8deg); }
         to { opacity: 1; transform: scale(1.18) rotate(14deg); }
       }
-      /* Semua bola bersinar bersama sesaat sebelum menghentak boss */
+      /* Semua bola bersinar bersama sesaat sebelum menghentak boss.
+         Filter sinar kini juga menempel pada gambar permata, BUKAN wadahnya —
+         wadah harus tetap tanpa filter (lihat .sig-orb) supaya grupnya tidak
+         digambar ulang tiap frame; nilai cahayanya sama seperti sebelumnya */
       .sigil.shine { animation: shinePulse .45s ease; }
-      .sigil.shine .sig-orb {
+      .sigil.shine .sig-orb img {
         filter: brightness(1.85) drop-shadow(0 0 16px var(--c)) drop-shadow(0 0 36px var(--c));
       }
       @keyframes shinePulse {
