@@ -1336,9 +1336,9 @@
          tutorial SUDAH gelap & berkabut — kartu (overlay z-20) menimpa
          kabut (z-16) dan tetap jelas & bisa diklik. Sesudah "Mulai
          Bermain" diklik & kartu keluar, TIDAK ada momen kabut muncul:
-         openFog hanya DITAHAN berkabut penuh 1 detik (goyangan lembut
-         drift tetap berjalan pelan selama jeda tahan; keyframes drift,
-         hanya transform), kemudian kedua belah BERGESER ke samping —
+         openFog LANGSUNG menggeser kedua belah ke samping begitu kartu
+         keluar, tanpa jeda tahan dulu (tampilan berkabutnya sudah
+         dilihat pemain selama kartu tampil di atas kabut) —
          kiri ke kiri, kanan ke kanan — sampai keluar layar dalam
          1 detik (kelas .open: animasi keyframe dengan stop
          0%/25%/50%/75%/100% pada transform saja — kabut melewati
@@ -2234,8 +2234,8 @@
            belakang kartu tutorial (overlay z-20 menimpa kabut z-16 ini,
            jadi kartu tetap jelas & tombolnya bisa diklik; layar loading
            z-999 menutupi semuanya sampai selesai). Sesudah "Mulai
-           Bermain" diklik & kartu keluar, openFog menahan kabut 1 detik,
-           lalu kedua belah bergeser ke samping keluar layar sambil
+           Bermain" diklik & kartu keluar, openFog LANGSUNG menggeser
+           kedua belah ke samping keluar layar (tanpa jeda tahan) sambil
            lapisan gelap memudar ke 0 dalam 1 detik; sesudah kabut hilang
            sepenuhnya ada jeda 1 detik, BARU hitung mundur 3-2-1 dimulai
            (lihat openFog di skrip game). Murni dekoratif: pointer-events none dari CSS-nya.
@@ -5380,10 +5380,11 @@
          dalam keadaan tertutup sejak halaman pertama tampil — ia
          menutupi papan di belakang kartu tutorial — jadi fungsi ini
          TIDAK memunculkan kabut lagi; ia hanya menjalankan urutan
-         waktunya: DITAHAN dalam keadaan berkabut penuh selama 1.000ms
-         (kelas .show + .drifting memang sudah terpasang sejak markup;
-         goyangan lembut drift tetap berjalan pelan selama jeda tahan
-         ini), kemudian kedua belah bergeser ke samping keluar layar
+         waktunya: TANPA jeda tahan — kedua belah LANGSUNG bergeser ke
+         samping keluar layar begitu fungsi ini dipanggil (kelas .show
+         + .drifting memang sudah terpasang sejak markup; tampilan
+         berkabutnya sudah dilihat pemain selama kartu tutorial tampil,
+         jadi tidak perlu ditahan lagi sesudah klik),
          melewati titik keyframe 1/4, 2/4, 3/4, 4/4 dengan geseran
          HALUS antar titik (easing ease-in-out per segmen, bukan
          lompatan steps) sambil lapisan gelap memudar halus ke 0
@@ -5397,7 +5398,7 @@
          (awal jeda halaman bersih), kanvas lanjut normal.
          sesudah kabut hilang SEPENUHNYA ada jeda 1.000ms dengan layar
          sudah terang & bersih, BARU callback dijalankan — di situlah
-         hitung mundur dimulai. Total 3 detik. Untuk
+         hitung mundur dimulai. Total 2 detik. Untuk
          prefers-reduced-motion kabut disembunyikan seketika (tanpa
          animasi membuka) dan callback langsung jalan, sejalan
          penanganan gerak lain di game ini */
@@ -5410,17 +5411,15 @@
           done();
           return;
         }
+        window.__fogBusy = true;
+        veil.classList.add("open");
         setTimeout(function () {
-          window.__fogBusy = true;
-          veil.classList.add("open");
-          setTimeout(function () {
-            veil.classList.add("hidden");
-            veil.classList.remove("show", "drifting", "open");
-            window.__fogBusy = false;
-            /* Jeda 1 detik: layar sudah terang & bersih sesudah kabut
-               benar-benar hilang, baru hitung mundur 3-2-1 dimulai */
-            setTimeout(done, 1000);
-          }, 1000);
+          veil.classList.add("hidden");
+          veil.classList.remove("show", "drifting", "open");
+          window.__fogBusy = false;
+          /* Jeda 1 detik: layar sudah terang & bersih sesudah kabut
+             benar-benar hilang, baru hitung mundur 3-2-1 dimulai */
+          setTimeout(done, 1000);
         }, 1000);
       }
       /* Kabut ditutup lagi: dipakai saat kembali ke menu pembuka
@@ -5442,9 +5441,8 @@
          dengan fade + mengecil sedikit dan overlay ikut memudar; game TIDAK
          langsung dimulai: overlay disembunyikan, KABUT yang SUDAH
          menutupi papan sejak awal (di belakang kartu) membuka ke
-         samping (openFog, total 3 detik: tahan berkabut
-         1 detik, membuka 1 detik, lalu jeda 1 detik sesudah kabut
-         hilang), pop-up hitung mundur
+         samping (openFog, total 2 detik: membuka 1 detik,
+         lalu jeda 1 detik sesudah kabut hilang), pop-up hitung mundur
          3-2-1 tampil di atas papan yang sudah terender (3 detik), dan
          startGame BARU dipanggil setelah hitung mundur selesai.
          Kelas-kelas animasi dibersihkan lagi sesudah game dimulai
