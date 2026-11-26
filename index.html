@@ -3034,6 +3034,96 @@
           } catch (e) {}
         });
       }
+      /* ---------- Suara hitung mundur 3-2-1: rekaman suara pemilik ----------
+         Hitung mundur kini BERBUNYI dengan rekaman suara pemilik
+         sendiri — satu suara per angka plus satu suara penanda mulai —
+         lewat elemen <audio> yang file-nya EKSTERNAL di samping
+         index.html, sama seperti suara salah pencet & suara berhasil
+         (TIDAK di-inline sebagai base64/data URI):
+           - "count-tiga-v1.ogg" — utama "Tiga." (14.156 byte, 1,07 detik)
+           - "count-tiga-v1.mp3" — cadangan "Tiga." (34.073 byte)
+           - "count-dua-v1.ogg" — utama "Dua" (13.995 byte, 1,07 detik)
+           - "count-dua-v1.mp3" — cadangan "Dua" (34.073 byte)
+           - "count-satu-v1.ogg" — utama "Satu" (16.166 byte, 1,31 detik)
+           - "count-satu-v1.mp3" — cadangan "Satu" (37.834 byte)
+           - "count-mulai-v1.ogg" — utama "Pertarungan Dimulai!"
+             (21.013 byte, 1,72 detik)
+           - "count-mulai-v1.mp3" — cadangan "Pertarungan Dimulai!"
+             (44.522 byte)
+         Format dipilih lewat canPlayType seperti pola suara file
+         lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan bila
+         file utama gagal dimuat, format cadangan dicoba sekali.
+         Elemen dibuat sekali dan di-PRELOAD sesudah gestur "Mulai
+         Bermain" (preloadCount, dipanggil dari penangan tombol itu)
+         supaya siap saat hitung mundur jalan (~2 detik kemudian,
+         sesudah kabut membuka & jeda bersih). Volume elemen 0,8
+         (sama seperti suara salah pencet & suara berhasil), ikut
+         tombol mute (S.muted) seperti SFX lain: saat mute tidak ada
+         suara hitung mundur sama sekali. Diputar dari runCountdown:
+         suara tiga/dua/satu tepat saat angkanya tampil, dan suara
+         mulai tepat saat hitung mundur selesai — FIRE-AND-FORGET:
+         game langsung dimulai (done/startGame) tanpa menunggu suara
+         mulai selesai; suara berbunyi mengiringi awal permainan.
+         Tiap pemutaran diulang dari awal (currentTime = 0) supaya
+         hitung mundur berikutnya berbunyi penuh */
+      var COUNT_TIGA_OGG = "count-tiga-v1.ogg";
+      var COUNT_TIGA_MP3 = "count-tiga-v1.mp3";
+      var COUNT_DUA_OGG = "count-dua-v1.ogg";
+      var COUNT_DUA_MP3 = "count-dua-v1.mp3";
+      var COUNT_SATU_OGG = "count-satu-v1.ogg";
+      var COUNT_SATU_MP3 = "count-satu-v1.mp3";
+      var COUNT_MULAI_OGG = "count-mulai-v1.ogg";
+      var COUNT_MULAI_MP3 = "count-mulai-v1.mp3";
+      var countEls = {};  /* elemen <audio> suara hitung mundur, dibuat sekali per suara */
+      function countElement(key, ogg, mp3) {
+        if (countEls[key]) return countEls[key];
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        /* Pilih format berdasarkan dukungan browser: pakai OGG bila
+           bisa diputar, kalau tidak pakai MP3 */
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? ogg : mp3;
+        /* Jaring pengaman: bila format utama gagal dimuat, coba
+           format cadangan sekali */
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = mp3; }
+        });
+        countEls[key] = el;
+        return el;
+      }
+      function tigaElement() { return countElement("tiga", COUNT_TIGA_OGG, COUNT_TIGA_MP3); }
+      function duaElement() { return countElement("dua", COUNT_DUA_OGG, COUNT_DUA_MP3); }
+      function satuElement() { return countElement("satu", COUNT_SATU_OGG, COUNT_SATU_MP3); }
+      function mulaiElement() { return countElement("mulai", COUNT_MULAI_OGG, COUNT_MULAI_MP3); }
+      /* Preload sesudah gestur "Mulai Bermain": keempat elemen dibuat
+         & file dimuat sekarang, jadi suara hitung mundur siap berbunyi
+         tanpa jeda begitu angkanya tampil */
+      function preloadCount() {
+        try { tigaElement().load(); } catch (e) {}
+        try { duaElement().load(); } catch (e) {}
+        try { satuElement().load(); } catch (e) {}
+        try { mulaiElement().load(); } catch (e) {}
+      }
+      /* Putar satu suara hitung mundur dari awal (currentTime = 0)
+         supaya hitung mundur berikutnya berbunyi penuh. Saat mute
+         tidak berbunyi sama sekali. Fire-and-forget: pemanggil tidak
+         pernah menunggu suara selesai */
+      function playCount(el) {
+        if (S.muted) return;
+        try {
+          el.currentTime = 0;
+          var p = el.play();
+          /* play() yang ditolak webview tidak dibiarkan jadi error
+             tak tertangani */
+          if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
+      }
+      function playCountTiga() { playCount(tigaElement()); }
+      function playCountDua() { playCount(duaElement()); }
+      function playCountSatu() { playCount(satuElement()); }
+      function playCountMulai() { playCount(mulaiElement()); }
       /* ---------- Penyihir bicara sendiri: TIGA kalimat acak ----------
          Kebiasaan baru atas permintaan pemilik: selama permainan
          berjalan, PENYIHIR sesekali bicara sendiri TANPA sebab —
@@ -5552,14 +5642,32 @@
          animasi pop (kelas .pop dimulai ulang lewat reflow paksa). Setelah
          angka 1 selesai, lapisan disembunyikan dan callback dijalankan —
          di situlah game BARU dimulai. Untuk prefers-reduced-motion tiap
-         angka dipersingkat jadi 300ms, sejalan penanganan gerak lain */
+         angka dipersingkat jadi 300ms, sejalan penanganan gerak lain.
+         Tiap angka kini juga BERBUNYI dengan rekaman suara pemilik —
+         tiga untuk "3", dua untuk "2", satu untuk "1" (tepat saat
+         angkanya tampil) — dan suara "Pertarungan Dimulai!" berbunyi
+         tepat saat hitung mundur selesai, fire-and-forget tanpa
+         menunda callback/game mulai (lihat blok suara hitung mundur:
+         playCountTiga/playCountDua/playCountSatu/playCountMulai) */
       function runCountdown(done) {
         var cd = $("countdown"), num = $("countdownNum");
         var steps = ["3", "2", "1"], i = 0;
         cd.classList.remove("hidden");
         (function tick() {
-          if (i >= steps.length) { cd.classList.add("hidden"); done(); return; }
-          num.textContent = steps[i++];
+          if (i >= steps.length) {
+            cd.classList.add("hidden");
+            /* Suara "Pertarungan Dimulai!" berbunyi tepat saat hitung
+               mundur selesai — fire-and-forget: callback (game mulai)
+               langsung dijalankan tanpa menunggu suara selesai */
+            playCountMulai();
+            done(); return;
+          }
+          var step = steps[i++];
+          num.textContent = step;
+          /* Suara angka berbunyi tepat saat angkanya tampil */
+          if (step === "3") playCountTiga();
+          else if (step === "2") playCountDua();
+          else if (step === "1") playCountSatu();
           num.classList.remove("pop");
           void num.offsetWidth;
           num.classList.add("pop");
@@ -5670,6 +5778,11 @@
            mantra lengkap sebelum video ultimate (lihat
            preloadBerhasil) */
         preloadBerhasil();
+        /* Gestur yang sama juga me-PRELOAD keempat file suara hitung
+           mundur ("count-tiga-v1", "count-dua-v1", "count-satu-v1",
+           "count-mulai-v1") supaya siap berbunyi tanpa jeda saat
+           hitung mundur jalan (lihat preloadCount) */
+        preloadCount();
         /* Gestur yang sama juga me-PRELOAD file suara bicara penyihir
            ("sihir-hidup-v1") supaya siap berbunyi tanpa jeda saat
            jadwal acaknya tiba (lihat preloadHidup) */
