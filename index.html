@@ -2406,18 +2406,29 @@
       function sfxOver() { [392, 329.63, 261.63, 196].forEach(function (f, k) { tone(f, 0.3, "triangle", 0.18, null, k * 0.13); }); }
       function sfxWin() { [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach(function (f, k) { bell(f, 0.17, 0.55, k * 0.07); }); }
 
-      /* ---------- Musik latar: band mini CERIA & HEBOH (sintetis) ----------
-         Loop 4 bar (32 langkah nada kedelapan) di ±140 BPM, karakternya
-         ceria & menghentak seperti musik di video ultimate: melodi mayor
-         pentatonik yang pendek-pendek & playful (call-and-response antar
-         bar), bass yang melompat-lompat di pola nada kedelapan (akar ↔
-         oktaf ↔ kwint), plus drum sintetis — kick di ketukan utama &
-         hi-hat noise pendek di sela ketukan. Progresi C – G – Am – F.
+      /* ---------- Musik latar: band mini PADAT & MENGHENTAK (sintetis) ----------
+         Loop 4 bar (32 langkah nada kedelapan) di ±140 BPM, disamakan
+         nuansanya dengan contoh audio dari pemilik: KERAS & PADAT terus-
+         menerus dari awal sampai akhir, tidak ada bagian yang pelan.
+         Paruh pertama (bar 1–2) dipimpin melodi yang "menyanyi" seperti
+         baris vokal — not panjang yang mengalun (BGM_DUR 2 langkah)
+         diselingi larian pendek yang bouncy, tetap mayor pentatonik &
+         ceria; paruh kedua (bar 3–4) bass-nya dibuat lebih berat lagi
+         (volume bass naik) seperti bagian bass-heavy di contoh.
+         Bass kini MENGISI SETIAP langkah nada kedelapan (bukan pluck
+         tipis sesekali): pola akar–akar–oktaf–akar–kwint yang
+         menghentak di oktaf rendah, dengan lapisan sawtooth ber-
+         lowpass + sub sinus supaya terasa berat & dominan. Di bawah
+         semuanya ada lapisan PAD lembut (triad tiap bar, serangan
+         pelan, bunyi penuh satu bar) supaya suara terasa penuh &
+         konstan — tidak ada momen yang kosong. Drum tetap: kick di
+         ketukan utama & hi-hat noise pendek di sela ketukan.
+         Progresi C – G – Am – F.
          Dibuat murni dari Web Audio lewat AudioContext yang sama —
-         TANPA file audio. Volumenya tetap dijaga di bawah SFX (melodi
-         ±0.075) supaya seru tapi tidak menusuk saat diulang-ulang; tiap
-         bar menyambung langsung ke bar berikutnya, jadi putarannya
-         mulus tanpa jeda yang terasa.
+         TANPA file audio. Volumenya LEBIH HADIR dari sebelumnya
+         (melodi ±0.115, naik dari 0.075) tapi tetap dijaga di bawah
+         SFX; tiap bar menyambung langsung ke bar berikutnya, jadi
+         putarannya mulus tanpa jeda yang terasa.
          Musik hanya mulai setelah gestur pemain: bgmWanted dinyalakan
          tombol "Mulai Bermain" (pola buka kunci yang sama seperti
          primeUltimate; ketukan berikutnya mencoba lagi lewat pendengar
@@ -2427,17 +2438,39 @@
          interval 200ms menjadwalkan nada sampai ±0.55s ke depan memakai
          jam AudioContext; tidak menyentuh jalur input sama sekali */
       var BGM_NOTES = [
-        /* Bar 1 (C) — panggilan  */ 659.25, 783.99, 880, 783.99, 659.25, 783.99, 1046.5, 0,
-        /* Bar 2 (G) — jawaban    */ 587.33, 783.99, 880, 783.99, 659.25, 587.33, 659.25, 0,
-        /* Bar 3 (Am) — panggilan */ 440, 523.25, 659.25, 880, 783.99, 659.25, 523.25, 0,
-        /* Bar 4 (F) — jawaban    */ 880, 783.99, 659.25, 783.99, 880, 783.99, 659.25, 587.33
+        /* Bar 1 (C) — not panjang mengalun + larian pendek */
+        659.25, 0, 783.99, 880, 1046.5, 0, 880, 783.99,
+        /* Bar 2 (G) — larian bouncy, ditutup not panjang */
+        659.25, 587.33, 659.25, 783.99, 880, 0, 783.99, 659.25,
+        /* Bar 3 (Am) — puncak melodi, not panjang di atas */
+        880, 0, 1046.5, 880, 659.25, 0, 587.33, 659.25,
+        /* Bar 4 (F) — turun pulang, ditutup not panjang */
+        880, 1046.5, 880, 783.99, 659.25, 0, 587.33, 523.25
       ];
-      /* Bass melompat per bar di langkah 0/2/4/6: akar, oktaf, akar, kwint */
+      /* Panjang tiap not melodi dalam langkah: 2 = not panjang yang
+         mengalun & menyambung (nada di langkah berikutnya 0 = ekornya
+         masih berbunyi), 1 = not pendek bouncy, 0 = bukan awal not */
+      var BGM_DUR = [
+        2, 0, 1, 1, 2, 0, 1, 1,
+        1, 1, 1, 1, 2, 0, 1, 1,
+        2, 0, 1, 1, 2, 0, 1, 1,
+        1, 1, 1, 1, 2, 0, 1, 1
+      ];
+      /* Bass menghentak di SETIAP langkah: akar rendah, akar, oktaf,
+         akar, akar, kwint, oktaf, kwint — mengisi penuh tiap bar */
       var BGM_BASS = [
-        130.81, 0, 261.63, 0, 130.81, 0, 196, 0,     /* C  */
-        98, 0, 196, 0, 98, 0, 146.83, 0,             /* G  */
-        110, 0, 220, 0, 110, 0, 164.81, 0,           /* Am */
-        87.31, 0, 174.61, 0, 87.31, 0, 130.81, 0     /* F  */
+        65.41, 65.41, 130.81, 65.41, 65.41, 98, 130.81, 98,          /* C  */
+        49, 49, 98, 49, 49, 73.42, 98, 73.42,                        /* G  */
+        55, 55, 110, 55, 55, 82.41, 110, 82.41,                      /* Am */
+        43.65, 43.65, 87.31, 43.65, 43.65, 65.41, 87.31, 65.41       /* F  */
+      ];
+      /* Pad lembut: triad akor tiap bar (C – G – Am – F), dibunyikan
+         sekali di awal bar dan berbunyi penuh sepanjang bar */
+      var BGM_PAD = [
+        [261.63, 329.63, 392],   /* C  */
+        [196, 246.94, 293.66],   /* G  */
+        [220, 261.63, 329.63],   /* Am */
+        [174.61, 220, 261.63]    /* F  */
       ];
       var BGM_STEP = 0.2143;   /* nada kedelapan di 140 BPM — satu putaran ±6.9 detik */
       var bgmWanted = false;  /* sudah diminta gestur "Mulai Bermain" */
@@ -2451,7 +2484,11 @@
       function bgmNote(freq, t, vol, dur) {
         var ctx = AC, bus = bgmBus;
         if (!ctx || !bus || !freq) return;
-        /* Melodi cerah: sinus + harmonik atas tipis yang cepat padam */
+        /* Melodi yang "menyanyi": sinus + harmonik atas tipis yang
+           cepat padam, DITAMBAH badan segitiga lembut di nada dasar
+           yang berbunyi sepanjang durasi not — badan inilah yang
+           membuat not panjang terasa mengalun seperti baris vokal,
+           bukan denting pendek yang langsung hilang */
         var parts = [[1, 1], [2, 0.28], [3, 0.16], [4.24, 0.06]];
         for (var j = 0; j < parts.length; j++) {
           var o = ctx.createOscillator(), g = ctx.createGain();
@@ -2464,10 +2501,46 @@
           o.connect(g); g.connect(bus);
           o.start(t); o.stop(t + d + 0.05);
         }
+        var ob = ctx.createOscillator(), gb = ctx.createGain();
+        ob.type = "triangle";
+        ob.frequency.setValueAtTime(freq, t);
+        gb.gain.setValueAtTime(0.0001, t);
+        gb.gain.exponentialRampToValueAtTime(vol * 0.38, t + 0.03);
+        gb.gain.setValueAtTime(vol * 0.38, t + Math.max(dur - 0.09, 0.03));
+        gb.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        ob.connect(gb); gb.connect(bus);
+        ob.start(t); ob.stop(t + dur + 0.05);
       }
-      /* Bass pluck: segitiga pendek & menonjok + sub sinus di bawahnya,
-         envelope cepat padam supaya lompatan akar–oktaf–kwintnya terasa
-         menghentak & bergerak, bukan nada panjang yang mengalun tenang */
+      /* Pad lembut: triad akor dibunyikan dengan serangan pelan &
+         lepas pelan sepanjang satu bar penuh (dur ≈ 8 langkah), dua
+         osilator per nada yang sedikit digeser nadanya (detune ±4
+         cent) supaya bunyinya lebar & hangat. Volumenya kecil per
+         nada — tugasnya hanya mengisi ruang di bawah melodi, bass &
+         drum supaya tidak ada momen yang terasa kosong */
+      function bgmPad(freqs, t, dur) {
+        var ctx = AC, bus = bgmBus;
+        if (!ctx || !bus || !freqs) return;
+        for (var j = 0; j < freqs.length; j++) {
+          for (var k = 0; k < 2; k++) {
+            var o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = k === 0 ? "sine" : "triangle";
+            o.frequency.setValueAtTime(freqs[j], t);
+            o.detune.setValueAtTime(k === 0 ? -4 : 4, t);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.026, t + 0.35);
+            g.gain.setValueAtTime(0.026, t + Math.max(dur - 0.4, 0.4));
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            o.connect(g); g.connect(bus);
+            o.start(t); o.stop(t + dur + 0.05);
+          }
+        }
+      }
+      /* Bass BERAT & dominan (bukan pluck tipis lagi): tiga lapisan —
+         sub sinus penuh di nada dasar (beratnya), segitiga menonjok
+         (badannya), dan sawtooth lewat lowpass 500Hz (gigitannya,
+         supaya bass tetap terdengar jelas di speaker HP kecil).
+         Envelope-nya mengisi hampir seluruh langkah nada kedelapan,
+         jadi bass-nya terasa terus mendorong, bukan bunyi sesekali */
       function bgmPluck(freq, t, vol, dur) {
         var ctx = AC, bus = bgmBus;
         if (!ctx || !bus || !freq) return;
@@ -2483,10 +2556,19 @@
         o2.type = "sine";
         o2.frequency.setValueAtTime(freq, t);
         g2.gain.setValueAtTime(0.0001, t);
-        g2.gain.exponentialRampToValueAtTime(vol * 0.6, t + 0.012);
-        g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.8);
+        g2.gain.exponentialRampToValueAtTime(vol * 0.85, t + 0.012);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.92);
         o2.connect(g2); g2.connect(bus);
         o2.start(t); o2.stop(t + dur + 0.05);
+        var o3 = ctx.createOscillator(), f3 = ctx.createBiquadFilter(), g3 = ctx.createGain();
+        o3.type = "sawtooth";
+        o3.frequency.setValueAtTime(freq, t);
+        f3.type = "lowpass"; f3.frequency.value = 500;
+        g3.gain.setValueAtTime(0.0001, t);
+        g3.gain.exponentialRampToValueAtTime(vol * 0.4, t + 0.012);
+        g3.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.7);
+        o3.connect(f3); f3.connect(g3); g3.connect(bus);
+        o3.start(t); o3.stop(t + dur + 0.05);
       }
       /* Drum sintetis: kick = sinus yang nadanya jatuh cepat (150→48Hz);
          hi-hat = semburan noise pendek lewat highpass. Buffer noise
@@ -2508,7 +2590,7 @@
         o.frequency.setValueAtTime(150, t);
         o.frequency.exponentialRampToValueAtTime(48, t + 0.11);
         g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.34, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.38, t + 0.008);
         g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
         o.connect(g); g.connect(bus);
         o.start(t); o.stop(t + 0.2);
@@ -2531,11 +2613,19 @@
         if (!bgmNext || bgmNext < ctx.currentTime) { bgmNext = ctx.currentTime + 0.06; bgmStep = 0; }
         while (bgmNext < ctx.currentTime + 0.55) {
           var idx = bgmStep % BGM_NOTES.length;
-          if (BGM_NOTES[idx]) bgmNote(BGM_NOTES[idx], bgmNext, 0.075, 0.5);
-          if (BGM_BASS[idx]) bgmPluck(BGM_BASS[idx], bgmNext, 0.11, 0.21);
+          /* Melodi lebih hadir (0.115, naik dari 0.075); not panjang
+             (BGM_DUR 2) berbunyi ±2 langkah penuh supaya mengalun,
+             not pendek tetap bouncy ±0.45 detik */
+          if (BGM_NOTES[idx]) bgmNote(BGM_NOTES[idx], bgmNext, 0.115, BGM_DUR[idx] > 1 ? BGM_DUR[idx] * BGM_STEP * 1.8 : 0.45);
+          /* Bass mengisi SETIAP langkah & jauh lebih kuat (0.22);
+             di paruh kedua loop (bar 3–4) lebih berat lagi (0.26)
+             seperti bagian bass-heavy di contoh audio */
+          if (BGM_BASS[idx]) bgmPluck(BGM_BASS[idx], bgmNext, idx >= 16 ? 0.26 : 0.22, 0.24);
+          /* Pad lembut di awal tiap bar, penuh sepanjang bar */
+          var beat = idx % 8;
+          if (beat === 0) bgmPad(BGM_PAD[Math.floor(idx / 8)], bgmNext, BGM_STEP * 8 * 1.05);
           /* Drum: kick di ketukan utama tiap bar (langkah 0 & 4),
              hi-hat di semua sela ketukan (langkah ganjil) */
-          var beat = idx % 8;
           if (beat === 0 || beat === 4) bgmKick(bgmNext);
           if (idx % 2 === 1) bgmHat(bgmNext, 0.11);
           bgmStep++;
