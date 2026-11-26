@@ -352,6 +352,35 @@
         pointer-events: none; z-index: 6;
       }
       .bubble.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+      /* Balon bicara PENYIHIR: balon KECIL terpisah dari balon boss di atas —
+         hanya muncul sesaat menemani kalimat acak "Sihir adalah bagian
+         dari hidupku" (lihat blok suara sihir-hidup di skrip game), lalu
+         hilang lagi. Gaya lembut Fantasy Casual RPG yang sama seperti
+         balon boss (isian #fdf7ff, teks ungu tua), tapi bayangannya
+         ungu & sangat lembut (tanpa bayangan keras). Posisi left/top
+         dihitung JS (placeWizBubble di layoutSprites + saat balon
+         tampil) supaya selalu menggantung tepat di atas topi penyihir;
+         nilai di sini hanya cadangan sebelum JS jalan. Muncul/hilang
+         HANYA lewat opacity & transform, dan pointer-events none
+         supaya tidak pernah mengganggu tombol */
+      .wiz-bubble {
+        position: absolute; top: 30%; left: 12%; max-width: 46%;
+        background: #fdf7ff; color: #33135e;
+        font-weight: 400; font-size: 9px; line-height: 1.35; text-align: center;
+        padding: 6px 8px; border-radius: 10px 10px 10px 4px;
+        box-shadow: 0 3px 10px rgba(49,16,101,.28);
+        opacity: 0; transform: translate(-50%, calc(-100% + 5px)) scale(.95);
+        transition: opacity .22s ease, transform .22s ease;
+        pointer-events: none; z-index: 6;
+      }
+      .wiz-bubble.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+      /* Ekor kecil balon di sudut bawah, mengarah turun ke penyihir */
+      .wiz-bubble::after {
+        content: ""; position: absolute; left: 20px; bottom: -4px;
+        width: 9px; height: 9px; background: #fdf7ff;
+        transform: rotate(45deg); border-radius: 0 0 3px 0;
+        box-shadow: 2px 2px 3px rgba(49,16,101,.10);
+      }
       .dmg-num {
         position: absolute; font-family: "Baloo 2", sans-serif; font-weight: 400;
         color: #ffd23e; text-shadow: 0 2px 0 #7a2b00, 0 0 12px rgba(255,150,40,.8);
@@ -2050,6 +2079,8 @@
         <div class="victory" id="victory" hidden aria-hidden="true"><div class="rays"></div><div class="v-text">VICTORY!</div></div>
         <div class="cheer" id="cheer" hidden aria-hidden="true"></div>
         <div class="bubble" id="bubble" role="status"></div>
+        <!-- Balon bicara kecil PENYIHIR: hanya untuk kalimat acak "Sihir adalah bagian dari hidupku" — tampil saat suaranya berbunyi, hilang saat suaranya selesai (lihat blok suara sihir-hidup). Balon boss di atasnya tetap mati seperti keputusan sebelumnya -->
+        <div class="wiz-bubble" id="wizBubble" role="status">Sihir adalah bagian dari hidupku</div>
         <div id="fxLayer"></div>
       </section>
 
@@ -2763,6 +2794,185 @@
             if (p && p.catch) p.catch(function () {});
           } catch (e) {}
         });
+      }
+      /* ---------- Penyihir bicara sendiri: kalimat acak "Sihir adalah bagian dari hidupku" ----------
+         Kebiasaan baru atas permintaan pemilik: selama permainan
+         berjalan, PENYIHIR sesekali bicara sendiri TANPA sebab —
+         seperti suara latar — mengucapkan kalimat kiriman pemilik
+         "Sihir adalah bagian dari hidupku" (file "sihir_bagian_hidup.mp3",
+         3,00 detik, mono; suara sepanjang 0–3 detik) lewat elemen
+         <audio> yang file-nya EKSTERNAL di samping index.html, sama
+         seperti suara salah pencet & suara berhasil (TIDAK di-inline
+         sebagai base64/data URI):
+           - "sihir-hidup-v1.ogg" — utama (34.195 byte)
+           - "sihir-hidup-v1.mp3" — cadangan (65.002 byte)
+         Format dipilih lewat canPlayType seperti pola suara file
+         lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan bila
+         file utama gagal dimuat, format cadangan dicoba sekali.
+         Elemen dibuat sekali dan di-PRELOAD sesudah gestur "Mulai
+         Bermain" (preloadHidup, dipanggil dari penangan tombol itu)
+         supaya siap berbunyi tanpa jeda saat gilirannya tiba. Volume
+         elemen 0,8 (sama seperti suara salah/berhasil — kalimatnya
+         harus terdengar jelas), ikut tombol mute (S.muted) seperti
+         SFX lain: saat mute kalimat tidak berbunyi sama sekali, dan
+         bila mute ditekan di tengah kalimat, kalimat berhenti.
+         JADWAL ACAK: timer pertama dipasang oleh startGame (yaitu
+         SETELAH hitung mundur selesai & game aktif) — kalimat pertama
+         muncul 15–30 detik setelah game mulai; sesudah tiap kalimat
+         selesai berbunyi, timer berikutnya dipasang 25–60 detik
+         (diacak tiap kali). Saat timer berbunyi, kalimat DILEWATI
+         (dijadwalkan ulang ke waktu acak berikutnya, tidak menumpuk)
+         bila kondisinya tidak memungkinkan: game belum aktif / sudah
+         berakhir (fase idle/over — dalam hal ini timer berhenti
+         total), game dijeda, tab tidak aktif (document.hidden), video
+         ultimate sedang diputar (bgmUlt / overlay ultimate tampil),
+         atau suara "berhasil" sedang berbunyi (tidak boleh bersamaan).
+         Timer dihentikan total saat game berakhir (menang/kalah —
+         lihat gameOver/victory/levelComingSoon) atau kembali ke menu
+         (tombol keluar & menu layar "segera hadir"): stopWizTalk.
+         Saat kalimat berbunyi, balon bicara kecil penyihir
+         (#wizBubble, elemen BARU yang terpisah dari balon boss)
+         tampil di atas topi penyihir dengan teks yang sama persis,
+         muncul saat suara mulai & hilang saat suara selesai. Balon
+         boss TETAP MATI (showBubble tetap no-op) — balon baru ini
+         hanya untuk penyihir & hanya untuk kalimat acak ini */
+      var VOICE_HIDUP_OGG = "sihir-hidup-v1.ogg";
+      var VOICE_HIDUP_MP3 = "sihir-hidup-v1.mp3";
+      var hidupEl = null;  /* elemen <audio> suara penyihir, dibuat sekali */
+      function hidupElement() {
+        if (hidupEl) return hidupEl;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        /* Pilih format berdasarkan dukungan browser: pakai OGG bila
+           bisa diputar, kalau tidak pakai MP3 */
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? VOICE_HIDUP_OGG : VOICE_HIDUP_MP3;
+        /* Jaring pengaman: bila format utama gagal dimuat, coba
+           format cadangan sekali */
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = VOICE_HIDUP_MP3; }
+        });
+        hidupEl = el;
+        return el;
+      }
+      /* Preload sesudah gestur "Mulai Bermain": elemen dibuat & file
+         dimuat sekarang, jadi kalimat pertama pun siap berbunyi */
+      function preloadHidup() { try { hidupElement().load(); } catch (e) {} }
+      /* Balon bicara penyihir: jangkarnya puncak sprite penyihir
+         (topi) — left = 45% lebar sprite dari tepi kirinya (tengah
+         topi), top = tepi atas sprite, lalu transform CSS
+         translate(-50%, -100%) menggantungkan sisi BAWAH balon tepat
+         di titik itu, jadi balon selalu melayang di atas penyihir di
+         semua ukuran layar. Tengah balon dijepit supaya tidak keluar
+         arena di layar sempit (penyihir menempel tepi kiri).
+         Dipanggil dari layoutSprites (tiap tata letak dihitung ulang)
+         dan sekali lagi tepat sebelum balon ditampilkan */
+      var wizBubbleEl = null;
+      function wizBubble() {
+        if (!wizBubbleEl) wizBubbleEl = $("wizBubble");
+        return wizBubbleEl;
+      }
+      function placeWizBubble() {
+        var b = wizBubble(); if (!b) return;
+        var ar = arena.getBoundingClientRect(), wr = wizSprite.getBoundingClientRect();
+        if (!ar.width || !wr.width) return;
+        var cx = wr.left - ar.left + wr.width * 0.45;
+        var half = b.offsetWidth / 2;
+        if (half > 0) cx = Math.max(half + 4, Math.min(cx, ar.width - half - 4));
+        b.style.left = cx + "px";
+        b.style.top = (wr.top - ar.top - 4) + "px";
+      }
+      function showWizBubble() {
+        var b = wizBubble(); if (!b) return;
+        placeWizBubble();
+        b.classList.add("show");
+      }
+      function hideWizBubble() {
+        var b = wizBubble(); if (b) b.classList.remove("show");
+      }
+      var wizTalkTimer = null;   /* timer jadwal bicara yang sedang menunggu */
+      var wizTalkSession = 0;    /* nomor sesi putar — sesi lama gugur begitu naik */
+      var wizTalkPlaying = false;
+      /* Jeda acak: kemunculan pertama 15–30 detik, berikutnya 25–60 detik */
+      function wizTalkDelay(first) {
+        return first ? 15000 + Math.random() * 15000 : 25000 + Math.random() * 35000;
+      }
+      function scheduleWizTalk(first, runId) {
+        if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
+        var id = (typeof runId === "number") ? runId : S.run;
+        wizTalkTimer = setTimeout(function () { wizTalkFire(id); }, wizTalkDelay(first));
+      }
+      /* Timer berbunyi: periksa dulu kondisinya. Game sudah berganti
+         run atau sudah berakhir/belum aktif = berhenti total (tidak
+         dijadwalkan ulang). Kondisi sesaat yang menghalangi (jeda,
+         tab tidak aktif, mute, video ultimate, suara berhasil) =
+         lewati kalimat ini & jadwalkan ulang ke waktu acak
+         berikutnya — tidak menumpuk, tidak memaksa berbunyi */
+      function wizTalkFire(runId) {
+        wizTalkTimer = null;
+        if (runId !== S.run) return;
+        if (S.phase === "idle" || S.phase === "over") return;
+        var ultShowing = bgmUlt || !$("ultOverlay").classList.contains("hidden");
+        var berhasilPlaying = !!(berhasilEl && !berhasilEl.paused && !berhasilEl.ended);
+        if (S.paused || document.hidden || S.muted || ultShowing || berhasilPlaying || wizTalkPlaying) {
+          scheduleWizTalk(false, runId);
+          return;
+        }
+        playWizTalk(runId);
+      }
+      /* Putar kalimatnya sekarang: balon tampil bersamaan dengan
+         suara mulai, hilang begitu suara selesai (event ended).
+         Timer pengaman 3.600ms (durasi file 3,0 detik + kelonggaran)
+         memastikan balon tetap hilang & jadwal tetap lanjut bila
+         ended tak kunjung datang (mis. play() ditolak webview) —
+         jadwal bicara tidak boleh macet. Sesudah selesai, timer
+         berikutnya (25–60 detik) dipasang di sini */
+      function playWizTalk(runId) {
+        var el = hidupElement();
+        var session = ++wizTalkSession;
+        wizTalkPlaying = true;
+        var finished = false;
+        function finish() {
+          if (finished || session !== wizTalkSession) return;
+          finished = true;
+          wizTalkPlaying = false;
+          el.removeEventListener("ended", finish);
+          hideWizBubble();
+          if (runId === S.run && S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false, runId);
+        }
+        el.addEventListener("ended", finish);
+        setTimeout(finish, 3600);
+        showWizBubble();
+        try {
+          el.currentTime = 0;
+          var p = el.play();
+          /* play() yang ditolak webview tidak dibiarkan jadi error
+             tak tertangani — timer pengaman yang menyelesaikan sesi */
+          if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
+      }
+      /* Hentikan SEMUA bicara penyihir: timer dibatalkan, suara yang
+         sedang berbunyi dihentikan, balon disembunyikan. Dipanggil
+         saat game berakhir (menang/kalah) & saat kembali ke menu */
+      function stopWizTalk() {
+        if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
+        wizTalkSession++;
+        wizTalkPlaying = false;
+        if (hidupEl) { try { hidupEl.pause(); hidupEl.currentTime = 0; } catch (e) {} }
+        hideWizBubble();
+      }
+      /* Tombol mute ditekan DI TENGAH kalimat: suara & balon berhenti
+         saat itu juga (kalimat tunduk pada S.muted seperti SFX lain),
+         lalu jadwal lanjut seperti biasa bila game masih berjalan */
+      function wizTalkMuted() {
+        if (!wizTalkPlaying) return;
+        wizTalkSession++;
+        wizTalkPlaying = false;
+        if (hidupEl) { try { hidupEl.pause(); hidupEl.currentTime = 0; } catch (e) {} }
+        hideWizBubble();
+        if (S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false);
       }
       function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, VOL.magic, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
@@ -4636,6 +4846,7 @@
       function levelComingSoon() {
         S.phase = "over";
         S.run++;
+        stopWizTalk();
         sfxWin();
         $("soonScore").textContent = S.score.toLocaleString("id-ID");
         $("soonBoss").textContent = S.defeated;
@@ -4645,6 +4856,7 @@
       function gameOver() {
         S.phase = "over";
         S.run++;
+        stopWizTalk();
         sfxOver();
         /* Pop-up kalah kini kartu gambar desain Harith: tidak ada judul/
            deskripsi teks lagi — hanya nilai statistik live yang ditulis
@@ -4655,6 +4867,7 @@
       function victory() {
         S.phase = "over";
         S.run++;
+        stopWizTalk();
         sfxWin();
         /* Kemenangan tampil di overlay kemenangannya sendiri (kartu teks
            lama), karena pop-up kalah sudah diganti kartu gambar "Kalah!" */
@@ -4686,6 +4899,13 @@
         ac();
         setupBoss(id);
         drawHud();
+        /* Jadwal bicara acak penyihir DIMULAI di sini — startGame
+           baru dipanggil setelah hitung mundur selesai, jadi game
+           sudah aktif: kalimat pertama muncul 15–30 detik dari
+           sekarang, berikutnya tiap 25–60 detik (lihat blok suara
+           "sihir-hidup"). Jadwal lama dari run sebelumnya dibatalkan
+           scheduleWizTalk sebelum memasang yang baru */
+        scheduleWizTalk(true, id);
         /* Aktivasi sihir pembuka (murni visual): lingkaran rune menyala
            & berputar sesaat di bola tongkat penyihir saat permainan
            dimulai, seperti mantra yang baru dibangunkan */
@@ -4899,6 +5119,10 @@
            mantra lengkap sebelum video ultimate (lihat
            preloadBerhasil) */
         preloadBerhasil();
+        /* Gestur yang sama juga me-PRELOAD file suara bicara penyihir
+           ("sihir-hidup-v1") supaya siap berbunyi tanpa jeda saat
+           jadwal acaknya tiba (lihat preloadHidup) */
+        preloadHidup();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
@@ -4934,6 +5158,7 @@
         sfxClick();
         S.run++;
         S.phase = "idle";
+        stopWizTalk();
         hideVictory();
         resetSigils();
         $("mantra").hidden = true;
@@ -4957,6 +5182,10 @@
         S.phase = "busy";
         setupBoss(id);
         drawHud();
+        /* Mode bebas dimulai dari layar menang (bukan lewat
+           startGame): jadwal bicara acak penyihir dipasang lagi di
+           sini — kalimat pertama 15–30 detik dari sekarang */
+        scheduleWizTalk(true, id);
         setTimeout(function () { if (id === S.run) nextRound(id); }, 1000);
       });
       var soundBtnEl = $("soundBtn");
@@ -4967,6 +5196,9 @@
         /* Musik latar tunduk pada tombol yang sama: mati saat suara
            dimatikan, lanjut lagi saat dinyalakan (lihat bgmApply) */
         bgmApply();
+        /* Kalimat penyihir yang sedang berbunyi ikut berhenti saat
+           suara dimatikan (lihat wizTalkMuted) */
+        if (S.muted) wizTalkMuted();
         if (!S.muted) playRune(0);
       });
       function setPaused(p) {
@@ -4983,6 +5215,7 @@
         S.run++;
         S.paused = false;
         S.phase = "idle";
+        stopWizTalk();
         hideVictory();
         resetSigils();
         $("mantra").hidden = true;
@@ -5078,6 +5311,9 @@
         /* Balon percakapan ikut menempel di atas kepala boss tiap kali
            tata letak dihitung ulang (muat awal, resize, ganti ukuran layar) */
         placeBubble();
+        /* Balon bicara penyihir ikut menempel di atas topinya dengan
+           cara yang sama (lihat placeWizBubble) */
+        placeWizBubble();
         /* Gugus sigil di sekitar bola tongkat penyihir: jangkar wadah ditaruh di
            pusat bola tongkat (dari kotak sprite penyihir yang tergambar, relatif
            terhadap arena), lalu tiap sigil digeser ke titik sebarannya — satuan
