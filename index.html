@@ -1538,10 +1538,11 @@
          satu dari "ult-01s.mp4" / "ult-02s.mp4" / "ult-03s.mp4" / "ult-04s.mp4" (dipilih acak, tidak berurutan
          sama dua kali) — file EKSTERNAL di samping index.html (bukan di
          assets/, supaya tidak ter-inline base64 saat export), LANDSCAPE 16:9 seperti
-         YouTube — TIDAK di-crop jadi potret: video tampil selebar layar
-         ditempel ke KIRI ATAS (tepi kiri menempel ke tepi layar, tepat
-         di bawah HUD supaya tidak menutupi tampilan mantra di tengah),
-         dan area kanan-bawahnya diisi latar game yang sama dengan stage
+         YouTube — TIDAK di-crop jadi potret: video tampil 75% lebar
+         layar ditempel ke KIRI ATAS (tepi kiri menempel ke tepi layar,
+         tepat di bawah HUD supaya tidak menutupi tampilan mantra di
+         tengah, dan sisi kanannya menyisakan ±25% space), dan area
+         kanan-bawahnya diisi latar game yang sama dengan stage
          (.ult-bg, bg-castle.webp) TANPA blur — hanya sedikit digelapkan
          (brightness .62) supaya video tetap jadi fokus.
          Setelah video mulai jalan, ketuk di mana
@@ -1576,7 +1577,8 @@
       }
       .ult-overlay video {
         position: relative;
-        width: 100%;
+        width: 75vw;
+        max-width: 100%;
         aspect-ratio: 16 / 9;
         max-height: 100%;
         object-fit: contain;
