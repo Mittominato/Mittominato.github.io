@@ -1567,17 +1567,19 @@
          susunan lapis: overlay gelap (#0d0618), lalu gambar latar
          (.ult-bgimg), lalu video utama DI ATASNYA. Atas permintaan
          Harith video baru ini LURUS (tanpa miring/rotasi — bingkainya
-         sudah desain jadi di dalam video), menempel di TEPI KIRI
-         overlay (left 0, tanpa jarak), lebar 75% dari lebar overlay,
-         di tengah secara vertikal (top 50% + translateY(-50%)),
+         sudah desain jadi di dalam video), bergeser ke KIRI keluar
+         layar (left -10%, sebagian sisinya tenggelam ke luar tepi
+         kiri), lebar 75% dari lebar overlay, lebih TINGGI dari
+         karakter game (top 30% + translateY(-50%)),
          aspek 16/9, object-fit cover. Latar HITAM di sudut-sudut
-         luar bingkai video dihapus dengan mix-blend-mode: screen —
-         MP4 tidak bisa menyimpan transparansi, jadi latar transparan
-         dari editor berubah jadi hitam saat export; dengan screen,
-         piksel hitam (0,0,0) jadi transparan di browser sehingga
-         gambar latar di belakang terlihat lewat sudut-sudut itu,
-         sementara bingkai ungu & animasi penyihir yang terang tetap
-         tampil penuh.
+         luar bingkai video dihapus dengan MASKER ALPHA
+         (ult-05s-mask.png) — MP4 tidak bisa menyimpan transparansi,
+         jadi latar transparan dari editor berubah jadi hitam saat
+         export; masker memotong empat sudut hitam itu sehingga
+         latar di belakang terlihat lewat, sementara bingkai ungu &
+         animasi penyihir tetap tampil penuh. (mix-blend-mode:
+         screen pernah dipakai tapi tidak bekerja di webview
+         Discord untuk video yang dirender perangkat keras.)
          Setelah video mulai jalan, ketuk di mana
          saja = lewati. Bila autoplay ditolak webview (video belum mulai),
          ketuk justru MEMUTAR video, dan tombol "Putar Ultimate" besar
@@ -1614,9 +1616,9 @@
          bawah — OPAK (1080x2321), jadi tampil memenuhi overlay
          (inset 0, width/height 100%, object-fit cover) tanpa crop
          yang berarti dan tanpa celah. Video utama duduk DI ATAS
-         gambar ini (z-index 1), menempel di tepi kiri selebar 75%;
-         sudut-sudut hitam videonya yang di-screen memperlihatkan
-         gambar ini di belakangnya.
+         gambar ini (z-index 1), bergeser ke kiri selebar 75%;
+         sudut-sudut hitam videonya dipotong masker alpha sehingga
+         latar di belakangnya terlihat lewat.
          pointer-events none — ketukan tetap jatuh ke overlay
          (ketuk-untuk-lewati tetap jalan) */
       .ult-bgimg {
@@ -1627,28 +1629,41 @@
         pointer-events: none;
         z-index: 0;
       }
-      /* Video DI ATAS gambar latar, menempel di TEPI KIRI overlay
+      /* Video DI ATAS latar game, bergeser ke KIRI keluar layar
          (permintaan Harith untuk video baru ult-05s yang bingkainya
-         sudah jadi di dalam video): left 0 tanpa jarak, lebar 75%
-         dari lebar overlay, di tengah vertikal (top 50% +
-         translateY(-50%)), LURUS tanpa rotasi, aspek 16/9 mengikuti
-         video aslinya (1278x720), object-fit cover.
-         mix-blend-mode: screen menghapus latar HITAM di sudut-sudut
-         luar bingkai video (sisa export MP4 dari latar transparan):
-         piksel hitam jadi transparan, gambar latar di belakang
-         terlihat lewat, bingkai ungu & animasi tetap tampil.
-         z-index 1: di atas gambar latar (.ult-bgimg),
-         di bawah tombol Putar (3) & speaker (2) */
+         sudah jadi di dalam video): left -10% — sebagian sisi kiri
+         video (bingkai + ujung penyihir) tenggelam ke luar tepi kiri
+         layar; lebar 75% dari lebar overlay. Lebih TINGGI dari
+         karakter game: tengah video di 30% tinggi layar (top 30% +
+         translateY(-50%)), di bawah HUD dan di atas penyihir &
+         kucing. LURUS tanpa rotasi, aspek 16/9 mengikuti video
+         aslinya (1278x720), object-fit cover.
+         Latar HITAM di sudut-sudut luar bingkai video (sisa export
+         MP4 dari latar transparan) dihapus dengan MASKER ALPHA
+         (ult-05s-mask.png, file eksternal di samping index.html):
+         alpha 255 di area bingkai/konten, alpha 0 di empat sudut.
+         Masker mengikuti ukuran & posisi elemen video (mask-size
+         100% 100%), jadi tetap selaras walau video digeser.
+         mix-blend-mode: screen TIDAK dipakai lagi — tidak bekerja
+         di webview Discord untuk video yang dirender perangkat
+         keras; background #000 juga dihapus agar tidak ada hitam
+         yang tembus.
+         z-index 1: di atas latar game, di bawah tombol Putar (3)
+         & speaker (2) */
       .ult-overlay video {
         position: absolute;
-        left: 0; top: 50%;
+        left: -10%; top: 30%;
         width: 75%;
         aspect-ratio: 16 / 9;
         object-fit: cover;
         transform: translateY(-50%);
-        mix-blend-mode: screen;
+        -webkit-mask-image: url("ult-05s-mask.png");
+        mask-image: url("ult-05s-mask.png");
+        -webkit-mask-size: 100% 100%;
+        mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
         display: block;
-        background: #000;
         z-index: 1;
       }
       /* Tombol PUTAR besar: hanya tampil bila autoplay ditolak / video
@@ -2349,12 +2364,13 @@
            navy di tengah, hutan + lingkaran sihir di bawah): gambar
            itu adalah SATU-SATUNYA latar overlay — opak,
            memenuhi overlay penuh (object-fit cover) tanpa celah.
-           Video duduk menempel di TEPI KIRI gambar, lebar 75%
-           lebar overlay, di tengah vertikal, LURUS tanpa miring
+           Video duduk bergeser ke KIRI keluar layar (left -10%),
+           lebar 75% lebar overlay, lebih tinggi dari karakter game
+           (top 30% + translateY(-50%)), LURUS tanpa miring
            (permintaan Harith — bingkai "ULTIMATE" ungu sudah jadi
            di dalam videonya), aspek 16/9, object-fit cover.
            Latar hitam di sudut luar bingkai video dihapus dengan
-           mix-blend-mode: screen pada elemen video.
+           masker alpha (ult-05s-mask.png) pada elemen video.
            Latar game (.ult-bg) DISEMBUNYIKAN (display:none) selama
            overlay ini tampil.
            Bila webview
