@@ -352,35 +352,35 @@
         pointer-events: none; z-index: 6;
       }
       .bubble.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
-      /* Balon bicara PENYIHIR: balon KECIL terpisah dari balon boss di atas —
-         hanya muncul sesaat menemani kalimat acak "Sihir adalah bagian
-         dari hidupku" (lihat blok suara sihir-hidup di skrip game), lalu
-         hilang lagi. Gaya lembut Fantasy Casual RPG yang sama seperti
-         balon boss (isian #fdf7ff, teks ungu tua), tapi bayangannya
-         ungu & sangat lembut (tanpa bayangan keras). Posisi left/top
-         dihitung JS (placeWizBubble di layoutSprites + saat balon
+      /* Teks bicara PENYIHIR: dulu balon KECIL terpisah, kini TEKS POLOS
+         saja atas permintaan pemilik (Aturan 6) — TANPA background,
+         border, ekor balon, bayangan kotak, & padding; cukup tulisan
+         PUTIH dengan font yang sama seperti kata Mantra ("Baloo 2"),
+         ukuran TETAP 9px seperti teks balon dulu, ditambah bayangan
+         teks lembut yang sama seperti teks prompt di bawah layar
+         supaya tetap terbaca di atas latar. Lebar area teks tetap
+         max-width 46% supaya kalimat panjang ("Penduduk desa
+         mengandalkanku, aku tidak boleh kalah.") tetap terbungkus
+         rapi & tidak meluber keluar layar. Hanya muncul sesaat
+         menemani kalimat acak penyihir (lihat blok suara bicara
+         penyihir di skrip game), lalu hilang lagi. Posisi left/top
+         dihitung JS (placeWizBubble di layoutSprites + saat teks
          tampil) supaya selalu menggantung tepat di atas topi penyihir;
          nilai di sini hanya cadangan sebelum JS jalan. Muncul/hilang
          HANYA lewat opacity & transform, dan pointer-events none
          supaya tidak pernah mengganggu tombol */
       .wiz-bubble {
         position: absolute; top: 30%; left: 12%; max-width: 46%;
-        background: #fdf7ff; color: #33135e;
+        color: #fff;
+        font-family: "Baloo 2", sans-serif;
         font-weight: 400; font-size: 9px; line-height: 1.35; text-align: center;
-        padding: 6px 8px; border-radius: 10px 10px 10px 4px;
-        box-shadow: 0 3px 10px rgba(49,16,101,.28);
+        padding: 0;
+        text-shadow: 0 2px 10px rgba(0,0,0,.75), 0 0 22px rgba(0,0,0,.45);
         opacity: 0; transform: translate(-50%, calc(-100% + 5px)) scale(.95);
         transition: opacity .22s ease, transform .22s ease;
         pointer-events: none; z-index: 6;
       }
       .wiz-bubble.show { opacity: 1; transform: translate(-50%, -100%) scale(1); }
-      /* Ekor kecil balon di sudut bawah, mengarah turun ke penyihir */
-      .wiz-bubble::after {
-        content: ""; position: absolute; left: 20px; bottom: -4px;
-        width: 9px; height: 9px; background: #fdf7ff;
-        transform: rotate(45deg); border-radius: 0 0 3px 0;
-        box-shadow: 2px 2px 3px rgba(49,16,101,.10);
-      }
       .dmg-num {
         position: absolute; font-family: "Baloo 2", sans-serif; font-weight: 400;
         color: #ffd23e; text-shadow: 0 2px 0 #7a2b00, 0 0 12px rgba(255,150,40,.8);
@@ -2079,7 +2079,7 @@
         <div class="victory" id="victory" hidden aria-hidden="true"><div class="rays"></div><div class="v-text">VICTORY!</div></div>
         <div class="cheer" id="cheer" hidden aria-hidden="true"></div>
         <div class="bubble" id="bubble" role="status"></div>
-        <!-- Balon bicara kecil PENYIHIR: hanya untuk kalimat acak penyihir (teksnya diisi JS mengikuti kalimat yang diputar: "Sihir adalah bagian dari hidupku" atau "Penduduk desa mengandalkanku, aku tidak boleh kalah.") — tampil saat suaranya berbunyi, hilang saat suaranya selesai (lihat blok suara bicara penyihir). Balon boss di atasnya tetap mati seperti keputusan sebelumnya -->
+        <!-- Teks bicara PENYIHIR (dulu balon kecil, kini TEKS POLOS putih tanpa background atas permintaan pemilik): hanya untuk kalimat acak penyihir (teksnya diisi JS mengikuti kalimat yang diputar: "Sihir adalah bagian dari hidupku", "Penduduk desa mengandalkanku, aku tidak boleh kalah.", atau "Aku tidak takut padamu.") — tampil di atas topi penyihir saat suaranya berbunyi, hilang saat suaranya selesai (lihat blok suara bicara penyihir). Balon boss di atasnya tetap mati seperti keputusan sebelumnya -->
         <div class="wiz-bubble" id="wizBubble" role="status">Sihir adalah bagian dari hidupku</div>
         <div id="fxLayer"></div>
       </section>
@@ -2673,6 +2673,10 @@
       function preloadSalah() { try { salahElement().load(); } catch (e) {} }
       function sfxWrong() {
         if (S.muted) return;
+        /* ATURAN 4: suara salah yang berbunyi MEMAKSA menghentikan
+           kalimat tanpa sebab penyihir yang sedang berbunyi &
+           me-reset jeda bicaranya (lihat wizTalkSalahInterrupt) */
+        wizTalkSalahInterrupt();
         var el = salahElement();
         try {
           el.currentTime = 0;
@@ -2825,8 +2829,9 @@
          Elemen dibuat sekali dan di-PRELOAD sesudah gestur "Mulai
          Bermain" (preloadHidup, dipanggil dari penangan tombol itu)
          supaya siap berbunyi tanpa jeda saat gilirannya tiba. Volume
-         elemen 0,8 (sama seperti suara salah/berhasil — kalimatnya
-         harus terdengar jelas), ikut tombol mute (S.muted) seperti
+         elemen 0,64 (ATURAN 5: diturunkan ±20% dari 0,8 semula atas
+         permintaan pemilik — hanya suara tanpa sebab ini yang turun;
+         suara salah/berhasil tetap 0,8), ikut tombol mute (S.muted) seperti
          SFX lain: saat mute kalimat tidak berbunyi sama sekali, dan
          bila mute ditekan di tengah kalimat, kalimat berhenti.
          JADWAL: timer pertama dipasang oleh startGame (yaitu
@@ -2858,7 +2863,7 @@
       function hidupElement() {
         if (hidupEl) return hidupEl;
         var el = document.createElement("audio");
-        el.volume = 0.8;
+        el.volume = 0.64;
         el.preload = "auto";
         /* Pilih format berdasarkan dukungan browser: pakai OGG bila
            bisa diputar, kalau tidak pakai MP3 */
@@ -2881,7 +2886,8 @@
          seperti kalimat ke-1: file EKSTERNAL di samping index.html
          (TIDAK di-inline), format dipilih lewat canPlayType (OGG
          dulu, fallback MP3, dan format cadangan dicoba sekali bila
-         yang utama gagal dimuat), volume 0,8, ikut tombol mute
+         yang utama gagal dimuat), volume 0,64 (Aturan 5: turun ±20%
+         dari 0,8), ikut tombol mute
          (S.muted) seperti SFX lain, dan di-PRELOAD sesudah gestur
          "Mulai Bermain" (preloadKalah, dipanggil dari penangan
          tombol yang sama dengan preloadHidup) */
@@ -2891,7 +2897,7 @@
       function kalahElement() {
         if (kalahEl) return kalahEl;
         var el = document.createElement("audio");
-        el.volume = 0.8;
+        el.volume = 0.64;
         el.preload = "auto";
         var oggOk = false;
         try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
@@ -2908,7 +2914,8 @@
          seperti kalimat ke-1 & ke-2: file EKSTERNAL di samping
          index.html (TIDAK di-inline), format dipilih lewat
          canPlayType (OGG dulu, fallback MP3, dan format cadangan
-         dicoba sekali bila yang utama gagal dimuat), volume 0,8,
+         dicoba sekali bila yang utama gagal dimuat), volume 0,64
+         (Aturan 5: turun ±20% dari 0,8),
          ikut tombol mute (S.muted) seperti SFX lain, dan di-PRELOAD
          sesudah gestur "Mulai Bermain" (preloadTakut, dipanggil
          dari penangan tombol yang sama dengan preloadHidup) */
@@ -2918,7 +2925,7 @@
       function takutElement() {
         if (takutEl) return takutEl;
         var el = document.createElement("audio");
-        el.volume = 0.8;
+        el.volume = 0.64;
         el.preload = "auto";
         var oggOk = false;
         try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
@@ -2996,15 +3003,32 @@
       var wizTalkTimer = null;   /* timer jadwal bicara yang sedang menunggu */
       var wizTalkSession = 0;    /* nomor sesi putar — sesi lama gugur begitu naik */
       var wizTalkPlaying = false;
-      /* Jeda TETAP 5 detik (dipercepat atas permintaan pemilik):
+      /* ATURAN 2: flag jeda panjang pasca-ultimate — true berarti jeda
+         bicara BERIKUTNYA 10 detik (bukan 5). Dipasang di momen slam
+         sigil sesudah video ultimate (wizTalkAfterUltimate) dan
+         TERPAKAI SATU KALI: gugur begitu kalimat berikutnya mulai
+         berbunyi (playWizTalk), jadi sesudah itu semua jeda kembali
+         5 detik. Selama flag menyala, semua pemasangan ulang timer —
+         termasuk reset sentuhan Aturan 1 — memakai 10 detik */
+      var wizTalkLongGap = false;
+      /* ATURAN 3: catatan reset tertunda — sentuhan yang datang saat
+         kalimat SEDANG berbunyi TIDAK menghentikan suaranya; catatan
+         ini hanya penanda bahwa reset jeda berlaku begitu kalimat
+         selesai (finish di playWizTalk memang memasang timer jeda
+         PENUH sejak kalimat selesai, jadi resetnya terlaksana di
+         sana dan catatan ini dibersihkan) */
+      var wizTalkResetPending = false;
+      /* Jeda dasar TETAP 5 detik (dipercepat atas permintaan pemilik):
          kemunculan pertama 5 detik setelah game mulai; berikutnya
          5 detik itu adalah HENING PENUH yang dihitung SETELAH
          kalimat selesai sepenuhnya — timer dipasang di finish()
-         (playWizTalk) saat suara berakhir & balon hilang, BUKAN
+         (playWizTalk) saat suara berakhir & teks hilang, BUKAN
          dari awal kalimat. Siklusnya: bicara ±3 detik → hening
-         5 detik → bicara lagi */
+         5 detik → bicara lagi. Satu-satunya pengecualian: jeda
+         menuju bicara pertama sesudah ultimate memakai 10 detik
+         selama flag Aturan 2 menyala */
       function wizTalkDelay(first) {
-        return 5000;
+        return wizTalkLongGap ? 10000 : 5000;
       }
       function scheduleWizTalk(first, runId) {
         if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
@@ -3045,11 +3069,22 @@
         wizTalkEl = el;
         var session = ++wizTalkSession;
         wizTalkPlaying = true;
+        /* ATURAN 2: kalimat ini adalah bicara pertama sesudah
+           ultimate bila flag menyala — jeda panjangnya sudah
+           terlayani selama menunggu kalimat ini, jadi flag TERPAKAI
+           di sini; jeda sesudah kalimat ini kembali normal 5 detik */
+        wizTalkLongGap = false;
+        wizTalkResetPending = false;
         var finished = false;
         function finish() {
           if (finished || session !== wizTalkSession) return;
           finished = true;
           wizTalkPlaying = false;
+          /* ATURAN 3: reset tertunda dari sentuhan-sentuhan selama
+             kalimat berbunyi TERLAYANI di sini — timer yang dipasang
+             di bawah adalah jeda PENUH yang dihitung sejak kalimat
+             selesai, bukan sejak sentuhannya */
+          wizTalkResetPending = false;
           if (wizTalkEl === el) wizTalkEl = null;
           el.removeEventListener("ended", finish);
           hideWizBubble();
@@ -3074,6 +3109,10 @@
         if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
         wizTalkSession++;
         wizTalkPlaying = false;
+        wizTalkResetPending = false;
+        /* Flag Aturan 2 SENGAJA tidak dibersihkan di sini: bila slam
+           ultimate baru saja memasangnya, jeda 10 detik itu tetap
+           berlaku untuk bicara pertama pada startGame berikutnya */
         pauseWizVoices();
         hideWizBubble();
       }
@@ -3084,9 +3123,76 @@
         if (!wizTalkPlaying) return;
         wizTalkSession++;
         wizTalkPlaying = false;
+        wizTalkResetPending = false;
         pauseWizVoices();
         hideWizBubble();
         if (S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false);
+      }
+      /* ---------- ATURAN ANTI-TABRAKAN suara tanpa sebab ----------
+         Melengkapi jadwal bicara di atas atas permintaan pemilik:
+         penyihir hanya bicara setelah pemain diam, dan suara salah
+         pencet selalu menang atas kalimat yang sedang berbunyi */
+      /* ATURAN 1 + 3: SETIAP sentuhan layar (pointerdown di mana
+         saja — tombol mantra, tombol UI, atau area lain) me-reset
+         hitungan jeda hening ke 0, jadi penyihir hanya bicara setelah
+         pemain TIDAK menyentuh layar selama jeda penuh.
+         - TIDAK ada kalimat yang sedang berbunyi: timer yang sedang
+           menunggu dibatalkan & dipasang ulang dengan jeda penuh
+           (5 detik, atau 10 detik selama flag Aturan 2 menyala).
+         - ADA kalimat yang sedang berbunyi: suaranya TIDAK
+           dihentikan (Aturan 3) — cukup dicatat sebagai reset
+           tertunda; resetnya berlaku saat kalimat selesai (finish
+           memasang jeda penuh sejak kalimat selesai).
+         Listener-nya PASIF: tanpa preventDefault, tidak mengubah
+         perilaku tombol apa pun, hanya mengatur ulang timer bicara.
+         Hanya bekerja selama sistem bicara hidup untuk run ini (ada
+         timer yang menunggu); sesudah stopWizTalk (menang / kalah /
+         kembali ke menu) sentuhan tidak menghidupkan lagi jadwal
+         bicara yang sudah berhenti */
+      function wizTalkTouchReset() {
+        if (S.phase === "idle" || S.phase === "over") return;
+        if (wizTalkPlaying) { wizTalkResetPending = true; return; }
+        if (wizTalkTimer) scheduleWizTalk(false);
+      }
+      document.addEventListener("pointerdown", wizTalkTouchReset, { passive: true });
+      /* ATURAN 4: suara "sihirnya salah" (salah pencet) MENANG atas
+         Aturan 3 — satu-satunya sentuhan yang boleh menghentikan
+         paksa suara tanpa sebab. Bila suara salah berbunyi BERSAMAAN
+         dengan kalimat yang sedang berbunyi, kalimat itu DIMATIKAN
+         PAKSA seketika: elemen audionya di-pause, teksnya
+         disembunyikan, status bicara yang berjalan dibersihkan —
+         lalu timer bicara dipasang ulang dengan jeda penuh 5 detik
+         (reset ke 0, sama seperti Aturan 1; flag Aturan 2 sudah
+         terpakai saat kalimat itu mulai, jadi jedanya memang 5
+         detik). Bila TIDAK ada kalimat yang berbunyi (hanya timer
+         yang menunggu), cukup reset timer ke 0 seperti Aturan 1.
+         scheduleWizTalk selalu clearTimeout dulu sebelum memasang
+         timer baru, jadi tidak pernah ada timer ganda. Dipanggil
+         dari sfxWrong tepat saat suara salah diputar */
+      function wizTalkSalahInterrupt() {
+        if (S.phase === "idle" || S.phase === "over") return;
+        if (wizTalkPlaying) {
+          wizTalkSession++;
+          wizTalkPlaying = false;
+          wizTalkResetPending = false;
+          pauseWizVoices();
+          hideWizBubble();
+          scheduleWizTalk(false);
+        } else if (wizTalkTimer) {
+          scheduleWizTalk(false);
+        }
+      }
+      /* ATURAN 2: dipanggil di momen slam sigil sesudah video
+         ultimate (boss HP jadi 0 di ultimateSequence): flag jeda
+         10 detik dipasang & hitungannya dimulai dari momen ini —
+         timer yang sedang menunggu langsung dipasang ulang (10 detik
+         penuh dari slam). Bila kalimat kebetulan sedang berbunyi,
+         biarkan selesai: finish-nya memasang timer berikutnya yang
+         juga 10 detik selama flag belum terpakai, dan kalimat
+         sesudahnya yang memakai flag itu */
+      function wizTalkAfterUltimate(runId) {
+        wizTalkLongGap = true;
+        if (!wizTalkPlaying && S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false, runId);
       }
       function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, VOL.magic, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
@@ -4608,6 +4714,9 @@
         burstAtEl(catSprite, "#ffd23e", 14);
         var dmg = S.bossHp;
         S.bossHp = 0;
+        /* ATURAN 2: slam ultimate ini memasang flag jeda bicara
+           10 detik (satu kali) untuk bicara pertama sesudahnya */
+        wizTalkAfterUltimate(id);
         sfxMeow();
         catAnim("hit", 480);
         dmgNumber(dmg);
