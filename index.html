@@ -752,22 +752,47 @@
       /* Ronde cerita BERHASIL: slot terisi BERCAHAYA dulu bersamaan (permata
          jauh lebih terang + membesar sedikit, sinarnya menyala penuh), lalu
          semua slot MENGECIL BERSAMAAN jadi setengah ukuran (.fly-shrink),
-         lalu DIAM SEJENAK tetap mengecil (~450ms), baru permatanya terbang
-         SERENTAK ke mantra (lihat .slot-flyer &
-         flySlotToMantra di JS) dan slotnya kembali kosong/redup (.spent) */
+         lalu DIAM SEJENAK tetap mengecil (~180ms, dengan denyut halus
+         .fly-hold supaya jedanya terasa hidup, bukan macet), baru permatanya
+         terbang SERENTAK ke mantra (lihat .slot-flyer &
+         flySlotToMantra di JS) dan slotnya kembali kosong/redup (.spent).
+         Selama seluruh rangkaian ini slot memakai .fly-calm: sinar berputar
+         & percikan berkelipnya DIJEDA (lihat di bawah) supaya HP tidak
+         menggambar ulang efek-efek itu tiap frame di tengah animasi */
       .slot.fly-glow { transform: scale(1.32); z-index: 2; }
       .slot.fly-glow .slot-img {
+        /* Bayangan cahaya dikurangi 3 lapis → 2 lapis: filter ini menimpa
+           filter dasar .slot-img selama bercahaya + mengecil + diam, dan
+           tiap lapis drop-shadow digambar ulang di setiap frame transform */
         filter: brightness(1.65) saturate(1.2)
-          drop-shadow(0 0 4px var(--c))
-          drop-shadow(0 0 12px var(--c))
-          drop-shadow(0 0 22px color-mix(in srgb, var(--c) 65%, transparent));
+          drop-shadow(0 0 5px var(--c))
+          drop-shadow(0 0 17px color-mix(in srgb, var(--c) 65%, transparent));
       }
       /* Fase mengecil bersamaan: setengah dari ukuran slot terisi saat ini
-         (.slot.filled = scale(1.08) → setengahnya .54), transisi transform
-         .slot diperpanjang khusus fase ini supaya mengecilnya halus */
+         (.slot.filled = scale(1.08) → setengahnya .54). Transisinya kini
+         LEBIH SINGKAT (.3s → .24s) dengan kurva gesit yang bergerak cepat
+         di awal — kurva ease lama melambat di ujungnya sehingga mengecil
+         terasa seperti berhenti/macet sebelum terbang */
       .slot.fly-shrink {
         transform: scale(.54);
-        transition: transform .3s ease;
+        transition: transform .24s cubic-bezier(.2,.75,.3,1);
+      }
+      /* Selama rangkaian terbang berjalan, sinar berputar & percikan slot
+         DIJEDA: conic-gradient yang berputar dan teks yang berkelip memaksa
+         gambar ulang tiap frame di HP; menjedanya tidak mengubah tampilan
+         diamnya (sinar & percikan tetap terlihat), hanya menghilangkan
+         biaya putaran/kelipnya tepat saat animasi terbang berjalan */
+      .slot.fly-calm .slot-rays, .slot.fly-calm .slot-spk { animation-play-state: paused; }
+      /* Denyut halus SELAMA diam sejenak: slot yang sudah mengecil membesar
+         sangat sedikit lalu kembali ke ukuran mengecilnya — isyarat
+         "mengumpulkan tenaga" supaya jeda singkatnya terasa disengaja &
+         hidup, bukan seperti game macet. Transform saja (GPU), satu siklus
+         pas sepanjang jedanya (~180ms) */
+      .slot.fly-hold { animation: flyHoldPulse .18s ease-in-out; }
+      @keyframes flyHoldPulse {
+        0% { transform: scale(.54); }
+        55% { transform: scale(.59); }
+        100% { transform: scale(.54); }
       }
       .slot.spent .q { opacity: .3; }
       /* Permata terbang dari slot menuju mantra: elemen fixed di atas semua
@@ -780,10 +805,12 @@
       }
       .slot-flyer img {
         width: 100%; height: 100%; display: block; object-fit: contain;
+        /* Bayangan cahaya 3 lapis → 2 lapis: permata ini BERGERAK tiap frame,
+           jadi filternya digambar ulang terus selama terbang — satu lapis
+           dikurangi tanpa mengubah kesan cahayanya */
         filter: brightness(1.35)
-          drop-shadow(0 0 5px var(--c))
-          drop-shadow(0 0 14px var(--c))
-          drop-shadow(0 0 26px color-mix(in srgb, var(--c) 60%, transparent));
+          drop-shadow(0 0 6px var(--c))
+          drop-shadow(0 0 19px color-mix(in srgb, var(--c) 60%, transparent));
       }
       /* Percikan jejak & ledakan firework selama permata terbang */
       .fly-spark {
@@ -2737,7 +2764,10 @@
         sp.style.width = size + "px"; sp.style.height = size + "px";
         sp.style.left = (x - size / 2) + "px"; sp.style.top = (y - size / 2) + "px";
         sp.style.background = color;
-        sp.style.boxShadow = "0 0 8px " + color + ", 0 0 16px " + color;
+        /* Percikan JEJAK (big=false) cukup satu lapis bayangan — jumlahnya
+           banyak & terus lahir selama permata terbang; ledakan tiba
+           (big=true) tetap dua lapis karena jumlahnya sedikit */
+        sp.style.boxShadow = big ? "0 0 8px " + color + ", 0 0 16px " + color : "0 0 8px " + color;
         document.body.appendChild(sp);
         var ang = Math.random() * Math.PI * 2, dist = big ? 20 + Math.random() * 30 : 4 + Math.random() * 10;
         var anim = sp.animate([
@@ -2763,13 +2793,17 @@
           flyer.style.top = sy + "px";
           flyer.innerHTML = '<img src="' + r.sigil + '" alt="" />';
           document.body.appendChild(flyer);
-          /* Jejak firework: percikan sewarna permata berjatuhan di sepanjang lintasan melengkungnya */
+          /* Jejak firework: percikan sewarna permata berjatuhan di sepanjang
+             lintasan melengkungnya. Intervalnya direnggangkan (55ms → 90ms):
+             dengan sampai 15 permata terbang serentak, jejak 55ms melahirkan
+             ratusan elemen berbayangan sekaligus di HP — 90ms tetap terlihat
+             sebagai jejak menyambung, tapi bebannya jauh lebih ringan */
           var startedAt = performance.now();
           var trail = setInterval(function () {
             var p = Math.min(1, (performance.now() - startedAt) / durMs);
             var arc = -Math.sin(p * Math.PI) * 34;
             flySpark(sx + dx * p + (Math.random() - .5) * 10, sy + dy * p + arc + (Math.random() - .5) * 10, r.color, false);
-          }, 55);
+          }, 90);
           /* Permata berangkat dari ukuran slot yang sudah mengecil
              (setengah ukuran), membesar sedikit di tengah lintasan,
              lalu menyusut lagi saat masuk ke mantra */
@@ -2781,7 +2815,10 @@
           anim.onfinish = function () {
             clearInterval(trail);
             flyer.remove();
-            flyBurst(tx, ty, r.color, 9);
+            /* Ledakan tiba dikurangi 9 → 6 percikan: semua permata tiba
+               hampir bersamaan, jadi ledakannya pun menumpuk di titik yang
+               sama — 6 per permata sudah terasa penuh */
+            flyBurst(tx, ty, r.color, 6);
             resolve();
           };
         });
@@ -2792,9 +2829,19 @@
           if (d.classList.contains("filled")) filled.push(k);
         });
         if (!filled.length || reducedMotion) return true;
-        /* (1) Semua slot terisi ronde ini bercahaya dulu bersamaan */
-        filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-glow"); });
-        if (!(await sleep(400, id))) return false;
+        /* Bendera sibuk untuk canvas latar: selama rangkaian ini berjalan,
+           canvas air terjun/kunang-kunang digambar separuh laju (lihat
+           loop frame di skrip latar) supaya daya HP tercurah ke animasi
+           slot & permata terbang, bukan ke latar */
+        window.__slotFlightBusy = true;
+        /* (1) Semua slot terisi ronde ini bercahaya dulu bersamaan.
+           .fly-calm ikut dipasang dari sini sampai terbang: sinar berputar
+           & percikan slot dijeda selama rangkaian berjalan (lihat CSS) */
+        filled.forEach(function (k) {
+          slotsEl.children[k].classList.add("fly-glow");
+          slotsEl.children[k].classList.add("fly-calm");
+        });
+        if (!(await sleep(400, id))) { window.__slotFlightBusy = false; return false; }
         /* Targetnya: bagian mantra yang akan menyala oleh ronde ini */
         var spans = $("mantraWords").querySelectorAll(".mantra-part");
         var target = spans[S.mantraLit] || $("mantra");
@@ -2804,25 +2851,33 @@
         var n = filled.length;
         var dur = n <= 5 ? 520 : (n <= 10 ? 460 : 400);
         /* (2) Semua slot mengecil BERSAMAAN jadi setengah ukuran
-           (.fly-shrink, scale .54) — ditunggu sampai mengecilnya tuntas */
+           (.fly-shrink, scale .54) — ditunggu sampai mengecilnya tuntas.
+           Mengecilnya kini lebih gesit (.24s, kurva cepat di awal), jadi
+           tunggunya pun dipersingkat (320ms → 250ms) */
         filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-shrink"); });
-        if (!(await sleep(320, id))) return false;
-        /* (3) DIAM SEJENAK: slot yang sudah mengecil ditahan diam tetap
-           mengecil ~450ms sebelum ada yang bergerak — nafas singkat
-           antara mengecil dan terbang */
-        if (!(await sleep(450, id))) return false;
+        if (!(await sleep(250, id))) { window.__slotFlightBusy = false; return false; }
+        /* (3) DIAM SEJENAK: slot yang sudah mengecil ditahan tetap mengecil
+           sebelum ada yang terbang — nafas singkat antara mengecil dan
+           terbang. Jedanya DIPERKENDEK (450ms → 180ms): 450ms diam total
+           terbaca sebagai game macet/ngelag. Selama jeda singkat ini slot
+           memakai .fly-hold — denyut halus satu siklus (membesar sedikit
+           lalu kembali) sebagai isyarat "mengumpulkan tenaga", jadi jeda
+           terasa hidup & disengaja, bukan beku */
+        filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-hold"); });
+        if (!(await sleep(180, id))) { window.__slotFlightBusy = false; return false; }
         /* (4) Semua permata terbang SERENTAK menuju mantra; slotnya
            langsung kosong bersamaan. Ditunggu sampai SEMUA tiba —
            mantra baru terisi oleh pemanggil setelah ini selesai */
         var flights = filled.map(function (k) {
           var slotEl = slotsEl.children[k];
           var fly = flySlotToMantra(slotEl, S.seq[k], target, dur);
-          slotEl.classList.remove("fly-glow", "fly-shrink", "filled");
+          slotEl.classList.remove("fly-glow", "fly-shrink", "fly-calm", "fly-hold", "filled");
           slotEl.classList.add("spent");
           slotEl.querySelector(".q").textContent = "?";
           return fly;
         });
         await Promise.all(flights);
+        window.__slotFlightBusy = false;
         return id === S.run;
       }
 
@@ -3870,6 +3925,7 @@
           ctx.fill();
         }
 
+        var frameNo = 0;
         function frame(ts) {
           var t = ts / 1000;
           /* Gambar ulang di SETIAP frame requestAnimationFrame (full 60fps mengikuti
@@ -3877,10 +3933,18 @@
              kunang-kunang bergerak sehalus layar. Posisi dihitung dari waktu absolut,
              jadi kecepatannya sama seperti sebelumnya — hanya gerakannya yang halus.
              Batas DPR 1.5 dan jumlah garis aliran/kunang-kunang yang sudah diringankan
-             tetap dipertahankan supaya biaya gambar per frame tetap ringan. */
-          ctx.clearRect(0, 0, view.w, view.h);
-          FALLS.forEach(function (f) { drawFall(f, t); });
-          flies.forEach(function (fl) { drawFly(fl, t); });
+             tetap dipertahankan supaya biaya gambar per frame tetap ringan.
+             SATU pengecualian: selama rangkaian slot terbang ke mantra berjalan
+             (window.__slotFlightBusy, dipasang slotFlightToMantra di skrip game),
+             latar digambar SEPARUH laju saja (frame ganjil dilewati) — air &
+             kunang-kunang tetap bergerak karena posisinya dari waktu absolut,
+             dan daya gambar HP tercurah ke animasi slot yang sedang ditonton */
+          frameNo++;
+          if (!(window.__slotFlightBusy && frameNo % 2 === 1)) {
+            ctx.clearRect(0, 0, view.w, view.h);
+            FALLS.forEach(function (f) { drawFall(f, t); });
+            flies.forEach(function (fl) { drawFly(fl, t); });
+          }
           requestAnimationFrame(frame);
         }
         resize();
