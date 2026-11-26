@@ -1399,20 +1399,20 @@
         from { transform: translate3d(7px, 2px, 0); }
         to { transform: translate3d(-7px, -3px, 0); }
       }
-      /* Membuka: animasi keyframe 1 detik dengan titik-titik stop
-         0% / 25% / 50% / 75% / 100% (1/4, 2/4, 3/4, 4/4 perjalanan),
-         tapi tiap segmen DIGESER HALUS — easing ease-in-out pada tiap
-         segmen keyframe, BUKAN steps() — jadi kabut tetap melewati
-         keempat titik itu dalam 1 detik, namun gerakannya mengalir
+      /* Membuka: animasi keyframe 600ms dengan titik-titik stop
+         0% / 25% / 50% / 75% / 100% (1/4, 2/4, 3/4, 4/4 perjalanan,
+         tiap tahap 150ms), tapi tiap segmen DIGESER HALUS — easing
+         ease-in-out pada tiap segmen keyframe, BUKAN steps() — jadi
+         kabut tetap melewati keempat titik itu dalam 600ms, namun gerakannya mengalir
          tanpa satu pun lompatan mendadak (lompatan steps terbaca
          seperti frame drop / nge-frame di HP). Lapisan gelap memudar
          HALUS mengikuti titik yang sama (opacity .75 → ±.56 → ±.38 →
          ±.19 → 0, interpolasi halus antar titik). Murni transform &
          opacity (translate3d + will-change pada .fog-half), tanpa JS
          per frame dan tanpa filter yang dianimasikan */
-      .fog-veil.open .fog-left { animation: fog-open-l 1s ease-in-out both; }
-      .fog-veil.open .fog-right { animation: fog-open-r 1s ease-in-out both; }
-      .fog-veil.open .fog-dark { animation: fog-dark-open 1s ease-in-out both; }
+      .fog-veil.open .fog-left { animation: fog-open-l 0.6s ease-in-out both; }
+      .fog-veil.open .fog-right { animation: fog-open-r 0.6s ease-in-out both; }
+      .fog-veil.open .fog-dark { animation: fog-dark-open 0.6s ease-in-out both; }
       @keyframes fog-open-l {
         0% { transform: translate3d(0, 0, 0); }
         25% { transform: translate3d(-28%, 0, 0); }
@@ -5388,8 +5388,8 @@
          melewati titik keyframe 1/4, 2/4, 3/4, 4/4 dengan geseran
          HALUS antar titik (easing ease-in-out per segmen, bukan
          lompatan steps) sambil lapisan gelap memudar halus ke 0
-         mengikuti titik yang sama, total 1.000ms (kelas .open).
-         Selama 1 detik membuka itu flag window.__fogBusy dipasang
+         mengikuti titik yang sama, total 600ms (kelas .open).
+         Selama 600ms membuka itu flag window.__fogBusy dipasang
          supaya loop kanvas latar & kanvas efek depan berjalan SEPARUH
          laju saja (pola yang sama seperti __slotFlightBusy) — daya
          gambar HP tercurah ke geseran kabut yang sedang ditonton,
@@ -5398,7 +5398,7 @@
          (awal jeda halaman bersih), kanvas lanjut normal.
          sesudah kabut hilang SEPENUHNYA ada jeda 1.000ms dengan layar
          sudah terang & bersih, BARU callback dijalankan — di situlah
-         hitung mundur dimulai. Total 2 detik. Untuk
+         hitung mundur dimulai. Total 1,6 detik. Untuk
          prefers-reduced-motion kabut disembunyikan seketika (tanpa
          animasi membuka) dan callback langsung jalan, sejalan
          penanganan gerak lain di game ini */
@@ -5420,7 +5420,7 @@
           /* Jeda 1 detik: layar sudah terang & bersih sesudah kabut
              benar-benar hilang, baru hitung mundur 3-2-1 dimulai */
           setTimeout(done, 1000);
-        }, 1000);
+        }, 600);
       }
       /* Kabut ditutup lagi: dipakai saat kembali ke menu pembuka
          (kartu tutorial tampil lagi), supaya papan di belakang kartu
@@ -5441,7 +5441,7 @@
          dengan fade + mengecil sedikit dan overlay ikut memudar; game TIDAK
          langsung dimulai: overlay disembunyikan, KABUT yang SUDAH
          menutupi papan sejak awal (di belakang kartu) membuka ke
-         samping (openFog, total 2 detik: membuka 1 detik,
+         samping (openFog, total 1,6 detik: membuka 600ms,
          lalu jeda 1 detik sesudah kabut hilang), pop-up hitung mundur
          3-2-1 tampil di atas papan yang sudah terender (3 detik), dan
          startGame BARU dipanggil setelah hitung mundur selesai.
