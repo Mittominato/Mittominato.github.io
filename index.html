@@ -1340,20 +1340,24 @@
          drift tetap berjalan pelan selama jeda tahan; keyframes drift,
          hanya transform), kemudian kedua belah BERGESER ke samping —
          kiri ke kiri, kanan ke kanan — sampai keluar layar dalam
-         1 detik (kelas .open: animasi keyframe BERTAHAP steps(4, end)
-         pada transform saja — kabut hilang dalam 4 tahap yang terlihat
-         jelas: 1/4 pada 0,25 detik, 2/4 pada 0,50 detik, 3/4 pada
-         0,75 detik, 4/4 habis pada 1 detik; tanpa filter animasi per
-         frame, sesuai aturan performa). Tepi dalam
+         1 detik (kelas .open: animasi keyframe dengan stop
+         0%/25%/50%/75%/100% pada transform saja — kabut melewati
+         titik 1/4 pada 0,25 detik, 2/4 pada 0,50 detik, 3/4 pada
+         0,75 detik, 4/4 habis pada 1 detik, tapi tiap segmen DIGESER
+         HALUS dengan easing ease-in-out, bukan dilompat: versi lama
+         memakai steps(4, end) dan lompatan mendadak tiap tahapnya
+         terbaca sebagai frame drop / nge-frame di HP; tanpa filter
+         animasi per frame, sesuai aturan performa). Tepi dalam
          tiap belah memang transparan di gambarnya (asap menipis ke
          arah tengah), jadi sambungan tengahnya lembut tanpa masker.
          Karena tengah gambar transparan, di BAWAH kedua belah ada
          lapisan GELAP full-screen (.fog-dark, hitam opacity .75) yang
          menyembunyikan papan saat kabut menutup; saat kabut membuka,
-         lapisan itu MEMUDAR ke 0 mengikuti tahap yang SAMA
-         (steps(4, end): opacity .75 → ±.56 → ±.38 → ±.19 → 0),
+         lapisan itu MEMUDAR ke 0 mengikuti titik yang SAMA dengan
+         interpolasi halus antar titik
+         (opacity .75 → ±.56 → ±.38 → ±.19 → 0),
          sehingga permainan muncul dari gelap menjadi
-         terang bertahap seiring kabutnya hilang. z-index 16: di atas papan &
+         terang seiring kabutnya hilang. z-index 16: di atas papan &
          hitung mundur (15), di bawah overlay (20). pointer-events
          none — tidak pernah menghalangi sentuhan. Untuk
          prefers-reduced-motion goyangan drift dimatikan (media query
@@ -1395,27 +1399,40 @@
         from { transform: translate3d(7px, 2px, 0); }
         to { transform: translate3d(-7px, -3px, 0); }
       }
-      /* Membuka BERTAHAP: animasi keyframe 1 detik dengan
-         steps(4, end) — tiap belah diam di tempat, lalu meloncat
-         1/4 perjalanan pada 0,25 / 0,50 / 0,75 / 1,00 detik, jadi
-         kabut tampak hilang dalam 4 tahap yang jelas, bukan satu
-         geseran halus. Lapisan gelap memudar dengan tahap yang sama
-         (opacity .75 → ±.56 → ±.38 → ±.19 → 0). Murni transform &
-         opacity, tanpa JS per frame */
-      .fog-veil.open .fog-left { animation: fog-open-l 1s steps(4, end) both; }
-      .fog-veil.open .fog-right { animation: fog-open-r 1s steps(4, end) both; }
-      .fog-veil.open .fog-dark { animation: fog-dark-open 1s steps(4, end) both; }
+      /* Membuka: animasi keyframe 1 detik dengan titik-titik stop
+         0% / 25% / 50% / 75% / 100% (1/4, 2/4, 3/4, 4/4 perjalanan),
+         tapi tiap segmen DIGESER HALUS — easing ease-in-out pada tiap
+         segmen keyframe, BUKAN steps() — jadi kabut tetap melewati
+         keempat titik itu dalam 1 detik, namun gerakannya mengalir
+         tanpa satu pun lompatan mendadak (lompatan steps terbaca
+         seperti frame drop / nge-frame di HP). Lapisan gelap memudar
+         HALUS mengikuti titik yang sama (opacity .75 → ±.56 → ±.38 →
+         ±.19 → 0, interpolasi halus antar titik). Murni transform &
+         opacity (translate3d + will-change pada .fog-half), tanpa JS
+         per frame dan tanpa filter yang dianimasikan */
+      .fog-veil.open .fog-left { animation: fog-open-l 1s ease-in-out both; }
+      .fog-veil.open .fog-right { animation: fog-open-r 1s ease-in-out both; }
+      .fog-veil.open .fog-dark { animation: fog-dark-open 1s ease-in-out both; }
       @keyframes fog-open-l {
-        from { transform: translate3d(0, 0, 0); }
-        to { transform: translate3d(-112%, 0, 0); }
+        0% { transform: translate3d(0, 0, 0); }
+        25% { transform: translate3d(-28%, 0, 0); }
+        50% { transform: translate3d(-56%, 0, 0); }
+        75% { transform: translate3d(-84%, 0, 0); }
+        100% { transform: translate3d(-112%, 0, 0); }
       }
       @keyframes fog-open-r {
-        from { transform: translate3d(0, 0, 0); }
-        to { transform: translate3d(112%, 0, 0); }
+        0% { transform: translate3d(0, 0, 0); }
+        25% { transform: translate3d(28%, 0, 0); }
+        50% { transform: translate3d(56%, 0, 0); }
+        75% { transform: translate3d(84%, 0, 0); }
+        100% { transform: translate3d(112%, 0, 0); }
       }
       @keyframes fog-dark-open {
-        from { opacity: .75; }
-        to { opacity: 0; }
+        0% { opacity: .75; }
+        25% { opacity: .56; }
+        50% { opacity: .38; }
+        75% { opacity: .19; }
+        100% { opacity: 0; }
       }
       /* ---------- Tampilan MANTRA (mode cerita saja) ----------
          Duduk di ruang kosong antara arena (karakter) dan baris slot/tombol
@@ -5367,9 +5384,17 @@
          (kelas .show + .drifting memang sudah terpasang sejak markup;
          goyangan lembut drift tetap berjalan pelan selama jeda tahan
          ini), kemudian kedua belah bergeser ke samping keluar layar
-         dalam 4 TAHAP keyframe (steps(4, end): 1/4, 2/4, 3/4, 4/4)
-         sambil lapisan gelap memudar ke 0 mengikuti tahap yang sama,
-         total 1.000ms (kelas .open);
+         melewati titik keyframe 1/4, 2/4, 3/4, 4/4 dengan geseran
+         HALUS antar titik (easing ease-in-out per segmen, bukan
+         lompatan steps) sambil lapisan gelap memudar halus ke 0
+         mengikuti titik yang sama, total 1.000ms (kelas .open).
+         Selama 1 detik membuka itu flag window.__fogBusy dipasang
+         supaya loop kanvas latar & kanvas efek depan berjalan SEPARUH
+         laju saja (pola yang sama seperti __slotFlightBusy) — daya
+         gambar HP tercurah ke geseran kabut yang sedang ditonton,
+         dan kanvas yang terlewat tetap menampilkan frame terakhirnya
+         di balik kabut; flag dilepas begitu kabut benar-benar hilang
+         (awal jeda halaman bersih), kanvas lanjut normal.
          sesudah kabut hilang SEPENUHNYA ada jeda 1.000ms dengan layar
          sudah terang & bersih, BARU callback dijalankan — di situlah
          hitung mundur dimulai. Total 3 detik. Untuk
@@ -5386,10 +5411,12 @@
           return;
         }
         setTimeout(function () {
+          window.__fogBusy = true;
           veil.classList.add("open");
           setTimeout(function () {
             veil.classList.add("hidden");
             veil.classList.remove("show", "drifting", "open");
+            window.__fogBusy = false;
             /* Jeda 1 detik: layar sudah terang & bersih sesudah kabut
                benar-benar hilang, baru hitung mundur 3-2-1 dimulai */
             setTimeout(done, 1000);
@@ -5405,6 +5432,7 @@
       function resetFog() {
         var veil = $("fogVeil");
         if (!veil) return;
+        window.__fogBusy = false;
         veil.classList.remove("hidden", "open");
         veil.classList.add("show", "drifting");
       }
@@ -6141,9 +6169,12 @@
              (window.__slotFlightBusy, dipasang slotFlightToMantra di skrip game),
              latar digambar SEPARUH laju saja (frame ganjil dilewati) — air &
              kunang-kunang tetap bergerak karena posisinya dari waktu absolut,
-             dan daya gambar HP tercurah ke animasi slot yang sedang ditonton */
+             dan daya gambar HP tercurah ke animasi slot yang sedang ditonton.
+             Pengecualian yang sama berlaku selama 1 detik kabut membuka
+             (window.__fogBusy, dipasang openFog): latar separuh laju supaya
+             geseran kabut tidak berebut daya gambar dengan kanvas ini */
           frameNo++;
-          if (!(window.__slotFlightBusy && frameNo % 2 === 1)) {
+          if (!((window.__slotFlightBusy || window.__fogBusy) && frameNo % 2 === 1)) {
             ctx.clearRect(0, 0, view.w, view.h);
             drawMoonGlow(t);
             drawStars(t);
@@ -6178,7 +6209,8 @@
          prefers-reduced-motion) game berjalan persis seperti sebelumnya.
          Pola hematnya sama seperti canvas latar: DPR dibatasi (1.25),
          jumlah partikel dibatasi (pool 240), dan selama slot terbang ke
-         mantra (__slotFlightBusy) gambar berjalan separuh laju */
+         mantra (__slotFlightBusy) atau kabut membuka (__fogBusy) gambar
+         berjalan separuh laju */
       (function () {
         "use strict";
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -6488,8 +6520,9 @@
           var dt = Math.min(0.05, lastTs ? t - lastTs : 0.016);
           lastTs = t;
           frameNo++;
-          /* Sama seperti canvas latar: separuh laju selama slot terbang */
-          if (!(window.__slotFlightBusy && frameNo % 2 === 1)) {
+          /* Sama seperti canvas latar: separuh laju selama slot terbang
+             dan selama kabut membuka (__fogBusy) */
+          if (!((window.__slotFlightBusy || window.__fogBusy) && frameNo % 2 === 1)) {
             ctx.clearRect(0, 0, W, H);
             if (frameNo % 30 === 0) cachePads();
             /* Debu cahaya depan */
