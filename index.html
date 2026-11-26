@@ -1272,6 +1272,60 @@
         82% { opacity: 1; transform: scale(1); }
         100% { opacity: 0; transform: scale(.92); }
       }
+      /* ---------- Kabut terbuka sesudah "Mulai Bermain" ----------
+         Lapisan kabut lembut (putih keunguan pucat, cocok dengan tema
+         malam — bukan putih terang) yang menutupi papan sesudah kartu
+         tutorial keluar: muncul memudar, mengalir pelan sebentar
+         (keyframes drift, hanya transform), lalu TERBELAH dari tengah
+         ke kiri & kanan sambil menipis sampai hilang (kelas .open:
+         transisi transform & opacity saja — tanpa filter animasi per
+         frame, sesuai aturan performa). Dua belahan selebar 62% yang
+         tumpang tindih di tengah; tepi tengahnya dilunakkan masker
+         gradasi diam (bukan animasi) supaya belahannya terasa seperti
+         kabut yang tersibak, bukan dua papan bergeser. z-index 16:
+         di atas papan & hitung mundur (15), di bawah overlay (20).
+         pointer-events none — tidak pernah menghalangi sentuhan.
+         Untuk prefers-reduced-motion lapisan ini dilewati sepenuhnya
+         oleh openFog di skrip game */
+      .fog-veil {
+        position: absolute; inset: 0; z-index: 16;
+        pointer-events: none; overflow: hidden;
+        opacity: 0; transition: opacity .3s ease;
+      }
+      .fog-veil.hidden { display: none; }
+      .fog-veil.show { opacity: 1; }
+      .fog-half {
+        position: absolute; top: -4%; bottom: -4%; width: 62%;
+        background:
+          radial-gradient(ellipse 85% 55% at 32% 28%, rgba(233,226,250,.98), rgba(233,226,250,0) 72%),
+          radial-gradient(ellipse 80% 60% at 68% 68%, rgba(219,208,245,.95), rgba(219,208,245,0) 72%),
+          radial-gradient(ellipse 70% 45% at 50% 48%, rgba(226,216,248,.9), rgba(226,216,248,0) 75%),
+          linear-gradient(180deg, rgba(208,196,240,.96), rgba(196,182,236,.96));
+        transition: transform .95s cubic-bezier(.65,0,.3,1), opacity .95s ease;
+      }
+      .fog-left {
+        left: 0;
+        -webkit-mask-image: linear-gradient(to right, #000 74%, transparent 99%);
+        mask-image: linear-gradient(to right, #000 74%, transparent 99%);
+      }
+      .fog-right {
+        right: 0;
+        -webkit-mask-image: linear-gradient(to left, #000 74%, transparent 99%);
+        mask-image: linear-gradient(to left, #000 74%, transparent 99%);
+      }
+      .fog-veil.drifting .fog-left { animation: fog-drift-l 1.5s ease-in-out infinite alternate; }
+      .fog-veil.drifting .fog-right { animation: fog-drift-r 1.7s ease-in-out infinite alternate; }
+      @keyframes fog-drift-l {
+        from { transform: translate3d(-7px, -2px, 0); }
+        to { transform: translate3d(7px, 3px, 0); }
+      }
+      @keyframes fog-drift-r {
+        from { transform: translate3d(7px, 2px, 0); }
+        to { transform: translate3d(-7px, -3px, 0); }
+      }
+      .fog-veil.open .fog-half { animation: none; opacity: 0; }
+      .fog-veil.open .fog-left { transform: translate3d(-112%, 0, 0); }
+      .fog-veil.open .fog-right { transform: translate3d(112%, 0, 0); }
       /* ---------- Tampilan MANTRA (mode cerita saja) ----------
          Duduk di ruang kosong antara arena (karakter) dan baris slot/tombol
          permata, mengikuti mockup yang disetujui Harith: label kecil "MANTRA"
@@ -2062,6 +2116,17 @@
         <div class="countdown-num" id="countdownNum">3</div>
       </div>
 
+      <!-- Kabut terbuka: lapisan kabut lembut yang menutupi papan sesudah
+           kartu tutorial keluar — mengalir pelan sebentar, lalu terbelah
+           terbuka dari tengah ke kiri & kanan sambil menipis; hitung
+           mundur 3-2-1 BARU dimulai sesudah kabut hilang sepenuhnya
+           (lihat openFog di skrip game). Murni dekoratif: pointer-events
+           none dari CSS-nya, dua belahan untuk sisi kiri & kanan -->
+      <div class="fog-veil hidden" id="fogVeil" aria-hidden="true">
+        <div class="fog-half fog-left"></div>
+        <div class="fog-half fog-right"></div>
+      </div>
+
       <!-- Overlay video ULTIMATE (mode cerita): muncul fullscreen saat mantra
            satu boss lengkap, sebelum rentetan sigil menghantam boss. Videonya
            salah satu dari file EKSTERNAL "ult-01s.mp4" / "ult-02s.mp4" / "ult-03s.mp4" / "ult-04s.mp4" di
@@ -2181,7 +2246,10 @@
          di 99% dan menunggu; begitu keduanya tuntas, bar menyentuh 100%,
          layar loading memudar (opacity), lalu disembunyikan — kartu
          tutorial di bawahnya muncul seperti biasa. Untuk
-         prefers-reduced-motion durasinya dipersingkat jadi 350ms */
+         prefers-reduced-motion durasinya dipersingkat jadi 350ms.
+         Saat bar pertama kali mencapai ±99% ("hampir selesai"), skrip
+         game diberi tahu SEKALI (nearDone di bawah) supaya suara latar
+         DICOBA dimulai saat itu juga — sebelum klik "Mulai Bermain" */
       (function () {
         "use strict";
         var screen = document.getElementById("loadingScreen");
@@ -2199,11 +2267,27 @@
         function ease(t) {
           return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         }
+        /* Titik "hampir selesai" (±99%): beri tahu skrip game SEKALI
+           supaya suara latar (musik + ambience) DICOBA dimulai sekarang,
+           selagi kartu tutorial tampil — bukan menunggu klik "Mulai
+           Bermain". Skrip game mendaftarkan window.__earlyAudio;
+           bendera window.__loadingNearDone menutup kemungkinan urutan
+           terbalik (bar menyentuh 99% sebelum skrip game mendaftar) */
+        var nearDoneFired = false;
+        function nearDone() {
+          if (nearDoneFired) return;
+          nearDoneFired = true;
+          window.__loadingNearDone = true;
+          if (typeof window.__earlyAudio === "function") {
+            try { window.__earlyAudio(); } catch (e) {}
+          }
+        }
         function render(p) {
           fill.style.transform = "scaleX(" + p + ")";
           star.style.transform = "translateX(" + (p * bar.clientWidth) + "px) translate(-50%, -50%)";
           pct.textContent = Math.round(p * 100) + "%";
           bar.setAttribute("aria-valuenow", String(Math.round(p * 100)));
+          if (p >= 0.99) nearDone();
         }
         render(0);
         var startTs = null, finished = false;
@@ -2576,18 +2660,21 @@
          35% (VOL.bgm) supaya musik duduk di bawah SFX dan tidak
          menusuk telinga.
          Semua aturan hidup/mati TETAP, diatur satu-satunya oleh
-         bgmApply: musik hanya mulai setelah ketukan "Mulai Bermain"
-         (startBgm — pola buka kunci yang sama seperti primeUltimate,
-         play() dipanggil di dalam gestur; ketukan berikutnya mencoba
-         lagi lewat pendengar pointerdown bila play() sempat ditolak
-         webview), berhenti total (pause) selama video ultimate
+         bgmApply: musik DICOBA mulai lebih awal — saat loading
+         mencapai ±99% (tryEarlyAudio: resume + play sungguhan,
+         sebelum gestur apa pun); bila browser menolaknya karena
+         kebijakan autoplay, musik mulai pada ketukan "Mulai Bermain"
+         (startBgm — play() dipanggil di dalam gestur; ketukan
+         berikutnya mencoba lagi lewat pendengar pointerdown bila
+         play() sempat ditolak webview), berhenti total (pause)
+         selama video ultimate
          diputar (bgmUlt) dan lanjut lagi sesudahnya dari posisi yang
          sama, dan tunduk pada tombol mute (S.muted — mute = pause,
          unmute = lanjut). Elemen audio tidak menyentuh jalur
          input/gameplay sama sekali */
       var BGM_SRC_OGG = "bgm-loop-v1.ogg";
       var BGM_SRC_MP3 = "bgm-loop-v1.mp3";
-      var bgmWanted = false;  /* sudah diminta gestur "Mulai Bermain" */
+      var bgmWanted = false;  /* sudah diminta: percobaan loading ±99% atau gestur "Mulai Bermain" */
       var bgmUlt = false;     /* sedang ditahan video ultimate */
       var bgmEl = null;       /* elemen <audio> musik latar, dibuat sekali */
       function bgmElement() {
@@ -2611,11 +2698,14 @@
         return el;
       }
       /* Satu-satunya pengatur hidup/mati musik: elemen DIPUTAR hanya
-         bila sudah diminta gestur, tidak sedang ditahan ultimate,
-         dan tidak mute. Selain itu elemen di-pause total — musik
-         berhenti sungguhan, bukan sekadar dibisukan. Sebelum gestur
-         pertama elemen bahkan belum dibuat, jadi tidak ada unduhan
-         atau bunyi apa pun sebelum "Mulai Bermain" ditekan */
+         bila sudah diminta (percobaan loading ±99% atau gestur), tidak
+         sedang ditahan ultimate, dan tidak mute. Selain itu elemen
+         di-pause total — musik berhenti sungguhan, bukan sekadar
+         dibisukan. play() yang ditolak kebijakan autoplay TIDAK
+         dipaksa: elemen tetap diam dan ketukan berikutnya (pendengar
+         pointerdown / "Mulai Bermain") mencoba lagi lewat fungsi ini;
+         bila elemen sudah berbunyi, play() tidak dipanggil ulang,
+         jadi musik tidak pernah mulai dari awal lagi */
       function bgmApply() {
         /* Layer ambience mengikuti aturan hidup/mati yang sama persis
            (lihat ambApply di bawah) — satu panggilan di sini membuat
@@ -2641,6 +2731,42 @@
       }
       function startBgm() { bgmWanted = true; ambWanted = true; bgmApply(); }
 
+      /* ---------- Percobaan mulai suara latar saat loading ±99% ----------
+         Atas permintaan pemilik, suara LATAR (musik + ambience — BUKAN
+         SFX) dicoba dimulai lebih awal: skrip loading memanggil fungsi
+         ini lewat window.__earlyAudio begitu bar pertama kali mencapai
+         ±99%, saat papan game sudah ter-render di belakang layar
+         loading dan kartu tutorial belum diklik. Percobaannya
+         SUNGGUHAN: AudioContext di-resume dan bgmApply (yang di
+         dalamnya memanggil ambApply) menjalankan play() seperti
+         biasa. Dua kemungkinan hasil:
+           - Browser mengizinkan: musik + ambience langsung berbunyi
+             selagi kartu tutorial tampil.
+           - Browser menolak (kebijakan autoplay — umum di webview
+             HP/Discord pada kunjungan pertama): TIDAK dipaksa.
+             bgmWanted/ambWanted sudah terpasang, jadi ketukan pertama
+             pemain ("Mulai Bermain" atau ketukan apa pun, lewat
+             pendengar pointerdown & startBgm) memulai suara persis
+             seperti sebelumnya — dan karena bgmApply hanya memutar
+             elemen yang sedang pause, suara yang ternyata sudah jalan
+             TIDAK pernah dimulai ulang dari awal.
+         Prime video ultimate TIDAK ikut dimajukan: tetap di dalam
+         gestur "Mulai Bermain" seperti sebelumnya */
+      function tryEarlyAudio() {
+        if (bgmWanted) return; /* sudah diminta/berjalan — jangan mulai ulang */
+        bgmWanted = true; ambWanted = true;
+        var ctx = ac(); /* membuat AudioContext sekaligus resume() */
+        if (ctx && ctx.resume) {
+          try { var rp = ctx.resume(); if (rp && rp.catch) rp.catch(function () {}); } catch (e) {}
+        }
+        bgmApply(); /* di dalamnya ambApply ikut dipanggil */
+      }
+      window.__earlyAudio = tryEarlyAudio;
+      /* Urutan terbalik: bar loading sudah menyentuh 99% sebelum skrip
+         ini sempat mendaftar (skrip loading berjalan lebih dulu) —
+         bendera dari skrip loading membuat percobaan tetap dijalankan */
+      if (window.__loadingNearDone) tryEarlyAudio();
+
       /* ---------- Ambience lingkungan: angin malam + air terjun ----------
          Layer suasana SINTETIS murni Web Audio (TANPA file audio):
          noise putih bersama yang disaring dua jalur —
@@ -2658,12 +2784,13 @@
          menuju VOL.amb atau 0, jadi tidak ada bunyi "klik" saat
          layer menyala/padam.
          Aturan hidup/matinya SAMA PERSIS dengan musik latar, diatur
-         lewat ambApply yang dipanggil dari bgmApply: mulai setelah
-         gestur "Mulai Bermain" (ambWanted, diset startBgm), padam
+         lewat ambApply yang dipanggil dari bgmApply: mulai bersama
+         musik latar — dicoba saat loading ±99% (tryEarlyAudio) atau
+         pada gestur "Mulai Bermain" (ambWanted, diset keduanya), padam
          selama video ultimate diputar (bgmUlt), dan tunduk pada
          tombol mute (S.muted). Ambience tidak menyentuh jalur
          input/gameplay sama sekali */
-      var ambWanted = false;  /* sudah diminta gestur "Mulai Bermain" */
+      var ambWanted = false;  /* sudah diminta: percobaan loading ±99% atau gestur "Mulai Bermain" */
       var ambNodes = null;    /* { master } — dibangun sekali */
       function ambBuild(ctx) {
         var master = ctx.createGain();
@@ -2705,10 +2832,12 @@
         return { master: master };
       }
       /* Pengatur hidup/mati ambience — cermin bgmApply: berbunyi
-         hanya bila sudah diminta gestur, tidak sedang ditahan
-         ultimate, dan tidak mute. Sebelum gestur pertama node-nya
-         bahkan belum dibuat, jadi tidak ada bunyi apa pun sebelum
-         "Mulai Bermain" ditekan */
+         hanya bila sudah diminta (percobaan loading ±99% atau
+         gestur), tidak sedang ditahan ultimate, dan tidak mute.
+         Bila AudioContext masih tertahan kebijakan autoplay saat
+         node dibangun, layer ini diam saja; begitu konteks berlanjut
+         pada gestur pertama, gain yang sudah terpasang membuatnya
+         langsung terdengar tanpa perlu dibangun ulang */
       function ambApply() {
         var on = ambWanted && !bgmUlt && !S.muted;
         if (!on && !ambNodes) return;
@@ -4437,13 +4566,39 @@
           setTimeout(tick, reducedMotion ? 300 : 1000);
         })();
       }
+      /* Kabut terbuka: transisi antara kartu tutorial keluar dan hitung
+         mundur, supaya masuk ke game tidak terasa tiba-tiba. Lapisan
+         kabut ditampilkan di atas papan yang sudah ter-render, muncul
+         memudar sambil mengalir pelan ±450ms (kelas .show + .drifting),
+         lalu terbelah terbuka dari tengah ke kiri & kanan sambil
+         menipis ±950ms (kelas .open); sesudah lapisan dihapus,
+         callback dijalankan — di situlah hitung mundur BARU dimulai.
+         Total ±1,4 detik. Untuk prefers-reduced-motion kabut dilewati
+         sepenuhnya dan callback langsung jalan, sejalan penanganan
+         gerak lain di game ini */
+      function openFog(done) {
+        var veil = $("fogVeil");
+        if (reducedMotion || !veil) { done(); return; }
+        veil.classList.remove("hidden");
+        void veil.offsetWidth; /* paksa reflow: fade-in & aliran mulai dari keadaan awal */
+        veil.classList.add("show", "drifting");
+        setTimeout(function () {
+          veil.classList.add("open");
+          setTimeout(function () {
+            veil.classList.add("hidden");
+            veil.classList.remove("show", "drifting", "open");
+            done();
+          }, 950);
+        }, 450);
+      }
       /* Tombol "Mulai Bermain" pada kartu tutorial: saat ditekan, tombolnya
          terasa seperti tombol sungguhan — area tombol menyala & mengecil
          (kelas .pressed, melengkapi :active) — lalu kartu tutorial menghilang
          dengan fade + mengecil sedikit dan overlay ikut memudar; game TIDAK
-         langsung dimulai: overlay disembunyikan, pop-up hitung mundur 3-2-1
-         tampil di atas papan yang sudah terender (3 detik), dan startGame
-         BARU dipanggil setelah hitung mundur selesai.
+         langsung dimulai: overlay disembunyikan, KABUT lembut menutupi papan
+         lalu terbelah terbuka (openFog, ±1,4 detik), pop-up hitung mundur
+         3-2-1 tampil di atas papan yang sudah terender (3 detik), dan
+         startGame BARU dipanggil setelah hitung mundur selesai.
          Kelas-kelas animasi dibersihkan lagi sesudah game dimulai
          supaya kartu tampil segar saat menu dibuka kembali */
       $("startBtn").addEventListener("click", function () {
@@ -4456,10 +4611,11 @@
            primeUltimate) — webview HP/Discord menolak play() yang
            dipanggil tanpa riwayat gestur pada elemen medianya */
         primeUltimate();
-        /* Gestur yang sama juga menyalakan musik latar: elemen audio
-           file loop diputar (play()) di dalam ketukan ini, jadi musik
-           boleh mulai berbunyi (lihat startBgm) — tidak ada autoplay
-           sebelum gestur */
+        /* Gestur yang sama juga memastikan musik latar menyala
+           (startBgm): bila percobaan mulai saat loading ±99% tadi
+           ditolak kebijakan autoplay, play() di dalam ketukan inilah
+           yang mengizinkannya; bila musik ternyata sudah berbunyi
+           dari percobaan itu, startBgm tidak memulainya dari awal */
         startBgm();
         /* Gestur yang sama juga me-PRELOAD file suara salah pencet
            ("sfx-salah-v1") supaya bunyinya instan saat pemain salah
@@ -4470,11 +4626,13 @@
         ov.classList.add("fading");
         setTimeout(function () {
           ov.classList.add("hidden");
-          runCountdown(function () {
-            startGame(false);
-            btn.classList.remove("pressed");
-            card.classList.remove("leaving");
-            ov.classList.remove("fading");
+          openFog(function () {
+            runCountdown(function () {
+              startGame(false);
+              btn.classList.remove("pressed");
+              card.classList.remove("leaving");
+              ov.classList.remove("fading");
+            });
           });
         }, reducedMotion ? 60 : 400);
       });
