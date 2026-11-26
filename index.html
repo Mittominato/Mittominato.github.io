@@ -749,6 +749,47 @@
       .slot.filled .q { display: none; }
       .slot.wrong { animation: shake .35s ease; }
       .slot.wrong .q { color: #ff8fa3; opacity: .95; filter: blur(.3px); text-shadow: 0 0 10px rgba(255,84,112,.9); }
+      /* Salah tekan: slot RETAK lalu PECAH (permintaan Harith). Lapisan
+         retakan = SVG garis-garis patah yang MENGGAMBAR DIRI menyebar dari
+         tengah permukaan slot (stroke-dashoffset saja — tanpa layout),
+         tampil hanya saat slot memakai .cracking. Sesudah retak selesai,
+         slot memakai .shattered: isi slot (tanda tanya / permata) memudar
+         cepat dan serpihan-serpihan kecil (.slot-shard, dibuat JS)
+         beterbangan keluar / jatuh sambil memudar lewat WAAPI — semua
+         transform & opacity saja, pointer-events none, tanpa getar layar.
+         Kelas-kelasnya dilepas timer di slotCrackShatter, jadi slot
+         kembali persis seperti semula mengikuti alur putar ulang urutan */
+      .slot .slot-cracks {
+        position: absolute; inset: 0; z-index: 4;
+        pointer-events: none; opacity: 0;
+      }
+      .slot .slot-cracks svg { width: 100%; height: 100%; display: block; overflow: visible; }
+      .slot .slot-cracks polyline {
+        fill: none; stroke: rgba(255,255,255,.92); stroke-width: .9;
+        stroke-linecap: round; stroke-linejoin: round;
+        stroke-dasharray: 1; stroke-dashoffset: 1;
+      }
+      .slot.cracking .slot-cracks { opacity: 1; }
+      .slot.cracking .slot-cracks polyline { animation: crackDraw .26s ease-out forwards; }
+      .slot.cracking .slot-cracks polyline:nth-child(2) { animation-delay: .03s; }
+      .slot.cracking .slot-cracks polyline:nth-child(3) { animation-delay: .05s; }
+      .slot.cracking .slot-cracks polyline:nth-child(4) { animation-delay: .07s; }
+      .slot.cracking .slot-cracks polyline:nth-child(5) { animation-delay: .04s; }
+      .slot.cracking .slot-cracks polyline:nth-child(6) { animation-delay: .06s; }
+      .slot.cracking .slot-cracks polyline:nth-child(7) { animation-delay: .1s; }
+      .slot.cracking .slot-cracks polyline:nth-child(8) { animation-delay: .12s; }
+      @keyframes crackDraw { to { stroke-dashoffset: 0; } }
+      .slot.shattered .slot-cracks { opacity: 0; transition: opacity .18s ease-out; }
+      .slot.shattered .q, .slot.shattered .slot-img { opacity: 0; transition: opacity .12s ease-out; }
+      /* Serpihan pecahan slot: kepingan kaca kecil segitiga sewarna cahaya
+         slot (ungu pucat / putih), dibuat & diterbangkan JS lewat WAAPI
+         lalu dibuang saat animasinya selesai */
+      .slot-shard {
+        position: absolute; left: 50%; top: 50%; z-index: 5;
+        pointer-events: none;
+        clip-path: polygon(50% 0, 100% 100%, 0 82%);
+        will-change: transform, opacity;
+      }
       /* Ronde cerita BERHASIL: slot terisi BERCAHAYA dulu bersamaan (permata
          jauh lebih terang + membesar sedikit, sinarnya menyala penuh), lalu
          semua slot MENGECIL BERSAMAAN jadi setengah ukuran (.fly-shrink),
@@ -2376,9 +2417,10 @@
          lalu klik, permata, sihir, dan kemenangan paling keras.
          Setiap tempat suara diputar memakai konstanta dari peta ini,
          bukan angka lepas. Pengecualian yang SENGAJA tidak masuk
-         tabel: nada salah tekan (sfxWrong) tetap lembut seperti
-         semula, dan audio video ultimate (ult-01s..04s + tombol
-         speakernya) tetap volume penuh — keduanya tidak diubah. */
+         tabel: suara salah tekan (sfxWrong) kini memutar file
+         kiriman pemilik "sfx-salah-v1" bervolume elemen 0,8, dan
+         audio video ultimate (ult-01s..04s + tombol speakernya)
+         tetap volume penuh — keduanya tidak diubah. */
       var VOL = { bgm: 0.35, magic: 0.80, click: 0.45, gem: 0.60, win: 0.85, amb: 0.10 };
       function tone(freq, dur, type, vol, slideTo, delay) {
         if (S.muted) return;
@@ -2416,12 +2458,57 @@
         tone(1250, 0.06, "triangle", VOL.click);
         tone(1900, 0.04, "sine", VOL.click * 0.45, null, 0.012);
       }
+      /* ---------- Suara salah pencet: file kiriman pemilik ----------
+         Nada salah tekan sintetis yang lama DIGANTI file kiriman
+         pemilik "sihirnya_salah.mp3" (1,72 detik, mono) lewat elemen
+         <audio> yang file-nya EKSTERNAL di samping index.html, sama
+         seperti musik latar & video ultimate (TIDAK di-inline sebagai
+         base64/data URI):
+           - "sfx-salah-v1.ogg" — utama (20.258 byte)
+           - "sfx-salah-v1.mp3" — cadangan (44.522 byte)
+         Format dipilih lewat canPlayType seperti pola BGM: OGG bila
+         bisa diputar, kalau tidak pakai MP3; dan bila file utama
+         gagal dimuat, format cadangan dicoba sekali. Elemen dibuat
+         sekali dan di-PRELOAD sesudah gestur "Mulai Bermain"
+         (preloadSalah, dipanggil dari penangan tombol itu) supaya
+         bunyinya instan saat salah pencet, tanpa jeda unduh. Volume
+         elemen 0,8 — file-nya pendek dan pemilik jelas mau suaranya
+         terdengar. Suara ini ikut tombol mute (S.muted) seperti SFX
+         lain: saat mute, sfxWrong tidak memutar apa pun */
+      var SFX_SALAH_OGG = "sfx-salah-v1.ogg";
+      var SFX_SALAH_MP3 = "sfx-salah-v1.mp3";
+      var salahEl = null;  /* elemen <audio> suara salah, dibuat sekali */
+      function salahElement() {
+        if (salahEl) return salahEl;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        /* Pilih format berdasarkan dukungan browser: pakai OGG bila
+           bisa diputar, kalau tidak pakai MP3 */
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? SFX_SALAH_OGG : SFX_SALAH_MP3;
+        /* Jaring pengaman: bila format utama gagal dimuat, coba
+           format cadangan sekali */
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = SFX_SALAH_MP3; }
+        });
+        salahEl = el;
+        return el;
+      }
+      /* Preload sesudah gestur "Mulai Bermain": elemen dibuat & file
+         dimuat sekarang, jadi salah pencet pertama pun langsung bunyi */
+      function preloadSalah() { try { salahElement().load(); } catch (e) {} }
       function sfxWrong() {
-        /* Lebih lembut dari sebelumnya: segitiga halus yang meluncur
-           turun pelan + sub sinus di bawahnya — tetap rendah & jelas
-           "salah", tapi tanpa gerigi sawtooth yang menusuk */
-        tone(196, 0.34, "triangle", 0.13, 131);
-        tone(98, 0.34, "sine", 0.08, 73.4);
+        if (S.muted) return;
+        var el = salahElement();
+        try {
+          el.currentTime = 0;
+          var p = el.play();
+          /* play() yang ditolak webview tidak dibiarkan jadi error
+             tak tertangani */
+          if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
       }
       function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, VOL.magic, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
@@ -2812,7 +2899,13 @@
         for (var k = 0; k < n; k++) {
           var d = document.createElement("div");
           d.className = "slot";
-          d.innerHTML = '<span class="slot-rays"></span><span class="q">?</span><img class="slot-img" alt="" /><span class="slot-orb"></span>';
+          d.innerHTML = '<span class="slot-rays"></span><span class="q">?</span><img class="slot-img" alt="" /><span class="slot-orb"></span>'
+            + '<span class="slot-cracks"><svg viewBox="0 0 26 26" aria-hidden="true">'
+            + '<polyline pathLength="1" points="13,13 10,8 11,3"/><polyline pathLength="1" points="13,13 17,9 21,5"/>'
+            + '<polyline pathLength="1" points="13,13 18,14 23,13"/><polyline pathLength="1" points="13,13 16,18 17,23"/>'
+            + '<polyline pathLength="1" points="13,13 10,18 6,22"/><polyline pathLength="1" points="13,13 7,12 2,11"/>'
+            + '<polyline pathLength="1" points="10,8 6,5"/><polyline pathLength="1" points="17,9 18,4"/>'
+            + '</svg></span>';
           SSPK.forEach(function (p) {
             var sp = document.createElement("i");
             sp.className = "slot-spk" + (p.w ? " w" : "");
@@ -2848,6 +2941,55 @@
         var d = slotsEl.children[k]; if (!d) return;
         d.classList.add("wrong");
         setTimeout(function () { d.classList.remove("wrong"); }, 420);
+        /* Animasi BARU salah tekan: slot ini RETAK lalu PECAH (visual
+           saja — perilaku salah tekannya tidak berubah sama sekali) */
+        slotCrackShatter(d);
+      }
+      /* Retak → pecah pada SATU slot (slot posisi input saat salah tekan):
+         (1) kelas .cracking ±300ms — garis-garis retakan SVG menyebar di
+         permukaan slot; (2) kelas .shattered — isi slot memudar dan
+         serpihan kecil beterbangan keluar / jatuh memudar; (3) semua
+         kelas dilepas (±1000ms) dan slot kembali persis seperti semula,
+         jauh sebelum urutan yang sama selesai diputar ulang. Hanya
+         transform & opacity (WAAPI + dashoffset SVG), pointer-events
+         none, tanpa getar layar & tanpa memicu layout. Gerakan dikurangi
+         (prefers-reduced-motion): efek ini dilewati, goyangan .wrong
+         yang lama tetap berjalan seperti sebelumnya */
+      function slotCrackShatter(d) {
+        if (reducedMotion) return;
+        d.classList.add("cracking");
+        setTimeout(function () {
+          d.classList.add("shattered");
+          slotShards(d);
+        }, 300);
+        setTimeout(function () { d.classList.remove("cracking", "shattered"); }, 1000);
+      }
+      /* Serpihan pecahan: 9 kepingan kaca kecil dibuat di tengah slot,
+         diterbangkan WAAPI ke arah acak dengan bias jatuh ke bawah +
+         putaran, memudar sampai habis lalu elemennya dibuang — pola
+         yang sama seperti partikel .fly-spark / castParticles */
+      function slotShards(d) {
+        var colors = ["#efe9ff", "#cbb8ff", "#ffffff", "#a77dff"];
+        for (var n = 0; n < 9; n++) {
+          var s = document.createElement("span");
+          s.className = "slot-shard";
+          var w = 3 + Math.random() * 4;
+          var h = w * (0.7 + Math.random() * 0.6);
+          s.style.width = w + "px"; s.style.height = h + "px";
+          s.style.marginLeft = (-w / 2) + "px"; s.style.marginTop = (-h / 2) + "px";
+          s.style.background = colors[n % colors.length];
+          d.appendChild(s);
+          var ang = Math.random() * Math.PI * 2;
+          var dist = 10 + Math.random() * 16;
+          var dx = Math.cos(ang) * dist;
+          var dy = Math.sin(ang) * dist * 0.6 + 14 + Math.random() * 12;
+          var rot = (Math.random() - 0.5) * 320;
+          var anim = s.animate([
+            { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+            { transform: "translate(" + dx + "px," + dy + "px) rotate(" + rot + "deg)", opacity: 0 }
+          ], { duration: 520 + Math.random() * 260, easing: "cubic-bezier(.17,.67,.35,1)" });
+          (function (el, a) { a.onfinish = function () { el.remove(); }; })(s, anim);
+        }
       }
 
       /* ---------- FX ---------- */
@@ -4277,6 +4419,10 @@
            boleh mulai berbunyi (lihat startBgm) — tidak ada autoplay
            sebelum gestur */
         startBgm();
+        /* Gestur yang sama juga me-PRELOAD file suara salah pencet
+           ("sfx-salah-v1") supaya bunyinya instan saat pemain salah
+           menekan tombol, tanpa jeda unduh (lihat preloadSalah) */
+        preloadSalah();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
