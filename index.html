@@ -1593,10 +1593,12 @@
       .stage > .ult-overlay {
         position: absolute; inset: 0; z-index: 30;
         background: transparent;
-        /* TANPA blur latar (permintaan Harith): papan permainan di
-           belakang overlay tampil tajam/normal selama video diputar —
-           overlay transparan, satu-satunya efek selama video adalah
-           jeda animasi game (lihat .ult-playing & __ultBusy) */
+        /* BLUR LATAR (permintaan Harith): papan permainan di belakang
+           overlay menjadi kabur 8px selama video diputar — video di
+           dalam overlay TIDAK ikut blur dan tetap tajam. Blur hanya
+           aktif selama overlay tampil */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         /* Gambar latar (.ult-bgimg) diposisikan absolut memenuhi
            overlay — satu-satunya latar */
         display: flex; align-items: center; justify-content: center;
@@ -1641,10 +1643,9 @@
          (permintaan Harith untuk video baru ult-05s yang bingkainya
          sudah jadi di dalam video): left -10% — sebagian sisi kiri
          video (bingkai + ujung penyihir) tenggelam ke luar tepi kiri
-         layar; lebar 75% dari lebar overlay. Lebih TINGGI dari
-         karakter game: tengah video di 30% tinggi layar (top 30% +
-         translateY(-50%)), di bawah HUD dan di atas penyihir &
-         kucing. LURUS tanpa rotasi, aspek 16/9 mengikuti video
+         layar; lebar 75% dari lebar overlay. Sejajar dengan boss
+         kucing: tengah video di 50% tinggi layar (top 50% +
+         translateY(-50%)). LURUS tanpa rotasi, aspek 16/9 mengikuti video
          aslinya (1278x720), object-fit cover.
          Latar HITAM di sudut-sudut luar bingkai video (sisa export
          MP4 dari latar transparan) dihapus dengan MASKER ALPHA —
@@ -1664,7 +1665,7 @@
          & speaker (2) */
       .ult-overlay video {
         position: absolute;
-        left: -10%; top: 30%;
+        left: -10%; top: 50%;
         width: 75%;
         aspect-ratio: 16 / 9;
         object-fit: cover;
