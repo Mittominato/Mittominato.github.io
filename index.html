@@ -2816,12 +2816,15 @@
          harus terdengar jelas), ikut tombol mute (S.muted) seperti
          SFX lain: saat mute kalimat tidak berbunyi sama sekali, dan
          bila mute ditekan di tengah kalimat, kalimat berhenti.
-         JADWAL ACAK: timer pertama dipasang oleh startGame (yaitu
+         JADWAL: timer pertama dipasang oleh startGame (yaitu
          SETELAH hitung mundur selesai & game aktif) — kalimat pertama
-         muncul 15–30 detik setelah game mulai; sesudah tiap kalimat
-         selesai berbunyi, timer berikutnya dipasang 25–60 detik
-         (diacak tiap kali). Saat timer berbunyi, kalimat DILEWATI
-         (dijadwalkan ulang ke waktu acak berikutnya, tidak menumpuk)
+         muncul 5 detik setelah game mulai; sesudah tiap kalimat
+         selesai berbunyi, timer berikutnya dipasang TETAP 5 detik
+         (5 detik itu HENING PENUH setelah kalimat selesai
+         sepenuhnya & balon hilang — bukan dihitung dari awal
+         kalimat; siklusnya ±3 detik bicara + 5 detik hening).
+         Saat timer berbunyi, kalimat DILEWATI
+         (dijadwalkan ulang 5 detik lagi, tidak menumpuk)
          bila kondisinya tidak memungkinkan: game belum aktif / sudah
          berakhir (fase idle/over — dalam hal ini timer berhenti
          total), game dijeda, tab tidak aktif (document.hidden), video
@@ -2895,9 +2898,15 @@
       var wizTalkTimer = null;   /* timer jadwal bicara yang sedang menunggu */
       var wizTalkSession = 0;    /* nomor sesi putar — sesi lama gugur begitu naik */
       var wizTalkPlaying = false;
-      /* Jeda acak: kemunculan pertama 15–30 detik, berikutnya 25–60 detik */
+      /* Jeda TETAP 5 detik (dipercepat atas permintaan pemilik):
+         kemunculan pertama 5 detik setelah game mulai; berikutnya
+         5 detik itu adalah HENING PENUH yang dihitung SETELAH
+         kalimat selesai sepenuhnya — timer dipasang di finish()
+         (playWizTalk) saat suara berakhir & balon hilang, BUKAN
+         dari awal kalimat. Siklusnya: bicara ±3 detik → hening
+         5 detik → bicara lagi */
       function wizTalkDelay(first) {
-        return first ? 15000 + Math.random() * 15000 : 25000 + Math.random() * 35000;
+        return 5000;
       }
       function scheduleWizTalk(first, runId) {
         if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
@@ -2928,7 +2937,7 @@
          memastikan balon tetap hilang & jadwal tetap lanjut bila
          ended tak kunjung datang (mis. play() ditolak webview) —
          jadwal bicara tidak boleh macet. Sesudah selesai, timer
-         berikutnya (25–60 detik) dipasang di sini */
+         berikutnya (tetap 5 detik) dipasang di sini */
       function playWizTalk(runId) {
         var el = hidupElement();
         var session = ++wizTalkSession;
@@ -4901,8 +4910,8 @@
         drawHud();
         /* Jadwal bicara acak penyihir DIMULAI di sini — startGame
            baru dipanggil setelah hitung mundur selesai, jadi game
-           sudah aktif: kalimat pertama muncul 15–30 detik dari
-           sekarang, berikutnya tiap 25–60 detik (lihat blok suara
+           sudah aktif: kalimat pertama muncul 5 detik dari
+           sekarang, berikutnya tiap 5 detik (lihat blok suara
            "sihir-hidup"). Jadwal lama dari run sebelumnya dibatalkan
            scheduleWizTalk sebelum memasang yang baru */
         scheduleWizTalk(true, id);
@@ -5184,7 +5193,7 @@
         drawHud();
         /* Mode bebas dimulai dari layar menang (bukan lewat
            startGame): jadwal bicara acak penyihir dipasang lagi di
-           sini — kalimat pertama 15–30 detik dari sekarang */
+           sini — kalimat pertama 5 detik dari sekarang */
         scheduleWizTalk(true, id);
         setTimeout(function () { if (id === S.run) nextRound(id); }, 1000);
       });
