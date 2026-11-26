@@ -4993,30 +4993,25 @@
           ctx.lineCap = "round"; ctx.lineJoin = "round";
           var pts = links.map(function (i) { return padPts[i]; });
           /* Rangkaian segmen: tiap segmen sewarna tombol tujuannya —
-             aura lebar + glow menengah + inti tebal terang + aliran
-             titik-titik cahaya yang BERGERAK dari tombol ke tombol
-             (lineDashOffset). Inti ~2,5x lebih tebal dari sebelumnya
-             dan opacity/glow dinaikkan supaya jelas di atas latar
-             gelap, tapi tetap jauh lebih ramping dari ukuran permata
-             sehingga tidak menutupi batu. Lapisan berlapis dipakai
+             aura halus + inti ramping + aliran titik-titik cahaya yang
+             BERGERAK dari tombol ke tombol (lineDashOffset). Ketebalan
+             dikembalikan ke nilai semula (3 pass) karena versi yang
+             lebih tebal terasa mengganggu. Lapisan berlapis dipakai
              sebagai glow (tanpa shadowBlur) agar tetap ringan. */
-          for (var pass = 0; pass < 4; pass++) {
+          for (var pass = 0; pass < 3; pass++) {
             for (var k = 1; k < pts.length; k++) {
               ctx.beginPath();
               ctx.moveTo(pts[k - 1].x, pts[k - 1].y);
               ctx.lineTo(pts[k].x, pts[k].y);
               if (pass === 0) {
-                ctx.strokeStyle = pts[k].color; ctx.globalAlpha = 0.22; ctx.lineWidth = 16;
+                ctx.strokeStyle = pts[k].color; ctx.globalAlpha = 0.16; ctx.lineWidth = 7;
                 ctx.setLineDash([]);
               } else if (pass === 1) {
-                ctx.strokeStyle = pts[k].color; ctx.globalAlpha = 0.42; ctx.lineWidth = 9;
-                ctx.setLineDash([]);
-              } else if (pass === 2) {
-                ctx.strokeStyle = pts[k].color; ctx.globalAlpha = 0.95; ctx.lineWidth = 5;
+                ctx.strokeStyle = pts[k].color; ctx.globalAlpha = 0.75; ctx.lineWidth = 2;
                 ctx.setLineDash([]);
               } else {
-                ctx.strokeStyle = "#ffffff"; ctx.globalAlpha = 0.95; ctx.lineWidth = 4.5;
-                ctx.setLineDash([3.5, 13]); ctx.lineDashOffset = -t * 52;
+                ctx.strokeStyle = "#ffffff"; ctx.globalAlpha = 0.85; ctx.lineWidth = 2;
+                ctx.setLineDash([1.5, 11]); ctx.lineDashOffset = -t * 52;
               }
               ctx.stroke();
             }
