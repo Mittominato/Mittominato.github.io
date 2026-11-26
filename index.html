@@ -2569,25 +2569,57 @@
         [7, 7, 8, 8],
         [9, 10, 10, 10, 15, 15]
       ];
-      /* Nama mantra tiap level (mode cerita): jumlah bagiannya SAMA dengan
-         jumlah ronde di LEVEL_PLANS level itu. Boss TIDAK lagi menerima
+      /* Mantra tiap level (mode cerita) kini ACAK: daftar mantra kiriman
+         pemilik, dikelompokkan menurut JUMLAH BAGIAN — jumlah bagiannya
+         SAMA dengan jumlah ronde di LEVEL_PLANS level itu (L1: 2, L2: 3,
+         L3: 3, L4: 4, L5: 6). Saat sebuah level dimulai, SATU mantra
+         dipilih acak dari kelompok yang sesuai (lihat pickMantra) dan
+         tidak berubah selama level itu berjalan. Boss TIDAK lagi menerima
          damage per ronde — tiap ronde yang berhasil mengaktifkan SATU
          bagian mantra; setelah semua bagian aktif, video ultimate diputar
          lalu SEMUA sigil terkumpul meluncur sekaligus dan boss K.O. dalam
          sekali hantam (bar HP tetap penuh sampai hantaman terakhir itu) */
-      var MANTRAS = [
-        ["SHA", "BUM"],
-        ["KRA", "KA", "TOA"],
-        ["SIN", "SAL", "BIM"],
-        ["BINTANG", "ME", "LE", "DAK"],
-        ["AKU", "LAH", "PENYIHIR", "TER", "HE", "BAT"]
-      ];
+      var MANTRA_POOLS = {
+        2: ["PIM-POM", "LALA-LU", "POKA-POKA", "MIMI-MOO", "PIPI-POW",
+            "BIBI-BOO", "LULU-LUM", "TING-TING", "PUPU-PA", "BI-BU"],
+        3: ["LUMI-LUMI-LA", "MIRA-MIRA-MOO", "SILI-SALI-SOL", "PIKA-PUKA-PI",
+            "LUNA-LILI-LU", "MILA-MILO-MAGI", "WILI-WILI-WOO", "TARA-TIRI-TOO",
+            "MOKA-MIKA-MU", "SIM-SAL-BIM"],
+        4: ["PIM-POM-PIM-POM", "LALA-LILI-LULU-LA", "MIMI-MOMO-MUMU-MOO",
+            "PIKA-PIKA-POKA-POW", "LUMI-LUMA-LUMI-LA", "BIBI-BUBU-BABA-BOO",
+            "TING-TING-LALA-LU", "PUPU-PIPI-POKA-PA", "MIRA-MIRA-LILI-LU",
+            "NINI-NANA-NONO-NU"],
+        6: ["PIM-PIM-POM-POM-POW-POW", "LALA-LILI-LULU-LELE-LA-LU",
+            "MIMI-MOMO-MUMU-MAGI-MOO-MOO", "PIKA-PIKA-POKA-POKA-PI-POW",
+            "LUMI-LUMA-LILI-LALA-LU-LU", "BIBI-BABA-BUBU-BOBO-BOO-BOO",
+            "MIRA-MIRA-MORA-MORA-MAGI-MAGI", "PUPU-PIPI-POPO-PAPA-POW-POW",
+            "LUNA-LILI-LUMI-LALA-LU-LA", "HOKI-POKI-LUMI-LUMI-MAGI-MAGI"]
+      };
       /* Mode cerita = bukan mode bebas dan boss-nya boss cerita (punya
          rencana ronde & mantra). Semua perilaku mantra/ultimate hanya
          berlaku di mode ini; mode bebas tidak berubah sama sekali */
       function storyMode() { return !S.endless && S.bossIdx < BOSSES.length; }
+      /* Memilih mantra level ini secara acak dari kelompok yang jumlah
+         bagiannya sama dengan jumlah ronde level (LEVEL_PLANS[bossIdx]).
+         Dipanggil SEKALI saat level dimulai (dari setupBoss, sebelum
+         ronde pertama) dan hasilnya disimpan di S.mantra — salah pencet
+         maupun ronde berikutnya TIDAK memilih ulang. Mantra yang sama
+         dengan level sebelumnya tidak boleh terpilih berturut-turut:
+         hasil acak yang sama diacak ulang, maksimal 10 kali percobaan,
+         sesudah itu hasil terakhir diterima apa adanya */
+      function pickMantra() {
+        if (!storyMode()) { S.mantra = null; return; }
+        var pool = MANTRA_POOLS[LEVEL_PLANS[S.bossIdx].length] || [];
+        var chosen = pool[0];
+        for (var attempt = 0; attempt < 10; attempt++) {
+          chosen = pool[Math.floor(Math.random() * pool.length)];
+          if (chosen !== S.prevMantraKey) break;
+        }
+        S.prevMantraKey = chosen;
+        S.mantra = chosen.split("-");
+      }
       function mantraParts() {
-        return storyMode() && S.bossIdx < MANTRAS.length ? MANTRAS[S.bossIdx] : null;
+        return storyMode() ? S.mantra : null;
       }
 
       var $ = function (id) { return document.getElementById(id); };
@@ -2603,6 +2635,11 @@
         bossIdx: 0, cycle: 1, bossHp: 24, bossMax: 24, defeated: 0,
         round: 0, bestRound: 0, seq: [], inputIdx: 0, endless: false, stage: 0,
         mantraLit: 0,
+        /* Mantra terpilih untuk level berjalan (array bagian-bagiannya),
+           dipilih acak oleh pickMantra saat level dimulai; null di luar
+           mode cerita. prevMantraKey = mantra utuh level sebelumnya,
+           dipakai aturan anti-ulang berturut-turut di pickMantra */
+        mantra: null, prevMantraKey: "",
         /* Jumlah salah tekan di ronde berjalan — menentukan tulisan
            perayaan di roundComplete: 0 = "PERFECT!", >0 = "GREAT!".
            Direset tiap ronde baru (nextRound), ditambah tiap salah
@@ -4610,8 +4647,11 @@
         /* Mantra mulai dari nol untuk boss baru: tidak ada bagian aktif,
            bar progres kosong, dan kata-katanya dibangun ulang mengikuti
            boss ini (di mode bebas tampilannya disembunyikan buildMantra).
-           Sigil terkumpul juga mulai bersih untuk boss baru */
+           Mantra level ini dipilih ACAK di sini — tepat saat level
+           dimulai, sebelum ronde pertama — lalu tetap sama sepanjang
+           level. Sigil terkumpul juga mulai bersih untuk boss baru */
         S.mantraLit = 0;
+        pickMantra();
         buildMantra();
         resetSigils();
         S.stage++;
