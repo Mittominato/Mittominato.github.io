@@ -2795,18 +2795,21 @@
           } catch (e) {}
         });
       }
-      /* ---------- Penyihir bicara sendiri: DUA kalimat acak ----------
+      /* ---------- Penyihir bicara sendiri: TIGA kalimat acak ----------
          Kebiasaan baru atas permintaan pemilik: selama permainan
          berjalan, PENYIHIR sesekali bicara sendiri TANPA sebab —
          seperti suara latar — mengucapkan SATU kalimat kiriman
-         pemilik yang dipilih ACAK dari dua kalimat (kalimat yang
+         pemilik yang dipilih ACAK dari tiga kalimat (kalimat yang
          sama diusahakan tidak terulang dua kali berturut-turut):
          (1) "Sihir adalah bagian dari hidupku" (file
          "sihir_bagian_hidup.mp3", 3,00 detik, mono; suara sepanjang
-         0–3 detik) dan (2) "Penduduk desa mengandalkanku, aku tidak
+         0–3 detik), (2) "Penduduk desa mengandalkanku, aku tidak
          boleh kalah." (file "tidak_boleh_kalah.mp3", 4,13 detik,
          mono; suara sepanjang 0–4 detik; kalimat diverifikasi lewat
-         transkripsi). Keduanya lewat elemen
+         transkripsi) dan (3) "Aku tidak takut padamu." (file
+         "tidak_takut.mp3", 2,19 detik, mono; suara sepanjang
+         0–2 detik; kalimat diverifikasi lewat transkripsi).
+         Ketiganya lewat elemen
          <audio> yang file-nya EKSTERNAL di samping index.html, sama
          seperti suara salah pencet & suara berhasil (TIDAK di-inline
          sebagai base64/data URI):
@@ -2814,6 +2817,8 @@
            - "sihir-hidup-v1.mp3" — cadangan kalimat ke-1 (65.002 byte)
            - "tidak-kalah-v1.ogg" — utama kalimat ke-2 (45.987 byte)
            - "tidak-kalah-v1.mp3" — cadangan kalimat ke-2 (82.974 byte)
+           - "tidak-takut-v1.ogg" — utama kalimat ke-3 (25.687 byte)
+           - "tidak-takut-v1.mp3" — cadangan kalimat ke-3 (52.045 byte)
          Format dipilih lewat canPlayType seperti pola suara file
          lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan bila
          file utama gagal dimuat, format cadangan dicoba sekali.
@@ -2898,6 +2903,33 @@
         return el;
       }
       function preloadKalah() { try { kalahElement().load(); } catch (e) {} }
+      /* ---------- Kalimat ke-3: "Aku tidak takut padamu." ----------
+         Elemen <audio> SENDIRI untuk kalimat ke-3, pola persis sama
+         seperti kalimat ke-1 & ke-2: file EKSTERNAL di samping
+         index.html (TIDAK di-inline), format dipilih lewat
+         canPlayType (OGG dulu, fallback MP3, dan format cadangan
+         dicoba sekali bila yang utama gagal dimuat), volume 0,8,
+         ikut tombol mute (S.muted) seperti SFX lain, dan di-PRELOAD
+         sesudah gestur "Mulai Bermain" (preloadTakut, dipanggil
+         dari penangan tombol yang sama dengan preloadHidup) */
+      var VOICE_TAKUT_OGG = "tidak-takut-v1.ogg";
+      var VOICE_TAKUT_MP3 = "tidak-takut-v1.mp3";
+      var takutEl = null;  /* elemen <audio> kalimat ke-3, dibuat sekali */
+      function takutElement() {
+        if (takutEl) return takutEl;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? VOICE_TAKUT_OGG : VOICE_TAKUT_MP3;
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = VOICE_TAKUT_MP3; }
+        });
+        takutEl = el;
+        return el;
+      }
+      function preloadTakut() { try { takutElement().load(); } catch (e) {} }
       /* Daftar kalimat bicara penyihir: tiap jadwal bicara tiba,
          SATU kalimat dipilih ACAK dari daftar ini (pickWizLine) dan
          teks balon diisi teks yang SAMA PERSIS dengan kalimat yang
@@ -2905,7 +2937,8 @@
          kelonggaran) bila event ended tak kunjung datang */
       var WIZ_LINES = [
         { el: hidupElement, text: "Sihir adalah bagian dari hidupku", guard: 3600 },
-        { el: kalahElement, text: "Penduduk desa mengandalkanku, aku tidak boleh kalah.", guard: 4800 }
+        { el: kalahElement, text: "Penduduk desa mengandalkanku, aku tidak boleh kalah.", guard: 4800 },
+        { el: takutElement, text: "Aku tidak takut padamu.", guard: 2800 }
       ];
       var wizTalkLast = -1;  /* indeks kalimat terakhir yang diputar */
       var wizTalkEl = null;  /* elemen yang SEDANG berbunyi */
@@ -2920,10 +2953,10 @@
         wizTalkLast = idx;
         return WIZ_LINES[idx];
       }
-      /* Hentikan suara bicara mana pun yang sedang berbunyi (kedua
+      /* Hentikan suara bicara mana pun yang sedang berbunyi (ketiga
          elemen kalimat) — dipakai stopWizTalk & wizTalkMuted */
       function pauseWizVoices() {
-        [hidupEl, kalahEl].forEach(function (el) {
+        [hidupEl, kalahEl, takutEl].forEach(function (el) {
           if (el) { try { el.pause(); el.currentTime = 0; } catch (e) {} }
         });
         wizTalkEl = null;
@@ -5208,6 +5241,10 @@
            bicara penyihir ("tidak-kalah-v1") supaya siap berbunyi
            tanpa jeda saat terpilih acak (lihat preloadKalah) */
         preloadKalah();
+        /* Gestur yang sama juga me-PRELOAD file suara kalimat ke-3
+           bicara penyihir ("tidak-takut-v1") supaya siap berbunyi
+           tanpa jeda saat terpilih acak (lihat preloadTakut) */
+        preloadTakut();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
