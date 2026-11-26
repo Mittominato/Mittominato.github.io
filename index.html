@@ -2634,6 +2634,81 @@
           if (p && p.catch) p.catch(function () {});
         } catch (e) {}
       }
+      /* ---------- Suara "berhasil": file kiriman pemilik ----------
+         File kiriman pemilik "berhasil.mp3" (1,80 detik, mono; suara
+         nyata 0–1,5 detik lalu memudar habis) lewat elemen <audio>
+         yang file-nya EKSTERNAL di samping index.html, sama seperti
+         suara salah pencet (TIDAK di-inline sebagai base64/data URI):
+           - "berhasil-v1.ogg" — utama (21.622 byte)
+           - "berhasil-v1.mp3" — cadangan (45.776 byte)
+         Format dipilih lewat canPlayType seperti pola suara file
+         lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan bila
+         file utama gagal dimuat, format cadangan dicoba sekali.
+         Elemen dibuat sekali dan di-PRELOAD sesudah gestur "Mulai
+         Bermain" (preloadBerhasil, dipanggil dari penangan tombol
+         itu) supaya siap saat dibutuhkan. Volume elemen 0,8 (sama
+         seperti suara salah pencet), ikut tombol mute (S.muted)
+         seperti SFX lain. Suara ini HANYA berbunyi di jalur mantra
+         lengkap mode cerita: saat ronde benar & semua bagian mantra
+         terisi, suara mulai berbunyi selagi nama mantra berkedip
+         (.complete), dan video ultimate MENUNGGU sampai suara
+         SELESAI SEPENUHNYA (event ended) — lihat playBerhasil &
+         ultimateSequence. Mode bebas tidak berubah */
+      var SFX_BERHASIL_OGG = "berhasil-v1.ogg";
+      var SFX_BERHASIL_MP3 = "berhasil-v1.mp3";
+      var berhasilEl = null;  /* elemen <audio> suara berhasil, dibuat sekali */
+      function berhasilElement() {
+        if (berhasilEl) return berhasilEl;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        /* Pilih format berdasarkan dukungan browser: pakai OGG bila
+           bisa diputar, kalau tidak pakai MP3 */
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? SFX_BERHASIL_OGG : SFX_BERHASIL_MP3;
+        /* Jaring pengaman: bila format utama gagal dimuat, coba
+           format cadangan sekali */
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = SFX_BERHASIL_MP3; }
+        });
+        berhasilEl = el;
+        return el;
+      }
+      /* Preload sesudah gestur "Mulai Bermain": elemen dibuat & file
+         dimuat sekarang, jadi suaranya siap saat mantra lengkap */
+      function preloadBerhasil() { try { berhasilElement().load(); } catch (e) {} }
+      /* Putar suara berhasil & kembalikan janji yang selesai begitu
+         suara SELESAI SEPENUHNYA (event ended dari elemen audio).
+         PENGAMAN WAJIB: bila elemen gagal dimuat/diputar atau ended
+         tak kunjung datang (file tidak ada, browser memblokir),
+         janji tetap selesai lewat timer pengaman (durasi file
+         1,8 detik + 1 detik = 2.800ms) — game TIDAK BOLEH macet
+         menunggu suara, video ultimate tetap diputar sesudahnya.
+         Janji bernilai false bila run sudah berganti di tengah jalan.
+         Saat mute suara tidak diputar sama sekali; jedanya cukup
+         selama kedip nama mantra yang lama (950ms) lalu lanjut */
+      function playBerhasil(id) {
+        return new Promise(function (resolve) {
+          if (S.muted) { sleep(950, id).then(resolve); return; }
+          var el = berhasilElement();
+          var done = false;
+          function finish() {
+            if (done) return; done = true;
+            el.removeEventListener("ended", finish);
+            resolve(id === S.run);
+          }
+          el.addEventListener("ended", finish);
+          setTimeout(finish, 2800);
+          try {
+            el.currentTime = 0;
+            var p = el.play();
+            /* play() yang ditolak webview tidak dibiarkan jadi error
+               tak tertangani — timer pengaman yang menyelesaikan */
+            if (p && p.catch) p.catch(function () {});
+          } catch (e) {}
+        });
+      }
       function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, VOL.magic, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
       function sfxLevel() { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, k) { bell(f, VOL.magic, 0.5, k * 0.08); }); }
@@ -3397,10 +3472,15 @@
       }
       /* CINCIN CAHAYA sebelum rentetan menghantam boss (permintaan
          pemilik): sesudah semua sigil muncul & jeda bersinar, dua
-         cincin cahaya hangat/emas mengembang keluar dari bola tongkat
+         cincin cahaya UNGU mengembang keluar dari bola tongkat
          (pusat gugus sigil) disertai percikan cahaya kecil yang
          menyebar ke segala arah; sigil baru melesat (slamSigils)
-         SETELAH cincin selesai menyebar. Cincinnya elemen DOM di
+         SETELAH cincin selesai menyebar. Warnanya ungu mengikuti
+         warna dominan penyihir (permintaan pemilik, menggantikan
+         emas yang lama): cincin utama ungu rune #b26bff, cincin
+         kedua lavender terang #d8b4fe, percikan ikut ungu rune —
+         hanya warnanya yang berubah, bentuk/ukuran/durasi/perilaku
+         cincin tetap sama. Cincinnya elemen DOM di
          fxLayer, meniru pola cincin sigilBurst: animasi WAAPI hanya
          transform (membesar) + opacity (memudar) di lapis kompositor,
          pointer-events none, tanpa filter yang dianimasikan per
@@ -3410,12 +3490,12 @@
         if (reducedMotion) return;
         var orb = staffOrbPos();
         var fxR = fxApi();
-        if (fxR) fxR.burst(orb.x, orb.y, "#ffd94a", 14);
+        if (fxR) fxR.burst(orb.x, orb.y, "#b26bff", 14);
         var ar = arena.getBoundingClientRect();
         var cx = orb.x - ar.left, cy = orb.y - ar.top;
         var rings = [
-          { size: 120, to: 3.1, dur: 620, delay: 0, color: "#ffd94a", w: 3.5 },
-          { size: 84, to: 3.4, dur: 560, delay: 130, color: "#ffe9a8", w: 2.5 }
+          { size: 120, to: 3.1, dur: 620, delay: 0, color: "#b26bff", w: 3.5 },
+          { size: 84, to: 3.4, dur: 560, delay: 130, color: "#d8b4fe", w: 2.5 }
         ];
         rings.forEach(function (cfg) {
           var ring = document.createElement("div");
@@ -3999,7 +4079,8 @@
           window.__slotFlightBusy = true;
           setTimeout(function () { window.__slotFlightBusy = false; }, 700);
           if (S.mantraLit >= mantraParts().length) {
-            /* Mantra lengkap → kilat mantra penuh → video ultimate →
+            /* Mantra lengkap → kilat mantra penuh + suara "berhasil"
+               (video menunggu suara selesai) → video ultimate →
                rentetan semua sigil → boss K.O. sekali hantam */
             await ultimateSequence(id);
             return;
@@ -4035,7 +4116,10 @@
         nextRound(id);
       }
       /* ---------- ULTIMATE (mode cerita): mantra lengkap → video → K.O. ----------
-         Urutannya: nama mantra lengkap berkilat sesaat, lalu overlay video
+         Urutannya: nama mantra lengkap berkilat sesaat SAMBIL suara
+         "berhasil" berbunyi — video ultimate MENUNGGU sampai suara itu
+         selesai sepenuhnya (playBerhasil, dengan timer pengaman supaya
+         game tidak macet) — lalu overlay video
          ultimate tampil fullscreen; begitu video selesai atau dilewati,
          SEMUA sigil yang terkumpul dari semua ronde meluncur ke boss
          sebagai rentetan cepat satu demi satu, dan bar HP boss yang selama
@@ -4047,7 +4131,12 @@
         sfxLevel();
         var box = $("mantra");
         box.classList.add("complete");
-        if (!(await sleep(950, id))) { box.classList.remove("complete"); return; }
+        /* Nama mantra berkedip (.complete) SAMBIL suara "berhasil"
+           berbunyi; video ultimate baru diputar SETELAH suara itu
+           selesai sepenuhnya (playBerhasil menunggu event ended,
+           dengan timer pengaman 2.800ms supaya game tidak macet bila
+           suara gagal berbunyi) */
+        if (!(await playBerhasil(id))) { box.classList.remove("complete"); return; }
         box.classList.remove("complete");
         await playUltimate(id);
         if (id !== S.run) return;
@@ -4683,6 +4772,11 @@
            ("sfx-salah-v1") supaya bunyinya instan saat pemain salah
            menekan tombol, tanpa jeda unduh (lihat preloadSalah) */
         preloadSalah();
+        /* Gestur yang sama juga me-PRELOAD file suara "berhasil"
+           ("berhasil-v1") supaya siap berbunyi tanpa jeda saat
+           mantra lengkap sebelum video ultimate (lihat
+           preloadBerhasil) */
+        preloadBerhasil();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
