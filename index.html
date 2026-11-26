@@ -752,7 +752,8 @@
       /* Ronde cerita BERHASIL: slot terisi BERCAHAYA dulu bersamaan (permata
          jauh lebih terang + membesar sedikit, sinarnya menyala penuh), lalu
          semua slot MENGECIL BERSAMAAN jadi setengah ukuran (.fly-shrink),
-         lalu permatanya terbang SERENTAK ke mantra (lihat .slot-flyer &
+         lalu DIAM SEJENAK tetap mengecil (~450ms), baru permatanya terbang
+         SERENTAK ke mantra (lihat .slot-flyer &
          flySlotToMantra di JS) dan slotnya kembali kosong/redup (.spent) */
       .slot.fly-glow { transform: scale(1.32); z-index: 2; }
       .slot.fly-glow .slot-img {
@@ -2806,7 +2807,11 @@
            (.fly-shrink, scale .54) — ditunggu sampai mengecilnya tuntas */
         filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-shrink"); });
         if (!(await sleep(320, id))) return false;
-        /* (3) Semua permata terbang SERENTAK menuju mantra; slotnya
+        /* (3) DIAM SEJENAK: slot yang sudah mengecil ditahan diam tetap
+           mengecil ~450ms sebelum ada yang bergerak — nafas singkat
+           antara mengecil dan terbang */
+        if (!(await sleep(450, id))) return false;
+        /* (4) Semua permata terbang SERENTAK menuju mantra; slotnya
            langsung kosong bersamaan. Ditunggu sampai SEMUA tiba —
            mantra baru terisi oleh pemanggil setelah ini selesai */
         var flights = filled.map(function (k) {
