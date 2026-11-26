@@ -2406,250 +2406,85 @@
       function sfxOver() { [392, 329.63, 261.63, 196].forEach(function (f, k) { tone(f, 0.3, "triangle", 0.18, null, k * 0.13); }); }
       function sfxWin() { [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach(function (f, k) { bell(f, 0.17, 0.55, k * 0.07); }); }
 
-      /* ---------- Musik latar: band mini PADAT & MENGHENTAK (sintetis) ----------
-         Loop 4 bar (32 langkah nada kedelapan) di ±140 BPM, disamakan
-         nuansanya dengan contoh audio dari pemilik: KERAS & PADAT terus-
-         menerus dari awal sampai akhir, tidak ada bagian yang pelan.
-         Paruh pertama (bar 1–2) dipimpin melodi yang "menyanyi" seperti
-         baris vokal — not panjang yang mengalun (BGM_DUR 2 langkah)
-         diselingi larian pendek yang bouncy, tetap mayor pentatonik &
-         ceria; paruh kedua (bar 3–4) bass-nya dibuat lebih berat lagi
-         (volume bass naik) seperti bagian bass-heavy di contoh.
-         Bass kini MENGISI SETIAP langkah nada kedelapan (bukan pluck
-         tipis sesekali): pola akar–akar–oktaf–akar–kwint yang
-         menghentak di oktaf rendah, dengan lapisan sawtooth ber-
-         lowpass + sub sinus supaya terasa berat & dominan. Di bawah
-         semuanya ada lapisan PAD lembut (triad tiap bar, serangan
-         pelan, bunyi penuh satu bar) supaya suara terasa penuh &
-         konstan — tidak ada momen yang kosong. Drum tetap: kick di
-         ketukan utama & hi-hat noise pendek di sela ketukan.
-         Progresi C – G – Am – F.
-         Dibuat murni dari Web Audio lewat AudioContext yang sama —
-         TANPA file audio. Volumenya LEBIH HADIR dari sebelumnya
-         (melodi ±0.115, naik dari 0.075) tapi tetap dijaga di bawah
-         SFX; tiap bar menyambung langsung ke bar berikutnya, jadi
-         putarannya mulus tanpa jeda yang terasa.
-         Musik hanya mulai setelah gestur pemain: bgmWanted dinyalakan
-         tombol "Mulai Bermain" (pola buka kunci yang sama seperti
-         primeUltimate; ketukan berikutnya mencoba lagi lewat pendengar
-         pointerdown bila AudioContext sempat tertahan). Musik berhenti
-         total selama video ultimate (bgmUlt) dan tunduk pada tombol
-         mute (S.muted) — keduanya diatur bgmApply. Penjadwalnya ringan:
-         interval 200ms menjadwalkan nada sampai ±0.55s ke depan memakai
-         jam AudioContext; tidak menyentuh jalur input sama sekali */
-      var BGM_NOTES = [
-        /* Bar 1 (C) — not panjang mengalun + larian pendek */
-        659.25, 0, 783.99, 880, 1046.5, 0, 880, 783.99,
-        /* Bar 2 (G) — larian bouncy, ditutup not panjang */
-        659.25, 587.33, 659.25, 783.99, 880, 0, 783.99, 659.25,
-        /* Bar 3 (Am) — puncak melodi, not panjang di atas */
-        880, 0, 1046.5, 880, 659.25, 0, 587.33, 659.25,
-        /* Bar 4 (F) — turun pulang, ditutup not panjang */
-        880, 1046.5, 880, 783.99, 659.25, 0, 587.33, 523.25
-      ];
-      /* Panjang tiap not melodi dalam langkah: 2 = not panjang yang
-         mengalun & menyambung (nada di langkah berikutnya 0 = ekornya
-         masih berbunyi), 1 = not pendek bouncy, 0 = bukan awal not */
-      var BGM_DUR = [
-        2, 0, 1, 1, 2, 0, 1, 1,
-        1, 1, 1, 1, 2, 0, 1, 1,
-        2, 0, 1, 1, 2, 0, 1, 1,
-        1, 1, 1, 1, 2, 0, 1, 1
-      ];
-      /* Bass menghentak di SETIAP langkah: akar rendah, akar, oktaf,
-         akar, akar, kwint, oktaf, kwint — mengisi penuh tiap bar */
-      var BGM_BASS = [
-        65.41, 65.41, 130.81, 65.41, 65.41, 98, 130.81, 98,          /* C  */
-        49, 49, 98, 49, 49, 73.42, 98, 73.42,                        /* G  */
-        55, 55, 110, 55, 55, 82.41, 110, 82.41,                      /* Am */
-        43.65, 43.65, 87.31, 43.65, 43.65, 65.41, 87.31, 65.41       /* F  */
-      ];
-      /* Pad lembut: triad akor tiap bar (C – G – Am – F), dibunyikan
-         sekali di awal bar dan berbunyi penuh sepanjang bar */
-      var BGM_PAD = [
-        [261.63, 329.63, 392],   /* C  */
-        [196, 246.94, 293.66],   /* G  */
-        [220, 261.63, 329.63],   /* Am */
-        [174.61, 220, 261.63]    /* F  */
-      ];
-      var BGM_STEP = 0.2143;   /* nada kedelapan di 140 BPM — satu putaran ±6.9 detik */
+      /* ---------- Musik latar: loop file buatan pemilik ----------
+         Musik latar sekarang MEMUTAR FILE loop buatan pemilik —
+         "whimsical_fantasy_arcade_loop_v3" (29,09 detik, stereo,
+         loop bersih: ujung & awal gelombang tersambung sempurna,
+         energi konstan sepanjang loop) — lewat elemen <audio> yang
+         file-nya EKSTERNAL di samping index.html, sama seperti video
+         ultimate (TIDAK di-inline sebagai base64/data URI):
+           - "bgm-loop-v1.ogg" — utama, loop mulus tanpa jeda
+           - "bgm-loop-v1.mp3" — cadangan untuk browser yang tidak
+             mendukung OGG (mis. Safari/iOS)
+         Format dipilih lewat canPlayType: OGG bila bisa diputar,
+         kalau tidak pakai MP3; dan bila file utama gagal dimuat,
+         format cadangan dicoba sekali. Elemen di-loop (loop=true).
+         Penjadwal BGM sintetis yang lama (BGM_NOTES / BGM_BASS /
+         BGM_STEP, bgmTick, bgmPluck, bgmPad, drum sintetis, bus
+         gain Web Audio) DIMATIKAN TOTAL — tidak ada lagi nada Web
+         Audio untuk musik latar, jadi tidak ada dua musik yang
+         berbunyi bersamaan. SFX tidak berubah sama sekali: nada
+         lonceng tiap batu, playRune, dll. tetap lewat Web Audio.
+         File aslinya KERAS (peak sampai clipping, RMS ±0,23), jadi
+         volume elemen diatur 0,4 supaya musik duduk di bawah SFX
+         dan tidak menusuk telinga.
+         Semua aturan hidup/mati TETAP, diatur satu-satunya oleh
+         bgmApply: musik hanya mulai setelah ketukan "Mulai Bermain"
+         (startBgm — pola buka kunci yang sama seperti primeUltimate,
+         play() dipanggil di dalam gestur; ketukan berikutnya mencoba
+         lagi lewat pendengar pointerdown bila play() sempat ditolak
+         webview), berhenti total (pause) selama video ultimate
+         diputar (bgmUlt) dan lanjut lagi sesudahnya dari posisi yang
+         sama, dan tunduk pada tombol mute (S.muted — mute = pause,
+         unmute = lanjut). Elemen audio tidak menyentuh jalur
+         input/gameplay sama sekali */
+      var BGM_SRC_OGG = "bgm-loop-v1.ogg";
+      var BGM_SRC_MP3 = "bgm-loop-v1.mp3";
       var bgmWanted = false;  /* sudah diminta gestur "Mulai Bermain" */
       var bgmUlt = false;     /* sedang ditahan video ultimate */
-      var bgmTimer = null, bgmStep = 0, bgmNext = 0, bgmBus = null;
-      function bgmGainNode() {
-        var ctx = ac(); if (!ctx) return null;
-        if (!bgmBus) { bgmBus = ctx.createGain(); bgmBus.gain.value = 1; bgmBus.connect(ctx.destination); }
-        return bgmBus;
+      var bgmEl = null;       /* elemen <audio> musik latar, dibuat sekali */
+      function bgmElement() {
+        if (bgmEl) return bgmEl;
+        var el = document.createElement("audio");
+        el.loop = true;
+        el.volume = 0.4;
+        el.preload = "auto";
+        /* Pilih format berdasarkan dukungan browser: pakai OGG bila
+           bisa diputar, kalau tidak pakai MP3 */
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? BGM_SRC_OGG : BGM_SRC_MP3;
+        /* Jaring pengaman: bila format utama gagal dimuat (file
+           tidak ada / codec ditolak), coba format cadangan sekali —
+           sesudah src berganti ke MP3 penjaga ini tidak memicu lagi */
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = BGM_SRC_MP3; bgmApply(); }
+        });
+        bgmEl = el;
+        return el;
       }
-      function bgmNote(freq, t, vol, dur) {
-        var ctx = AC, bus = bgmBus;
-        if (!ctx || !bus || !freq) return;
-        /* Melodi yang "menyanyi": sinus + harmonik atas tipis yang
-           cepat padam, DITAMBAH badan segitiga lembut di nada dasar
-           yang berbunyi sepanjang durasi not — badan inilah yang
-           membuat not panjang terasa mengalun seperti baris vokal,
-           bukan denting pendek yang langsung hilang */
-        var parts = [[1, 1], [2, 0.28], [3, 0.16], [4.24, 0.06]];
-        for (var j = 0; j < parts.length; j++) {
-          var o = ctx.createOscillator(), g = ctx.createGain();
-          o.type = "sine";
-          o.frequency.setValueAtTime(freq * parts[j][0], t);
-          var v = vol * parts[j][1], d = dur * (parts[j][0] === 1 ? 1 : 0.45);
-          g.gain.setValueAtTime(0.0001, t);
-          g.gain.exponentialRampToValueAtTime(Math.max(v, 0.0002), t + 0.015);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-          o.connect(g); g.connect(bus);
-          o.start(t); o.stop(t + d + 0.05);
-        }
-        var ob = ctx.createOscillator(), gb = ctx.createGain();
-        ob.type = "triangle";
-        ob.frequency.setValueAtTime(freq, t);
-        gb.gain.setValueAtTime(0.0001, t);
-        gb.gain.exponentialRampToValueAtTime(vol * 0.38, t + 0.03);
-        gb.gain.setValueAtTime(vol * 0.38, t + Math.max(dur - 0.09, 0.03));
-        gb.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        ob.connect(gb); gb.connect(bus);
-        ob.start(t); ob.stop(t + dur + 0.05);
-      }
-      /* Pad lembut: triad akor dibunyikan dengan serangan pelan &
-         lepas pelan sepanjang satu bar penuh (dur ≈ 8 langkah), dua
-         osilator per nada yang sedikit digeser nadanya (detune ±4
-         cent) supaya bunyinya lebar & hangat. Volumenya kecil per
-         nada — tugasnya hanya mengisi ruang di bawah melodi, bass &
-         drum supaya tidak ada momen yang terasa kosong */
-      function bgmPad(freqs, t, dur) {
-        var ctx = AC, bus = bgmBus;
-        if (!ctx || !bus || !freqs) return;
-        for (var j = 0; j < freqs.length; j++) {
-          for (var k = 0; k < 2; k++) {
-            var o = ctx.createOscillator(), g = ctx.createGain();
-            o.type = k === 0 ? "sine" : "triangle";
-            o.frequency.setValueAtTime(freqs[j], t);
-            o.detune.setValueAtTime(k === 0 ? -4 : 4, t);
-            g.gain.setValueAtTime(0.0001, t);
-            g.gain.exponentialRampToValueAtTime(0.026, t + 0.35);
-            g.gain.setValueAtTime(0.026, t + Math.max(dur - 0.4, 0.4));
-            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-            o.connect(g); g.connect(bus);
-            o.start(t); o.stop(t + dur + 0.05);
-          }
-        }
-      }
-      /* Bass BERAT & dominan (bukan pluck tipis lagi): tiga lapisan —
-         sub sinus penuh di nada dasar (beratnya), segitiga menonjok
-         (badannya), dan sawtooth lewat lowpass 500Hz (gigitannya,
-         supaya bass tetap terdengar jelas di speaker HP kecil).
-         Envelope-nya mengisi hampir seluruh langkah nada kedelapan,
-         jadi bass-nya terasa terus mendorong, bukan bunyi sesekali */
-      function bgmPluck(freq, t, vol, dur) {
-        var ctx = AC, bus = bgmBus;
-        if (!ctx || !bus || !freq) return;
-        var o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = "triangle";
-        o.frequency.setValueAtTime(freq, t);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        o.connect(g); g.connect(bus);
-        o.start(t); o.stop(t + dur + 0.05);
-        var o2 = ctx.createOscillator(), g2 = ctx.createGain();
-        o2.type = "sine";
-        o2.frequency.setValueAtTime(freq, t);
-        g2.gain.setValueAtTime(0.0001, t);
-        g2.gain.exponentialRampToValueAtTime(vol * 0.85, t + 0.012);
-        g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.92);
-        o2.connect(g2); g2.connect(bus);
-        o2.start(t); o2.stop(t + dur + 0.05);
-        var o3 = ctx.createOscillator(), f3 = ctx.createBiquadFilter(), g3 = ctx.createGain();
-        o3.type = "sawtooth";
-        o3.frequency.setValueAtTime(freq, t);
-        f3.type = "lowpass"; f3.frequency.value = 500;
-        g3.gain.setValueAtTime(0.0001, t);
-        g3.gain.exponentialRampToValueAtTime(vol * 0.4, t + 0.012);
-        g3.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.7);
-        o3.connect(f3); f3.connect(g3); g3.connect(bus);
-        o3.start(t); o3.stop(t + dur + 0.05);
-      }
-      /* Drum sintetis: kick = sinus yang nadanya jatuh cepat (150→48Hz);
-         hi-hat = semburan noise pendek lewat highpass. Buffer noise
-         dibuat sekali saja lalu dipakai ulang di semua ketukan */
-      var bgmNoiseBuf = null;
-      function bgmNoise() {
-        if (!bgmNoiseBuf) {
-          var ctx = AC, len = Math.floor(ctx.sampleRate * 0.3);
-          bgmNoiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
-          var d = bgmNoiseBuf.getChannelData(0);
-          for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-        }
-        return bgmNoiseBuf;
-      }
-      function bgmKick(t) {
-        var ctx = AC, bus = bgmBus; if (!ctx || !bus) return;
-        var o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = "sine";
-        o.frequency.setValueAtTime(150, t);
-        o.frequency.exponentialRampToValueAtTime(48, t + 0.11);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(0.38, t + 0.008);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-        o.connect(g); g.connect(bus);
-        o.start(t); o.stop(t + 0.2);
-      }
-      function bgmHat(t, vol) {
-        var ctx = AC, bus = bgmBus; if (!ctx || !bus) return;
-        var src = ctx.createBufferSource(); src.buffer = bgmNoise();
-        var f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7200;
-        var g = ctx.createGain();
-        g.gain.setValueAtTime(vol, t);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-        src.connect(f); f.connect(g); g.connect(bus);
-        src.start(t); src.stop(t + 0.07);
-      }
-      function bgmTick() {
-        var ctx = AC; if (!ctx) return;
-        /* Tab tidak aktif: jangan jadwalkan apa pun; jam dijepit ulang
-           saat tab aktif lagi supaya tidak ada semburan nada susulan */
-        if (document.hidden) { bgmNext = 0; return; }
-        if (!bgmNext || bgmNext < ctx.currentTime) { bgmNext = ctx.currentTime + 0.06; bgmStep = 0; }
-        while (bgmNext < ctx.currentTime + 0.55) {
-          var idx = bgmStep % BGM_NOTES.length;
-          /* Melodi lebih hadir (0.115, naik dari 0.075); not panjang
-             (BGM_DUR 2) berbunyi ±2 langkah penuh supaya mengalun,
-             not pendek tetap bouncy ±0.45 detik */
-          if (BGM_NOTES[idx]) bgmNote(BGM_NOTES[idx], bgmNext, 0.115, BGM_DUR[idx] > 1 ? BGM_DUR[idx] * BGM_STEP * 1.8 : 0.45);
-          /* Bass mengisi SETIAP langkah & jauh lebih kuat (0.22);
-             di paruh kedua loop (bar 3–4) lebih berat lagi (0.26)
-             seperti bagian bass-heavy di contoh audio */
-          if (BGM_BASS[idx]) bgmPluck(BGM_BASS[idx], bgmNext, idx >= 16 ? 0.26 : 0.22, 0.24);
-          /* Pad lembut di awal tiap bar, penuh sepanjang bar */
-          var beat = idx % 8;
-          if (beat === 0) bgmPad(BGM_PAD[Math.floor(idx / 8)], bgmNext, BGM_STEP * 8 * 1.05);
-          /* Drum: kick di ketukan utama tiap bar (langkah 0 & 4),
-             hi-hat di semua sela ketukan (langkah ganjil) */
-          if (beat === 0 || beat === 4) bgmKick(bgmNext);
-          if (idx % 2 === 1) bgmHat(bgmNext, 0.11);
-          bgmStep++;
-          bgmNext += BGM_STEP;
-        }
-      }
-      /* Satu-satunya pengatur hidup/mati musik: jalan hanya bila sudah
-         diminta gestur, tidak sedang ditahan ultimate, dan tidak mute.
-         Saat harus diam, bus musik dipudar cepat ke 0 supaya ekor nada
-         yang sudah terjadwal ikut padam total, bukan menggantung */
+      /* Satu-satunya pengatur hidup/mati musik: elemen DIPUTAR hanya
+         bila sudah diminta gestur, tidak sedang ditahan ultimate,
+         dan tidak mute. Selain itu elemen di-pause total — musik
+         berhenti sungguhan, bukan sekadar dibisukan. Sebelum gestur
+         pertama elemen bahkan belum dibuat, jadi tidak ada unduhan
+         atau bunyi apa pun sebelum "Mulai Bermain" ditekan */
       function bgmApply() {
         var should = bgmWanted && !bgmUlt && !S.muted;
-        if (should && !bgmTimer) {
-          if (!bgmGainNode()) return;
-          bgmStep = 0; bgmNext = 0;
-          bgmTimer = setInterval(bgmTick, 200);
-          bgmTick();
-        } else if (!should && bgmTimer) {
-          clearInterval(bgmTimer); bgmTimer = null;
-        }
-        if (bgmBus && AC) {
-          var t = AC.currentTime;
-          bgmBus.gain.cancelScheduledValues(t);
-          bgmBus.gain.setTargetAtTime(should ? 1 : 0, t, 0.08);
+        if (!bgmWanted && !bgmEl) return;
+        var el = bgmElement();
+        if (should) {
+          if (el.paused) {
+            try {
+              var p = el.play();
+              /* play() yang ditolak webview tidak dibiarkan jadi
+                 error tak tertangani: ketukan pemain berikutnya
+                 mencoba lagi lewat pendengar pointerdown */
+              if (p && p.catch) p.catch(function () {});
+            } catch (e) {}
+          }
+        } else if (!el.paused) {
+          try { el.pause(); } catch (e) {}
         }
       }
       function startBgm() { bgmWanted = true; bgmApply(); }
@@ -4329,9 +4164,10 @@
            primeUltimate) — webview HP/Discord menolak play() yang
            dipanggil tanpa riwayat gestur pada elemen medianya */
         primeUltimate();
-        /* Gestur yang sama juga menyalakan musik latar: AudioContext
-           dibuka di dalam ketukan ini, jadi musik boleh mulai berbunyi
-           (lihat startBgm) — tidak ada autoplay sebelum gestur */
+        /* Gestur yang sama juga menyalakan musik latar: elemen audio
+           file loop diputar (play()) di dalam ketukan ini, jadi musik
+           boleh mulai berbunyi (lihat startBgm) — tidak ada autoplay
+           sebelum gestur */
         startBgm();
         btn.classList.add("pressed");
         card.classList.add("leaving");
