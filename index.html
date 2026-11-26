@@ -752,10 +752,13 @@
       /* Ronde cerita BERHASIL: slot terisi BERCAHAYA dulu bersamaan (permata
          jauh lebih terang + membesar sedikit, sinarnya menyala penuh), lalu
          semua slot MENGECIL BERSAMAAN jadi setengah ukuran (.fly-shrink),
-         lalu DIAM SEJENAK tetap mengecil (~180ms, dengan denyut halus
-         .fly-hold supaya jedanya terasa hidup, bukan macet), baru permatanya
-         terbang SERENTAK ke mantra (lihat .slot-flyer &
-         flySlotToMantra di JS) dan slotnya kembali kosong/redup (.spent).
+         lalu mengecilnya DITERUSKAN sampai permatanya MELEBUR jadi bola
+         cahaya kecil redup saja (.fly-melt & .slot-orb, sewarna cahaya
+         awal tiap slot), lalu DIAM SEJENAK sebagai bola cahaya itu
+         (~180ms, dengan denyut halus .fly-hold supaya jedanya terasa
+         hidup, bukan macet), baru BOLA CAHAYA itu yang terbang SERENTAK
+         ke mantra (lihat .slot-flyer & flySlotToMantra di JS) dan slotnya
+         kembali kosong/redup (.spent).
          Selama seluruh rangkaian ini slot memakai .fly-calm: sinar berputar
          & percikan berkelipnya DIJEDA (lihat di bawah) supaya HP tidak
          menggambar ulang efek-efek itu tiap frame di tengah animasi */
@@ -777,40 +780,80 @@
         transform: scale(.54);
         transition: transform .24s cubic-bezier(.2,.75,.3,1);
       }
+      /* Bola cahaya kecil REDUP — sisa akhir fase mengecil: gambar permata
+         melebur jadi cahaya ini (lihat .fly-melt di bawah) dan cahaya
+         inilah yang kemudian terbang ke mantra. Warnanya mengikuti --c
+         slot itu sendiri (cahaya awal tiap rune: ungu/emas/biru/hijau/
+         pink). SENGAJA dibuat redup, BUKAN bola terang menyilaukan
+         seperti sigil sesudah video: tanpa filter brightness, warnanya
+         dicampur transparan dan cahayanya pendek & lembut. Kotaknya 26px
+         di koordinat lokal slot; karena slotnya sendiri sudah mengecil
+         (.fly-melt scale .38), yang tampak di layar hanya bola ±10px */
+      .slot .slot-orb {
+        position: absolute; left: 50%; top: 50%; z-index: 3;
+        width: 26px; height: 26px; border-radius: 50%;
+        transform: translate(-50%,-50%);
+        background: radial-gradient(circle, color-mix(in srgb, var(--c) 55%, #fff) 0%, color-mix(in srgb, var(--c) 78%, transparent) 48%, transparent 74%);
+        box-shadow: 0 0 5px color-mix(in srgb, var(--c) 42%, transparent), 0 0 11px color-mix(in srgb, var(--c) 20%, transparent);
+        opacity: 0;
+        transition: opacity .3s ease-in;
+        pointer-events: none;
+      }
+      /* Fase melebur jadi cahaya: sesudah mengecil setengah (.fly-shrink),
+         slot MENGECIL TERUS — gambar permatanya memudar & menyusut habis
+         (melebur), sinar & percikannya ikut padam, sampai yang tersisa
+         hanya bola cahaya kecil redup (.slot-orb) sewarna cahaya awal
+         slot itu masing-masing */
+      .slot.fly-melt {
+        transform: scale(.38);
+        transition: transform .3s cubic-bezier(.45,.6,.4,1);
+      }
+      .slot.fly-melt .slot-img {
+        opacity: 0; transform: scale(.3);
+        transition: opacity .26s ease-in, transform .3s ease-in;
+      }
+      .slot.fly-melt .slot-rays, .slot.fly-melt .slot-spk { opacity: 0; transition: opacity .22s ease-out; }
+      .slot.fly-melt .slot-orb { opacity: .9; }
       /* Selama rangkaian terbang berjalan, sinar berputar & percikan slot
          DIJEDA: conic-gradient yang berputar dan teks yang berkelip memaksa
          gambar ulang tiap frame di HP; menjedanya tidak mengubah tampilan
          diamnya (sinar & percikan tetap terlihat), hanya menghilangkan
          biaya putaran/kelipnya tepat saat animasi terbang berjalan */
       .slot.fly-calm .slot-rays, .slot.fly-calm .slot-spk { animation-play-state: paused; }
-      /* Denyut halus SELAMA diam sejenak: slot yang sudah mengecil membesar
-         sangat sedikit lalu kembali ke ukuran mengecilnya — isyarat
-         "mengumpulkan tenaga" supaya jeda singkatnya terasa disengaja &
-         hidup, bukan seperti game macet. Transform saja (GPU), satu siklus
-         pas sepanjang jedanya (~180ms) */
-      .slot.fly-hold { animation: flyHoldPulse .18s ease-in-out; }
-      @keyframes flyHoldPulse {
-        0% { transform: scale(.54); }
-        55% { transform: scale(.59); }
-        100% { transform: scale(.54); }
+      /* Denyut halus SELAMA diam sejenak: yang berdenyut kini BOLA
+         CAHAYAnya (slotnya sudah melebur jadi cahaya itu di fase
+         .fly-melt) — membesar sangat sedikit lalu kembali ke ukuran
+         semula, isyarat "mengumpulkan tenaga" supaya jeda singkatnya
+         terasa disengaja & hidup, bukan seperti game macet. Transform
+         saja (GPU), satu siklus pas sepanjang jedanya (~180ms) */
+      .slot.fly-hold .slot-orb { animation: flyOrbPulse .18s ease-in-out; }
+      @keyframes flyOrbPulse {
+        0% { transform: translate(-50%,-50%) scale(1); }
+        55% { transform: translate(-50%,-50%) scale(1.25); }
+        100% { transform: translate(-50%,-50%) scale(1); }
       }
       .slot.spent .q { opacity: .3; }
-      /* Permata terbang dari slot menuju mantra: elemen fixed di atas semua
-         papan (z-index 60), digerakkan WAAPI (transform saja, GPU) dengan
-         jejak percikan sewarna permatanya seperti firework */
+      /* Bola cahaya terbang dari slot menuju mantra: elemen fixed di atas
+         semua papan (z-index 60), digerakkan WAAPI (transform saja, GPU)
+         dengan jejak percikan sewarna cahayanya seperti firework. Yang
+         terbang BUKAN lagi gambar permata — permata sudah melebur jadi
+         bola cahaya kecil redup ini di slotnya (lihat .slot-orb) */
       .slot-flyer {
         position: fixed; z-index: 60; pointer-events: none;
         width: 36px; height: 36px; margin-left: -18px; margin-top: -18px;
         will-change: transform;
       }
-      .slot-flyer img {
-        width: 100%; height: 100%; display: block; object-fit: contain;
-        /* Bayangan cahaya 3 lapis → 2 lapis: permata ini BERGERAK tiap frame,
-           jadi filternya digambar ulang terus selama terbang — satu lapis
-           dikurangi tanpa mengubah kesan cahayanya */
-        filter: brightness(1.35)
-          drop-shadow(0 0 6px var(--c))
-          drop-shadow(0 0 19px color-mix(in srgb, var(--c) 60%, transparent));
+      /* Bola cahayanya sendiri: rupa & redupnya SAMA seperti .slot-orb di
+         slot (gradasi radial sewarna --c, dicampur transparan, cahaya
+         pendek & lembut, tanpa brightness) — 20px di dalam wadah 36px,
+         diskalakan lagi oleh keyframes penerbangannya di JS */
+      .slot-flyer .fly-orb {
+        position: absolute; left: 50%; top: 50%;
+        width: 20px; height: 20px; border-radius: 50%;
+        transform: translate(-50%,-50%);
+        background: radial-gradient(circle, color-mix(in srgb, var(--c) 55%, #fff) 0%, color-mix(in srgb, var(--c) 78%, transparent) 48%, transparent 74%);
+        box-shadow: 0 0 6px color-mix(in srgb, var(--c) 45%, transparent), 0 0 13px color-mix(in srgb, var(--c) 22%, transparent);
+        opacity: .9;
       }
       /* Percikan jejak & ledakan firework selama permata terbang */
       .fly-spark {
@@ -2256,7 +2299,7 @@
         for (var k = 0; k < n; k++) {
           var d = document.createElement("div");
           d.className = "slot";
-          d.innerHTML = '<span class="slot-rays"></span><span class="q">?</span><img class="slot-img" alt="" />';
+          d.innerHTML = '<span class="slot-rays"></span><span class="q">?</span><img class="slot-img" alt="" /><span class="slot-orb"></span>';
           SSPK.forEach(function (p) {
             var sp = document.createElement("i");
             sp.className = "slot-spk" + (p.w ? " w" : "");
@@ -2750,11 +2793,14 @@
          Pengganti peran gugus sigil pengorbit tongkat saat satu ronde
          berhasil: (1) semua slot terisi ronde itu BERCAHAYA bersamaan,
          (2) lalu semua slot itu MENGECIL BERSAMAAN jadi setengah ukuran,
-         (3) lalu permatanya terbang SERENTAK (bersamaan, bukan satu per
-         satu) — jejak & ledakan percikan sewarna permatanya seperti
-         firework — menuju bagian mantra yang akan menyala, (4) animasinya
-         ditunggu sampai SEMUA permata tiba; pemanggil (roundComplete)
-         BARU mengisi/menyalakan mantra setelah fungsi ini selesai.
+         (3) lalu mengecilnya diteruskan sampai permatanya MELEBUR jadi
+         bola cahaya kecil redup sewarna cahaya awal tiap slot, diam
+         sejenak sebagai bola cahaya itu, (4) lalu BOLA CAHAYA itu yang
+         terbang SERENTAK (bersamaan, bukan satu per satu) — jejak &
+         ledakan percikan sewarna cahayanya seperti firework — menuju
+         bagian mantra yang akan menyala, (5) animasinya ditunggu sampai
+         SEMUA bola cahaya tiba; pemanggil (roundComplete) BARU
+         mengisi/menyalakan mantra setelah fungsi ini selesai.
          Elemen terbangnya fixed di atas papan dan digerakkan WAAPI
          transform saja (GPU), ringan di HP */
       function flySpark(x, y, color, big) {
@@ -2791,7 +2837,10 @@
           flyer.style.setProperty("--c", r.color);
           flyer.style.left = sx + "px";
           flyer.style.top = sy + "px";
-          flyer.innerHTML = '<img src="' + r.sigil + '" alt="" />';
+          /* Yang terbang adalah BOLA CAHAYA kecil redup sewarna rune ini
+             (permata di slotnya sudah melebur jadi cahaya itu, lihat
+             .fly-melt) — bukan lagi gambar permatanya */
+          flyer.innerHTML = '<span class="fly-orb"></span>';
           document.body.appendChild(flyer);
           /* Jejak firework: percikan sewarna permata berjatuhan di sepanjang
              lintasan melengkungnya. Intervalnya direnggangkan (55ms → 90ms):
@@ -2804,9 +2853,9 @@
             var arc = -Math.sin(p * Math.PI) * 34;
             flySpark(sx + dx * p + (Math.random() - .5) * 10, sy + dy * p + arc + (Math.random() - .5) * 10, r.color, false);
           }, 90);
-          /* Permata berangkat dari ukuran slot yang sudah mengecil
-             (setengah ukuran), membesar sedikit di tengah lintasan,
-             lalu menyusut lagi saat masuk ke mantra */
+          /* Bola cahaya berangkat dari ukuran bola cahaya di slot yang
+             sudah melebur, membesar sedikit di tengah lintasan, lalu
+             menyusut lagi saat masuk ke mantra */
           var anim = flyer.animate([
             { transform: "translate(0,0) scale(.55) rotate(0deg)", opacity: 1 },
             { transform: "translate(" + dx * .5 + "px," + (dy * .5 - 34) + "px) scale(.85) rotate(10deg)", opacity: 1, offset: .55 },
@@ -2856,22 +2905,31 @@
            tunggunya pun dipersingkat (320ms → 250ms) */
         filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-shrink"); });
         if (!(await sleep(250, id))) { window.__slotFlightBusy = false; return false; }
-        /* (3) DIAM SEJENAK: slot yang sudah mengecil ditahan tetap mengecil
-           sebelum ada yang terbang — nafas singkat antara mengecil dan
-           terbang. Jedanya DIPERKENDEK (450ms → 180ms): 450ms diam total
-           terbaca sebagai game macet/ngelag. Selama jeda singkat ini slot
-           memakai .fly-hold — denyut halus satu siklus (membesar sedikit
-           lalu kembali) sebagai isyarat "mengumpulkan tenaga", jadi jeda
-           terasa hidup & disengaja, bukan beku */
+        /* (3) MELEBUR JADI CAHAYA: mengecilnya DITERUSKAN (.fly-melt) —
+           gambar permata memudar & menyusut habis, sinar & percikannya
+           ikut padam, sampai yang tersisa hanya bola cahaya kecil redup
+           (.slot-orb) sewarna cahaya awal tiap slot masing-masing.
+           Ditunggu sampai leburnya tuntas (~300ms). Tahap ini GERAK
+           menyambung dari mengecil, bukan diam, jadi tidak terbaca
+           sebagai macet */
+        filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-melt"); });
+        if (!(await sleep(300, id))) { window.__slotFlightBusy = false; return false; }
+        /* (4) DIAM SEJENAK: bola cahaya ditahan tetap sebagai bola cahaya
+           sebelum ada yang terbang — nafas singkat antara melebur dan
+           terbang. Jedanya singkat (180ms): diam total yang lama terbaca
+           sebagai game macet/ngelag. Selama jeda singkat ini slot memakai
+           .fly-hold — denyut halus satu siklus PADA BOLA CAHAYAnya
+           (membesar sedikit lalu kembali) sebagai isyarat "mengumpulkan
+           tenaga", jadi jeda terasa hidup & disengaja, bukan beku */
         filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-hold"); });
         if (!(await sleep(180, id))) { window.__slotFlightBusy = false; return false; }
-        /* (4) Semua permata terbang SERENTAK menuju mantra; slotnya
+        /* (5) Semua bola cahaya terbang SERENTAK menuju mantra; slotnya
            langsung kosong bersamaan. Ditunggu sampai SEMUA tiba —
            mantra baru terisi oleh pemanggil setelah ini selesai */
         var flights = filled.map(function (k) {
           var slotEl = slotsEl.children[k];
           var fly = flySlotToMantra(slotEl, S.seq[k], target, dur);
-          slotEl.classList.remove("fly-glow", "fly-shrink", "fly-calm", "fly-hold", "filled");
+          slotEl.classList.remove("fly-glow", "fly-shrink", "fly-calm", "fly-melt", "fly-hold", "filled");
           slotEl.classList.add("spent");
           slotEl.querySelector(".q").textContent = "?";
           return fly;
@@ -2996,10 +3054,12 @@
            Sesudah itu, per mode:
            - MODE CERITA: TIDAK ada hentaman & TIDAK ada damage. Slot
              terisi ronde ini BERCAHAYA bersamaan, lalu mengecil bersamaan
-             jadi setengah ukuran, lalu permatanya terbang SERENTAK
-             seperti firework menuju mantra (slotFlightToMantra);
-             mantra BARU terisi setelah animasi itu selesai seluruhnya —
-             satu bagian mantra menyala (lihat cabang story di bawah).
+             jadi setengah ukuran, lalu mengecil terus sampai permatanya
+             melebur jadi bola cahaya kecil redup, lalu BOLA CAHAYA itu
+             yang terbang SERENTAK seperti firework menuju mantra
+             (slotFlightToMantra); mantra BARU terisi setelah animasi itu
+             selesai seluruhnya — satu bagian mantra menyala (lihat
+             cabang story di bawah).
            - MODE BEBAS: tidak berubah — fase bersinar total 600ms (bola
              sigil terkumpul bersinar bersama, denyut WAAPI shineSigils
              450ms tuntas di dalamnya), lalu sigil melesat menghentak
@@ -3007,9 +3067,9 @@
         if (story) {
           S.score += S.seq.length * 25 + 50;
           gainXp(dmg);
-          /* Slot bercahaya bersamaan → mengecil bersamaan → permata
-             terbang serentak ke mantra → animasi ditunggu tuntas →
-             BARU mantra terisi di bawah ini */
+          /* Slot bercahaya bersamaan → mengecil bersamaan → melebur
+             jadi bola cahaya → bola cahaya terbang serentak ke mantra →
+             animasi ditunggu tuntas → BARU mantra terisi di bawah ini */
           if (!(await slotFlightToMantra(id))) return;
           /* Satu bagian mantra aktif: kata barunya menyala emas + bar
              progres maju. HP boss TIDAK berubah sama sekali di sini */
