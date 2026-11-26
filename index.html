@@ -2363,6 +2363,23 @@
         if (AC && AC.state === "suspended") AC.resume();
         return AC;
       }
+      /* ---------- Peta volume per kategori (tabel pemilik) ----------
+         Satu-satunya sumber angka volume untuk SEMUA suara game,
+         mengikuti tabel rekomendasi pemilik:
+           Musik latar (BGM)          35% -> bgm: 0.35
+           SFX sihir                  80% -> magic: 0.80
+           SFX klik/tombol            45% -> click: 0.45
+           SFX permata/interaksi      60% -> gem: 0.60
+           SFX kemenangan             85% -> win: 0.85
+           Ambience lingkungan        30% -> amb: 0.30
+         Hierarkinya konsisten: BGM & ambience paling pelan di latar,
+         lalu klik, permata, sihir, dan kemenangan paling keras.
+         Setiap tempat suara diputar memakai konstanta dari peta ini,
+         bukan angka lepas. Pengecualian yang SENGAJA tidak masuk
+         tabel: nada salah tekan (sfxWrong) tetap lembut seperti
+         semula, dan audio video ultimate (ult-01s..04s + tombol
+         speakernya) tetap volume penuh — keduanya tidak diubah. */
+      var VOL = { bgm: 0.35, magic: 0.80, click: 0.45, gem: 0.60, win: 0.85, amb: 0.30 };
       function tone(freq, dur, type, vol, slideTo, delay) {
         if (S.muted) return;
         var ctx = ac(); if (!ctx) return;
@@ -2392,7 +2409,13 @@
       /* Nada dasar tiap batu TETAP RUNES[i].freq seperti sebelumnya —
          yang berubah hanya timbre-nya (kini lonceng), jadi suara tetap
          membantu pemain menghafal urutan */
-      function playRune(i) { bell(RUNES[i].freq, 0.24, 0.6); }
+      function playRune(i) { bell(RUNES[i].freq, VOL.gem, 0.6); }
+      /* Klik tombol UI (mulai, menu, jeda, dsb.): bunyi "tik" pendek
+         & ringan di volume kategori klik (45%) */
+      function sfxClick() {
+        tone(1250, 0.06, "triangle", VOL.click);
+        tone(1900, 0.04, "sine", VOL.click * 0.45, null, 0.012);
+      }
       function sfxWrong() {
         /* Lebih lembut dari sebelumnya: segitiga halus yang meluncur
            turun pelan + sub sinus di bawahnya — tetap rendah & jelas
@@ -2400,11 +2423,11 @@
         tone(196, 0.34, "triangle", 0.13, 131);
         tone(98, 0.34, "sine", 0.08, 73.4);
       }
-      function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, 0.17, 0.55, k * 0.055); }); }
+      function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, VOL.magic, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
-      function sfxLevel() { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, k) { bell(f, 0.17, 0.5, k * 0.08); }); }
+      function sfxLevel() { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, k) { bell(f, VOL.magic, 0.5, k * 0.08); }); }
       function sfxOver() { [392, 329.63, 261.63, 196].forEach(function (f, k) { tone(f, 0.3, "triangle", 0.18, null, k * 0.13); }); }
-      function sfxWin() { [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach(function (f, k) { bell(f, 0.17, 0.55, k * 0.07); }); }
+      function sfxWin() { [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach(function (f, k) { bell(f, VOL.win, 0.55, k * 0.07); }); }
 
       /* ---------- Musik latar: loop file buatan pemilik ----------
          Musik latar sekarang MEMUTAR FILE loop buatan pemilik —
@@ -2426,8 +2449,9 @@
          berbunyi bersamaan. SFX tidak berubah sama sekali: nada
          lonceng tiap batu, playRune, dll. tetap lewat Web Audio.
          File aslinya KERAS (peak sampai clipping, RMS ±0,23), jadi
-         volume elemen diatur 0,4 supaya musik duduk di bawah SFX
-         dan tidak menusuk telinga.
+         volume elemen diatur mengikuti tabel pemilik: kategori BGM
+         35% (VOL.bgm) supaya musik duduk di bawah SFX dan tidak
+         menusuk telinga.
          Semua aturan hidup/mati TETAP, diatur satu-satunya oleh
          bgmApply: musik hanya mulai setelah ketukan "Mulai Bermain"
          (startBgm — pola buka kunci yang sama seperti primeUltimate,
@@ -2447,7 +2471,7 @@
         if (bgmEl) return bgmEl;
         var el = document.createElement("audio");
         el.loop = true;
-        el.volume = 0.4;
+        el.volume = VOL.bgm;
         el.preload = "auto";
         /* Pilih format berdasarkan dukungan browser: pakai OGG bila
            bisa diputar, kalau tidak pakai MP3 */
@@ -2470,6 +2494,11 @@
          pertama elemen bahkan belum dibuat, jadi tidak ada unduhan
          atau bunyi apa pun sebelum "Mulai Bermain" ditekan */
       function bgmApply() {
+        /* Layer ambience mengikuti aturan hidup/mati yang sama persis
+           (lihat ambApply di bawah) — satu panggilan di sini membuat
+           keduanya selalu seirama: gestur mulai, tahanan ultimate,
+           dan tombol mute */
+        ambApply();
         var should = bgmWanted && !bgmUlt && !S.muted;
         if (!bgmWanted && !bgmEl) return;
         var el = bgmElement();
@@ -2487,7 +2516,85 @@
           try { el.pause(); } catch (e) {}
         }
       }
-      function startBgm() { bgmWanted = true; bgmApply(); }
+      function startBgm() { bgmWanted = true; ambWanted = true; bgmApply(); }
+
+      /* ---------- Ambience lingkungan: angin malam + air terjun ----------
+         Layer suasana SINTETIS murni Web Audio (TANPA file audio):
+         noise putih bersama yang disaring dua jalur —
+           - angin malam: lowpass ±420 Hz yang frekuensi & kekuatannya
+             digoyang LFO sangat pelan (0,05–0,07 Hz), jadi desisnya
+             naik-turun seperti embusan angin yang tidak beraturan;
+           - gemericik air terjun: bandpass ±1400 Hz dengan LFO lebih
+             cepat (0,11 & 0,33 Hz) pada frekuensi & kekuatan, jadi
+             terdengar seperti percikan air yang hidup.
+         Keduanya masuk ke satu gain induk bervolume kategori ambience
+         tabel pemilik (30% — VOL.amb): pelan, hanya latar suasana di
+         bawah BGM & SFX. Node dibangun SEKALI (lazy, saat pertama
+         dibutuhkan) dan sumber noise-nya terus berputar; yang diatur
+         hanya gain induknya — dirambatkan halus (setTargetAtTime)
+         menuju VOL.amb atau 0, jadi tidak ada bunyi "klik" saat
+         layer menyala/padam.
+         Aturan hidup/matinya SAMA PERSIS dengan musik latar, diatur
+         lewat ambApply yang dipanggil dari bgmApply: mulai setelah
+         gestur "Mulai Bermain" (ambWanted, diset startBgm), padam
+         selama video ultimate diputar (bgmUlt), dan tunduk pada
+         tombol mute (S.muted). Ambience tidak menyentuh jalur
+         input/gameplay sama sekali */
+      var ambWanted = false;  /* sudah diminta gestur "Mulai Bermain" */
+      var ambNodes = null;    /* { master } — dibangun sekali */
+      function ambBuild(ctx) {
+        var master = ctx.createGain();
+        master.gain.value = 0;
+        master.connect(ctx.destination);
+        /* Buffer noise bersama (2 detik, di-loop) untuk kedua jalur */
+        var len = Math.floor(ctx.sampleRate * 2);
+        var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        function noiseSrc(rate) {
+          var s = ctx.createBufferSource();
+          s.buffer = buf; s.loop = true; s.playbackRate.value = rate || 1;
+          return s;
+        }
+        function lfo(freq, amount, target) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.frequency.value = freq; g.gain.value = amount;
+          o.connect(g); g.connect(target); o.start();
+        }
+        /* Angin malam: noise -> lowpass -> gain, keduanya di-LFO pelan */
+        var windFilter = ctx.createBiquadFilter();
+        windFilter.type = "lowpass"; windFilter.frequency.value = 420; windFilter.Q.value = 0.4;
+        var windGain = ctx.createGain(); windGain.gain.value = 0.55;
+        var wind = noiseSrc(1);
+        wind.connect(windFilter); windFilter.connect(windGain); windGain.connect(master);
+        wind.start();
+        lfo(0.07, 0.22, windGain.gain);
+        lfo(0.05, 170, windFilter.frequency);
+        /* Gemericik air terjun: noise -> bandpass -> gain, LFO lebih hidup */
+        var fallFilter = ctx.createBiquadFilter();
+        fallFilter.type = "bandpass"; fallFilter.frequency.value = 1400; fallFilter.Q.value = 0.6;
+        var fallGain = ctx.createGain(); fallGain.gain.value = 0.16;
+        var fall = noiseSrc(0.7);
+        fall.connect(fallFilter); fallFilter.connect(fallGain); fallGain.connect(master);
+        fall.start();
+        lfo(0.33, 0.06, fallGain.gain);
+        lfo(0.11, 350, fallFilter.frequency);
+        return { master: master };
+      }
+      /* Pengatur hidup/mati ambience — cermin bgmApply: berbunyi
+         hanya bila sudah diminta gestur, tidak sedang ditahan
+         ultimate, dan tidak mute. Sebelum gestur pertama node-nya
+         bahkan belum dibuat, jadi tidak ada bunyi apa pun sebelum
+         "Mulai Bermain" ditekan */
+      function ambApply() {
+        var on = ambWanted && !bgmUlt && !S.muted;
+        if (!on && !ambNodes) return;
+        var ctx = ac(); if (!ctx) return;
+        if (!ambNodes) ambNodes = ambBuild(ctx);
+        var t = ctx.currentTime;
+        ambNodes.master.gain.cancelScheduledValues(t);
+        ambNodes.master.gain.setTargetAtTime(on ? VOL.amb : 0, t, 0.45);
+      }
 
       /* ---------- Helpers ---------- */
       function sleep(ms, id) {
@@ -4158,6 +4265,7 @@
       $("startBtn").addEventListener("click", function () {
         var card = $("tutorialCard"), ov = $("startOverlay"), btn = $("startBtn");
         if (card.classList.contains("leaving")) return;
+        sfxClick();
         enterFullscreen();
         /* Gestur sungguhan: buka kunci video ultimate sekarang juga,
            supaya nanti bisa autoplay saat mantra lengkap (lihat
@@ -4189,15 +4297,17 @@
       $("againBtn").addEventListener("click", function () {
         var btn = $("againBtn");
         if (btn.classList.contains("pressed")) return;
+        sfxClick();
         btn.classList.add("pressed");
         setTimeout(function () {
           startGame(false);
           btn.classList.remove("pressed");
         }, reducedMotion ? 30 : 180);
       });
-      $("winAgainBtn").addEventListener("click", function () { startGame(false); });
-      $("soonAgainBtn").addEventListener("click", function () { startGame(false); });
+      $("winAgainBtn").addEventListener("click", function () { sfxClick(); startGame(false); });
+      $("soonAgainBtn").addEventListener("click", function () { sfxClick(); startGame(false); });
       $("soonMenuBtn").addEventListener("click", function () {
+        sfxClick();
         S.run++;
         S.phase = "idle";
         hideVictory();
@@ -4213,6 +4323,7 @@
         buildSlots(LEVEL_PLANS[0][0]);
       });
       $("endlessBtn").addEventListener("click", function () {
+        sfxClick();
         $("victoryOverlay").classList.add("hidden");
         S.run++;
         var id = S.run;
@@ -4241,9 +4352,10 @@
         $("pauseOverlay").classList.toggle("hidden", !p);
       }
       var pauseBtnEl = $("pauseBtn");
-      if (pauseBtnEl) pauseBtnEl.addEventListener("click", function () { setPaused(!S.paused); });
-      $("resumeBtn").addEventListener("click", function () { setPaused(false); });
+      if (pauseBtnEl) pauseBtnEl.addEventListener("click", function () { sfxClick(); setPaused(!S.paused); });
+      $("resumeBtn").addEventListener("click", function () { sfxClick(); setPaused(false); });
       $("quitBtn").addEventListener("click", function () {
+        sfxClick();
         S.run++;
         S.paused = false;
         S.phase = "idle";
