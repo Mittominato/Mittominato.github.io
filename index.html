@@ -523,6 +523,25 @@
           drop-shadow(0 0 9px color-mix(in srgb, var(--c) 50%, transparent))
           drop-shadow(0 0 17px color-mix(in srgb, var(--c) 28%, transparent));
       }
+      /* Bola CAHAYA murni — dipakai HANYA oleh sigil mode cerita yang muncul
+         setelah video ultimate (spawnAllSigils), atas permintaan Harith: sigil
+         tidak lagi digambar sebagai permata segi, melainkan bola-bola cahaya
+         sewarna rune-nya. Inti putih terang melebur ke warna rune, lalu halo
+         radial yang JAUH LEBIH LEBAR & lembut daripada glow permata lama
+         (elemennya ±2,9x ukuran bola, gradasi memudar sampai transparan) —
+         murni gradasi statis yang digambar sekali, tanpa gambar & tanpa segi.
+         Sinar berputar & percikan di dalam .sig-orb tetap ada seperti sebelumnya */
+      .sig-orb .sig-glow {
+        position: absolute; inset: -95%; border-radius: 50%;
+        background: radial-gradient(circle,
+          #fff 0%,
+          color-mix(in srgb, var(--c) 55%, #fff) 14%,
+          var(--c) 32%,
+          color-mix(in srgb, var(--c) 45%, transparent) 55%,
+          transparent 74%);
+        z-index: 1;
+        pointer-events: none;
+      }
       /* Cahaya tebal seperti percikan sihir di sekeliling tiap bola sigil: lapisan sinar
          cahaya berputar pelan yang jauh lebih besar dari permatanya, ditambah percikan
          bintang besar yang berkelip di sekelilingnya — cahaya & percikannya sengaja
@@ -573,6 +592,11 @@
          statis saat kelas dipasang/dilepas, bukan per frame) */
       .sigil.shine .sig-orb img {
         filter: brightness(1.85) drop-shadow(0 0 16px var(--c)) drop-shadow(0 0 36px var(--c));
+      }
+      /* Fase bersinar untuk bola cahaya murni: intinya dibuat jauh lebih terang
+         (penukar filter satu kali, sama seperti gambar permata di atas) */
+      .sigil.shine .sig-orb .sig-glow {
+        filter: brightness(1.8) saturate(1.25);
       }
       /* ---------- Hantu kecil si kucing & perayaan VICTORY seperti akhir video ---------- */
       .ghost {
@@ -2320,11 +2344,21 @@
           return d;
         });
       }
-      function makeOrb(i, cls) {
+      function makeOrb(i, cls, glowBall) {
         var o = document.createElement("div");
-        o.className = "sig-orb" + (cls ? " " + cls : "");
-        /* Bola di langit memakai potongan berbentuk segi permata (sigil), bukan gambar persegi */
-        o.innerHTML = '<img src="' + RUNES[i].sigil + '" alt="" />';
+        o.className = "sig-orb" + (cls ? " " + cls : "") + (glowBall ? " glowball" : "");
+        if (glowBall) {
+          /* Bola CAHAYA murni (mode cerita setelah video ultimate): inti terang
+             sewarna rune + halo radial lebar (.sig-glow), TANPA gambar permata
+             segi — permintaan Harith mengganti sigil jadi bola-bola bercahaya
+             dengan efek cahaya yang lebih besar */
+          var gb = document.createElement("div");
+          gb.className = "sig-glow";
+          o.appendChild(gb);
+        } else {
+          /* Bola di langit memakai potongan berbentuk segi permata (sigil), bukan gambar persegi */
+          o.innerHTML = '<img src="' + RUNES[i].sigil + '" alt="" />';
+        }
         /* Cahaya tebal mengelilingi permata kecilnya: lapisan sinar berputar di belakang
            permata + percikan bintang besar berkelip di sekelilingnya, lebih dominan
            daripada permatanya — seperti render sigil langit v3 */
@@ -2529,7 +2563,8 @@
         for (var k = 0; k < plan.length; k++) {
           var p = plan[k];
           var d = sigilEls[p.i];
-          var o = makeOrb(p.i, "");
+          /* Sigil di sini adalah BOLA CAHAYA murni (glowBall), bukan permata segi */
+          var o = makeOrb(p.i, "", true);
           o.dataset.lvl = String(p.lvl);
           o.style.zIndex = String(20 - p.lvl);
           o.style.opacity = "1";
