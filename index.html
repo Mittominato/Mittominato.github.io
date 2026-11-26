@@ -1302,7 +1302,7 @@
       /* ---------- Overlay video ULTIMATE (mode cerita saja) ----------
          Lapisan fullscreen di atas papan (z-index 30: di atas hitung mundur
          15 & overlay menu 20, di bawah layar loading 999). Videonya salah
-         satu dari "ult-01.mp4" / "ult-02.mp4" (dipilih acak, tidak berurutan
+         satu dari "ult-01.mp4" / "ult-02.mp4" / "ult-03.mp4" (dipilih acak, tidak berurutan
          sama dua kali) — file EKSTERNAL di samping index.html (bukan di
          assets/, supaya tidak ter-inline base64 saat export), LANDSCAPE 16:9 seperti
          YouTube — TIDAK di-crop jadi potret: video tampil selebar layar
@@ -1798,7 +1798,7 @@
 
       <!-- Overlay video ULTIMATE (mode cerita): muncul fullscreen saat mantra
            satu boss lengkap, sebelum rentetan sigil menghantam boss. Videonya
-           salah satu dari file EKSTERNAL "ult-01.mp4" / "ult-02.mp4" di
+           salah satu dari file EKSTERNAL "ult-01.mp4" / "ult-02.mp4" / "ult-03.mp4" di
            samping index.html (bukan asset artifact — dipasangkan terpisah
            saat deploy), dipilih acak oleh JS (src awal di markup ini
            ult-01.mp4). preload="auto" memuatnya di latar belakang sejak game
@@ -3153,7 +3153,7 @@
       }
       /* Video ultimate: janji yang selesai saat video berakhir, dilewati
          pemain (ketuk overlay SETELAH video jalan), ATAU gagal dimuat.
-         FALLBACK WAJIB: file video ultimate ("ult-01.mp4" / "ult-02.mp4") — di tempat file itu tidak ada (mis. tautan share), video
+         FALLBACK WAJIB: file video ultimate ("ult-01.mp4" / "ult-02.mp4" / "ult-03.mp4") — di tempat file itu tidak ada (mis. tautan share), video
          ditandai rusak sejak awal dan fungsi ini langsung selesai tanpa
          menampilkan overlay, jadi game lanjut ke rentetan sigil tanpa macet
          dan tanpa error.
@@ -3170,7 +3170,7 @@
          membuka kunci autoplay sejak awal gestur pertama pemain */
       var ultBroken = false;
       var ultPrimed = false;
-      /* Dua video ultimate — keduanya file EKSTERNAL di samping index.html
+      /* Tiga video ultimate — ketiganya file EKSTERNAL di samping index.html
          (bukan asset artifact, tidak di-inline): dipilih ACAK tiap kali
          mantra lengkap, dan video yang sama tidak pernah diputar dua kali
          berturut-turut. Elemen video tetap SATU dan alurnya tetap v104:
@@ -3178,7 +3178,7 @@
          (saat prime dari ketukan "Mulai Bermain", lalu tiap video selesai
          langsung dipilih & dimuat video berikutnya) supaya video terpilih
          sempat termuat di latar seperti ult-01 selama ini */
-      var ULT_VIDEOS = ["ult-01.mp4", "ult-02.mp4"];
+      var ULT_VIDEOS = ["ult-01.mp4", "ult-02.mp4", "ult-03.mp4"];
       var ultIdx = 0;         /* indeks video yang sedang termuat di elemen */
       var ultLastPlayed = -1; /* indeks video yang terakhir diputar */
       function chooseUltimate() {
@@ -3787,7 +3787,7 @@
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layoutSprites(); });
       /* Video ultimate dimuat di latar belakang sejak game dibuka
          (preload="auto" pada elemennya). Bila file video ultimate
-         ("ult-01.mp4" / "ult-02.mp4")
+         ("ult-01.mp4" / "ult-02.mp4" / "ult-03.mp4")
          tidak ada atau gagal dimuat di tempat game ini dibuka, tandai
          rusak sejak awal supaya playUltimate melewatinya tanpa
          menampilkan overlay sama sekali */
