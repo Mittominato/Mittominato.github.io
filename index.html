@@ -2371,7 +2371,7 @@
            SFX klik/tombol            45% -> click: 0.45
            SFX permata/interaksi      60% -> gem: 0.60
            SFX kemenangan             85% -> win: 0.85
-           Ambience lingkungan        30% -> amb: 0.30
+           Ambience lingkungan        24% -> amb: 0.24
          Hierarkinya konsisten: BGM & ambience paling pelan di latar,
          lalu klik, permata, sihir, dan kemenangan paling keras.
          Setiap tempat suara diputar memakai konstanta dari peta ini,
@@ -2379,7 +2379,7 @@
          tabel: nada salah tekan (sfxWrong) tetap lembut seperti
          semula, dan audio video ultimate (ult-01s..04s + tombol
          speakernya) tetap volume penuh — keduanya tidak diubah. */
-      var VOL = { bgm: 0.35, magic: 0.80, click: 0.45, gem: 0.60, win: 0.85, amb: 0.30 };
+      var VOL = { bgm: 0.35, magic: 0.80, click: 0.45, gem: 0.60, win: 0.85, amb: 0.24 };
       function tone(freq, dur, type, vol, slideTo, delay) {
         if (S.muted) return;
         var ctx = ac(); if (!ctx) return;
@@ -2528,7 +2528,7 @@
              cepat (0,11 & 0,33 Hz) pada frekuensi & kekuatan, jadi
              terdengar seperti percikan air yang hidup.
          Keduanya masuk ke satu gain induk bervolume kategori ambience
-         tabel pemilik (30% — VOL.amb): pelan, hanya latar suasana di
+         tabel pemilik (24% — VOL.amb): pelan, hanya latar suasana di
          bawah BGM & SFX. Node dibangun SEKALI (lazy, saat pertama
          dibutuhkan) dan sumber noise-nya terus berputar; yang diatur
          hanya gain induknya — dirambatkan halus (setTargetAtTime)
