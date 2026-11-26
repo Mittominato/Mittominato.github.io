@@ -2557,16 +2557,19 @@
          Volumenya memakai kategori SFX sihir (VOL.magic = 0,80) supaya
          konsisten dengan tabel volume, dan karena dibangun di atas
          tone() ia ikut tombol mute (S.muted) seperti SFX lain.
-         PEMBATASAN (permintaan pemilik): hanya 10 pop PERTAMA dalam
-         satu rentetan yang bersuara — sigil ke-11 dan seterusnya muncul
-         tanpa suara (visual saja), jadi rentetan yang makin cepat itu
-         terasa berantai tanpa jadi berisik. Penghitungnya (sigilPopCount)
-         di-reset di awal setiap rentetan baru oleh spawnAllSigils.
-         Kesepuluh pop itu nadanya naik tipis demi tipis (×1,07 tiap pop)
-         supaya rentetannya terasa menanjak — halus, tidak berlebihan */
+         TANPA BATAS (permintaan pemilik, menggantikan batas 10 pop
+         yang lama): SETIAP sigil yang muncul berbunyi satu pop — satu
+         per satu, tidak dibatasi. Karena jeda kemunculan sigil makin
+         cepat (300ms menyusut ×0,94 sampai 60ms), pop-nya ikut makin
+         cepat & rapat mengikuti kemunculan sigilnya. Penghitungnya
+         (sigilPopCount) kini HANYA dipakai untuk kenaikan nada:
+         nadanya naik tipis demi tipis (×1,07 tiap pop) dan kenaikan
+         itu boleh terus berlanjut mengikuti jumlah pop, supaya
+         rentetannya terasa menanjak — halus, tidak berlebihan.
+         Penghitung di-reset di awal setiap rentetan baru oleh
+         spawnAllSigils supaya kenaikan nada mulai lagi dari awal */
       var sigilPopCount = 0;
       function sfxPop() {
-        if (sigilPopCount >= 10) return;
         var n = sigilPopCount++;
         var mul = 1 + n * 0.07;
         /* Serangan pop: segitiga + sinus meluncur naik cepat & cerah —
@@ -3392,6 +3395,49 @@
           });
         }
       }
+      /* CINCIN CAHAYA sebelum rentetan menghantam boss (permintaan
+         pemilik): sesudah semua sigil muncul & jeda bersinar, dua
+         cincin cahaya hangat/emas mengembang keluar dari bola tongkat
+         (pusat gugus sigil) disertai percikan cahaya kecil yang
+         menyebar ke segala arah; sigil baru melesat (slamSigils)
+         SETELAH cincin selesai menyebar. Cincinnya elemen DOM di
+         fxLayer, meniru pola cincin sigilBurst: animasi WAAPI hanya
+         transform (membesar) + opacity (memudar) di lapis kompositor,
+         pointer-events none, tanpa filter yang dianimasikan per
+         frame. Percikannya memakai pola partikel canvas yang sudah
+         ada (fxApi().burst) di titik yang sama */
+      function sigilRingBurst() {
+        if (reducedMotion) return;
+        var orb = staffOrbPos();
+        var fxR = fxApi();
+        if (fxR) fxR.burst(orb.x, orb.y, "#ffd94a", 14);
+        var ar = arena.getBoundingClientRect();
+        var cx = orb.x - ar.left, cy = orb.y - ar.top;
+        var rings = [
+          { size: 120, to: 3.1, dur: 620, delay: 0, color: "#ffd94a", w: 3.5 },
+          { size: 84, to: 3.4, dur: 560, delay: 130, color: "#ffe9a8", w: 2.5 }
+        ];
+        rings.forEach(function (cfg) {
+          var ring = document.createElement("div");
+          ring.style.position = "absolute";
+          ring.style.left = cx + "px"; ring.style.top = cy + "px";
+          ring.style.width = cfg.size + "px"; ring.style.height = cfg.size + "px";
+          ring.style.marginLeft = (-cfg.size / 2) + "px"; ring.style.marginTop = (-cfg.size / 2) + "px";
+          ring.style.borderRadius = "50%";
+          ring.style.border = cfg.w + "px solid " + cfg.color;
+          ring.style.boxShadow = "0 0 18px " + cfg.color + ", inset 0 0 14px " + cfg.color;
+          ring.style.pointerEvents = "none";
+          ring.style.zIndex = "5";
+          ring.style.opacity = "0";
+          fxLayer.appendChild(ring);
+          var anim = ring.animate([
+            { transform: "scale(.3)", opacity: 0 },
+            { transform: "scale(.55)", opacity: .95, offset: 0.18 },
+            { transform: "scale(" + cfg.to + ")", opacity: 0 }
+          ], { duration: cfg.dur, delay: cfg.delay, easing: "ease-out", fill: "backwards" });
+          anim.onfinish = function () { ring.remove(); };
+        });
+      }
       /* Bola-bola melesat menghentak boss, lalu lenyap.
          Gerakannya LAMBAT -> CEPAT (ease-in kuat): mulai perlahan lalu makin
          cepat sampai menghantam boss — bukan langsung cepat / linear.
@@ -3440,8 +3486,10 @@
          terakhir tuntas muncul — barulah fase bersinar & rentetan
          slamSigils boleh berjalan; false bila run berganti di tengah */
       async function spawnAllSigils(id) {
-        /* Rentetan baru dimulai: penghitung pop di-reset, jadi hanya
-           10 sigil pertama rentetan ini yang berbunyi "pop" (sfxPop) */
+        /* Rentetan baru dimulai: penghitung pop di-reset supaya
+           kenaikan nada pop (sfxPop) mulai lagi dari awal rentetan —
+           pop-nya sendiri kini berbunyi untuk SETIAP sigil, tanpa
+           batas */
         sigilPopCount = 0;
         sigilEls.forEach(function (d) {
           Array.prototype.slice.call(d.querySelectorAll(".sig-orb")).forEach(function (o) { o.remove(); });
@@ -3468,8 +3516,9 @@
           o.style.transform = stackTf(p.lvl, 1);
           d.appendChild(o);
           d.classList.add("has");
-          /* Sigil muncul -> bunyi "pop" (sfxPop sendiri yang membatasi:
-             hanya 10 pop pertama rentetan ini yang bersuara) */
+          /* Sigil muncul -> bunyi "pop" sihir (sfxPop): SETIAP sigil
+             berbunyi satu pop, tanpa batas, mengikuti kecepatan
+             kemunculannya yang makin rapat */
           sfxPop();
           if (!reducedMotion) {
             o.animate([
@@ -4006,11 +4055,23 @@
            video, semua sigil dari semua ronde MUNCUL SATU PER SATU di
            sekitar tongkat (jeda mulai 300ms lalu makin mengecil tiap
            sigil sampai 60ms); kemunculannya
-           ditunggu TUNTAS dulu, baru mereka bersinar sebentar lalu
-           meluncur beruntun ke boss */
+           ditunggu TUNTAS dulu, lalu JEDA bersinar & berdenyut bersama,
+           CINCIN CAHAYA menyebar dari gugus sigil, dan BARU setelah
+           cincin selesai sigil meluncur beruntun ke boss */
         if (!(await spawnAllSigils(id))) return;
+        /* JEDA (permintaan pemilik): semua sigil yang sudah muncul
+           bersinar & berdenyut bersama dulu ~0,8 detik — denyut
+           shineSigils dipicu dua kali supaya jedanya terasa hidup —
+           sebelum apa pun melesat ke boss */
         shineSigils(true);
-        if (!(await sleep(500, id))) { shineSigils(false); return; }
+        if (!(await sleep(400, id))) { shineSigils(false); return; }
+        shineSigils(true);
+        if (!(await sleep(400, id))) { shineSigils(false); return; }
+        /* PERCIKAN CINCIN CAHAYA yang menyebar dari gugus
+           sigil/tongkat; sigil melesat hanya SETELAH cincin selesai
+           menyebar (~0,7 detik: cincin kedua rampung di ~690ms) */
+        sigilRingBurst();
+        if (!(await sleep(700, id))) { shineSigils(false); return; }
         shineSigils(false);
         await slamSigils(26);
         if (id !== S.run) return;
