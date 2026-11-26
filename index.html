@@ -1549,10 +1549,13 @@
       }
       /* ---------- Overlay video ULTIMATE (mode cerita saja) ----------
          Lapisan fullscreen di atas papan (z-index 30: di atas hitung mundur
-         15 & overlay menu 20, di bawah layar loading 999). Videonya SATU:
-         "ult-05s.mp4" — file EKSTERNAL di samping index.html (bukan di
-         assets/, supaya tidak ter-inline base64 saat export), LANDSCAPE
-         16:9, sudah berbingkai "ULTIMATE" ungu di dalam videonya sendiri.
+         15 & overlay menu 20, di bawah layar loading 999). Videonya POOL
+         ACAK DUA: "ult-05s.mp4" & "ult-06s.mp4" — file EKSTERNAL di
+         samping index.html (bukan di assets/, supaya tidak ter-inline
+         base64 saat export), LANDSCAPE 16:9, sudah berbingkai "ULTIMATE"
+         ungu di dalam videonya sendiri, bingkai & ukuran keduanya sama
+         persis. Tiap ultimate, JS memilih acak salah satu (tidak pernah
+         sama dua kali berturut-turut — lihat ULT_VIDEOS/chooseUltimate).
          Empat video lama (ult-01s..04s) DINONAKTIFKAN: tidak lagi
          direferensikan di mana pun, jadi tidak pernah diputar lagi.
          Video tampil DI ATAS gambar latar kiriman Harith
@@ -1572,8 +1575,9 @@
          kiri), lebar 75% dari lebar overlay, lebih TINGGI dari
          karakter game (top 30% + translateY(-50%)),
          aspek 16/9, object-fit cover. Latar HITAM di sudut-sudut
-         luar bingkai video dihapus dengan MASKER ALPHA
-         (ult-05s-mask.png) — MP4 tidak bisa menyimpan transparansi,
+         luar bingkai video dihapus dengan MASKER ALPHA per video
+         (ult-05s-mask.png / ult-06s-mask.png, dipasang dinamis oleh
+         JS mengikuti video terpilih) — MP4 tidak bisa menyimpan transparansi,
          jadi latar transparan dari editor berubah jadi hitam saat
          export; masker memotong empat sudut hitam itu sehingga
          latar di belakang terlihat lewat, sementara bingkai ungu &
@@ -1643,9 +1647,13 @@
          kucing. LURUS tanpa rotasi, aspek 16/9 mengikuti video
          aslinya (1278x720), object-fit cover.
          Latar HITAM di sudut-sudut luar bingkai video (sisa export
-         MP4 dari latar transparan) dihapus dengan MASKER ALPHA
-         (ult-05s-mask.png, file eksternal di samping index.html):
-         alpha 255 di area bingkai/konten, alpha 0 di empat sudut.
+         MP4 dari latar transparan) dihapus dengan MASKER ALPHA —
+         satu masker per video (ult-05s-mask.png / ult-06s-mask.png,
+         file eksternal di samping index.html): alpha 255 di area
+         bingkai/konten, alpha 0 di empat sudut. Maskernya DINAMIS:
+         dipasang JS (chooseUltimate) lewat style.maskImage bersamaan
+         dengan src, supaya selalu mengikuti video yang sedang
+         diputar; CSS di bawah hanya mengatur ukuran & pengulangannya.
          Masker mengikuti ukuran & posisi elemen video (mask-size
          100% 100%), jadi tetap selaras walau video digeser.
          mix-blend-mode: screen TIDAK dipakai lagi — tidak bekerja
@@ -1661,8 +1669,9 @@
         aspect-ratio: 16 / 9;
         object-fit: cover;
         transform: translateY(-50%);
-        -webkit-mask-image: url("ult-05s-mask.png");
-        mask-image: url("ult-05s-mask.png");
+        /* mask-image TIDAK ditulis di sini lagi: dipasang dinamis oleh
+           JS (chooseUltimate) mengikuti video terpilih —
+           ult-05s-mask.png untuk ult-05s, ult-06s-mask.png untuk ult-06s */
         -webkit-mask-size: 100% 100%;
         mask-size: 100% 100%;
         -webkit-mask-repeat: no-repeat;
@@ -2361,9 +2370,10 @@
 
       <!-- Overlay video ULTIMATE (mode cerita): muncul fullscreen saat mantra
            satu boss lengkap, sebelum rentetan sigil menghantam boss. Videonya
-           file EKSTERNAL "ult-05s.mp4" di
+           POOL ACAK dari dua file EKSTERNAL "ult-05s.mp4" & "ult-06s.mp4" di
            samping index.html (bukan asset artifact — dipasangkan terpisah
-           saat deploy); empat video lama (ult-01s..04s) sudah
+           saat deploy), dipilih acak oleh JS tiap ultimate dan tidak pernah
+           sama dua kali berturut-turut; empat video lama (ult-01s..04s) sudah
            dinonaktifkan dan tidak direferensikan lagi. preload="auto" memuatnya di latar belakang sejak game
            dibuka supaya langsung jalan saat dibutuhkan; atribut muted di
            markup hanya keadaan AWAL sebelum JS jalan + playsinline supaya
@@ -2385,7 +2395,8 @@
            (permintaan Harith — bingkai "ULTIMATE" ungu sudah jadi
            di dalam videonya), aspek 16/9, object-fit cover.
            Latar hitam di sudut luar bingkai video dihapus dengan
-           masker alpha (ult-05s-mask.png) pada elemen video.
+           masker alpha per video (ult-05s-mask.png / ult-06s-mask.png)
+           yang dipasang JS pada elemen video mengikuti video terpilih.
            Latar game (.ult-bg) DISEMBUNYIKAN (display:none) selama
            overlay ini tampil.
            Bila webview
@@ -2800,7 +2811,7 @@
          bukan angka lepas. Pengecualian yang SENGAJA tidak masuk
          tabel: suara salah tekan (sfxWrong) kini memutar file
          kiriman pemilik "sfx-salah-v1" bervolume elemen 0,8, dan
-         audio video ultimate (ult-05s + tombol speakernya)
+         audio video ultimate (pool ult-05s/ult-06s + tombol speakernya)
          tetap volume penuh — keduanya tidak diubah. */
       var VOL = { bgm: 0.35, magic: 0.80, click: 0.45, gem: 0.60, win: 0.85, amb: 0.10, heart: 0.50 };
       function tone(freq, dur, type, vol, slideTo, delay) {
@@ -5125,7 +5136,7 @@
       }
       /* Video ultimate: janji yang selesai saat video berakhir, dilewati
          pemain (ketuk overlay SETELAH video jalan), ATAU gagal dimuat.
-         FALLBACK WAJIB: file video ultimate ("ult-05s.mp4") — di tempat file itu tidak ada (mis. tautan share), video
+         FALLBACK WAJIB: file video ultimate (pool "ult-05s.mp4" / "ult-06s.mp4") — di tempat file itu tidak ada (mis. tautan share), video
          ditandai rusak sejak awal dan fungsi ini langsung selesai tanpa
          menampilkan overlay, jadi game lanjut ke rentetan sigil tanpa macet
          dan tanpa error.
@@ -5153,16 +5164,58 @@
          pemain adalah gestur, jadi video berbunyi dari tombol itu */
       var ultBroken = false;
       var ultPrimed = false;
-      /* Video ultimate kini SATU: "ult-05s.mp4" — file EKSTERNAL di
-         samping index.html (bukan asset artifact, tidak di-inline),
-         video kiriman Harith yang bingkai "ULTIMATE" ungunya sudah
-         menyatu di dalam video. Empat video lama (ult-01s..04s)
-         DINONAKTIFKAN: tidak lagi direferensikan, jadi tidak pernah
-         diputar lagi — pemilihan acak & aturan "tidak berurutan sama
-         dua kali" tidak berlaku lagi. src elemen sudah ult-05s.mp4
-         dari markup dan tidak pernah diganti; preload="auto"
-         memuatnya di latar sejak game dibuka seperti sebelumnya */
-      var ULT_VIDEO = "ult-05s.mp4";
+      /* Video ultimate kini POOL ACAK DUA (pilihan Harith "Acak
+         dengan video lama"): "ult-05s.mp4" & "ult-06s.mp4" — file
+         EKSTERNAL di samping index.html (bukan asset artifact, tidak
+         di-inline), video kiriman Harith yang bingkai "ULTIMATE"
+         ungunya sudah menyatu di dalam video; bingkai & ukuran
+         keduanya sama persis. Tiap entri membawa MASKER ALPHA-nya
+         sendiri (ult-05s-mask.png / ult-06s-mask.png, juga file
+         eksternal di samping index.html) karena sudut hitam kedua
+         video tidak persis sama. Empat video lama (ult-01s..04s)
+         TETAP DINONAKTIFKAN: tidak lagi direferensikan, jadi tidak
+         pernah diputar lagi — pool hanya berisi dua video ini.
+         src awal elemen adalah ult-05s.mp4 dari markup;
+         playUltimate memanggil chooseUltimate() tiap kali ultimate
+         diputar untuk memilih & memasang video putaran itu */
+      var ULT_VIDEOS = [
+        { src: "ult-05s.mp4", mask: "ult-05s-mask.png" },
+        { src: "ult-06s.mp4", mask: "ult-06s-mask.png" }
+      ];
+      /* Indeks ULT_VIDEOS yang terakhir diputar (-1 = belum pernah):
+         dasar aturan "tidak pernah sama dua kali berturut-turut" */
+      var ultLastPlayed = -1;
+      /* Pilih SATU video ultimate secara ACAK, dengan aturan tidak
+         pernah sama dua kali berturut-turut: bila hasil acak sama
+         dengan ultLastPlayed, acak ulang (maksimal 10 kali
+         percobaan). ultLastPlayed diperbarui setiap kali video
+         dipilih. Dengan 2 video hasilnya praktis bergantian, tapi
+         logikanya tetap acak + anti-ulang seperti pool lama */
+      function chooseUltimate() {
+        var idx = Math.floor(Math.random() * ULT_VIDEOS.length);
+        var tries = 0;
+        while (ULT_VIDEOS.length > 1 && idx === ultLastPlayed && tries < 10) {
+          idx = Math.floor(Math.random() * ULT_VIDEOS.length);
+          tries++;
+        }
+        ultLastPlayed = idx;
+        return ULT_VIDEOS[idx];
+      }
+      /* Pasang pilihan chooseUltimate() ke elemen video: src DAN
+         maskernya diganti BERSAMAAN (masker lewat style.maskImage +
+         webkitMaskImage, menggantikan masker statis CSS yang dulu
+         hanya untuk ult-05s), supaya masker selalu mengikuti video
+         yang sedang diputar. src hanya diganti bila berbeda — video
+         yang sama tidak perlu dimuat ulang */
+      function applyUltimate(pick) {
+        var v = $("ultVideo");
+        if (!v || !pick) return;
+        var maskUrl = "url(\"" + pick.mask + "\")";
+        try { v.style.webkitMaskImage = maskUrl; v.style.maskImage = maskUrl; } catch (e) {}
+        if (v.getAttribute("src") !== pick.src) {
+          try { v.src = pick.src; v.load(); } catch (e) {}
+        }
+      }
       /* Membuka kunci pemutaran DARI DALAM gestur pengguna (ketukan
          "Mulai Bermain", dan tiap ketukan berikutnya selama belum
          berhasil — lihat pendengar pointerdown di init): putar video
@@ -5207,6 +5260,13 @@
         return new Promise(function (resolve) {
           var ov = $("ultOverlay"), v = $("ultVideo"), btn = $("ultPlayBtn"), sbtn = $("ultSoundBtn");
           if (!v || ultBroken || v.networkState === 3) { resolve(); return; }
+          /* Pilih video putaran ini dari pool acak (ult-05s/ult-06s,
+             tidak pernah sama dua kali berturut-turut) dan pasang
+             src + maskernya ke elemen SEBELUM overlay tampil — semua
+             mekanisme di bawah (prime, tombol Suara/Putar, lewati,
+             jeda animasi) tetap bekerja pada elemen yang sama, hanya
+             src + maskernya yang berganti */
+          applyUltimate(chooseUltimate());
           /* Musik latar berhenti total selama video ultimate diputar
              supaya tidak bentrok dengan audio video; dilanjutkan lagi
              di finish() bawah saat video selesai/dilewati */
@@ -5254,10 +5314,12 @@
             ov.classList.remove("need-tap", "started");
             ov.classList.add("hidden");
             resolve();
-            /* Video berikutnya adalah video yang sama (ult-05s.mp4):
-               elemen sudah kembali ke awal (currentTime 0 di atas) dan
-               tetap termuat, jadi tidak ada yang perlu dipilih/dimuat
-               ulang untuk mantra lengkap berikutnya */
+            /* Elemen sudah kembali ke awal (currentTime 0 di atas).
+               Video untuk mantra lengkap berikutnya TIDAK dipilih di
+               sini: playUltimate berikutnya memanggil chooseUltimate()
+               lagi (acak dari pool ult-05s/ult-06s, anti-ulang terhadap
+               yang baru saja diputar ini) dan memasang src + maskernya
+               saat itu juga */
           }
           function onError() { ultBroken = true; finish(); }
           function onPlaying() {
@@ -6059,7 +6121,7 @@
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layoutSprites(); });
       /* Video ultimate dimuat di latar belakang sejak game dibuka
          (preload="auto" pada elemennya). Bila file video ultimate
-         ("ult-05s.mp4")
+         (pool "ult-05s.mp4" / "ult-06s.mp4")
          tidak ada atau gagal dimuat di tempat game ini dibuka, tandai
          rusak sejak awal supaya playUltimate melewatinya tanpa
          menampilkan overlay sama sekali */
