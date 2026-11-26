@@ -1826,8 +1826,12 @@
            samping index.html (bukan asset artifact — dipasangkan terpisah
            saat deploy), dipilih acak oleh JS (src awal di markup ini
            ult-01.mp4). preload="auto" memuatnya di latar belakang sejak game
-           dibuka supaya langsung jalan saat dibutuhkan; muted + playsinline
-           supaya bisa autoplay di HP & webview Discord. Video LANDSCAPE
+           dibuka supaya langsung jalan saat dibutuhkan; atribut muted di
+           markup hanya keadaan AWAL (untuk prime senyap dari ketukan
+           "Mulai Bermain") + playsinline supaya tampil inline di HP &
+           webview Discord — saat ultimate benar-benar diputar, JS
+           mematikan mute-nya supaya suara video terdengar penuh.
+           Video LANDSCAPE
            (seperti YouTube, tidak di-crop potret): selebar layar di tengah,
            area atas-bawahnya latar game yang di-blur (.ult-bg), dan
            object-fit: contain membuat videonya tampil utuh. Bila webview
@@ -3209,12 +3213,20 @@
          webview langsung dianggap gagal total → overlay ditutup sekejap
          dan video tidak pernah terlihat. Di HP & webview Discord,
          play() yang dipanggil dari alur async (bukan tepat di dalam
-         gestur ketukan) memang sering ditolak walau video di-mute.
+         gestur ketukan) memang sering ditolak.
          Sekarang penolakan BUKAN akhir: overlay tetap terbuka, tombol
          "Putar Ultimate" tampil, dan ketukan pemain (gestur sungguhan)
          yang memutar videonya. Ketukan saat video belum jalan = putar,
          bukan lewati. primeUltimate() di tombol "Mulai Bermain" juga
-         membuka kunci autoplay sejak awal gestur pertama pemain */
+         membuka kunci autoplay sejak awal gestur pertama pemain.
+
+         SUARA (atas permintaan Harith): video ultimate diputar DENGAN
+         SUARA — file-filenya punya audio AAC. Prime tetap mute supaya
+         tidak ada bunyi sekilas di awal; tryPlay() di bawah mematikan
+         mute tepat sebelum play(). Bila webview menolak autoplay
+         bersuara, jalur tombol "Putar Ultimate" yang sama menanganinya:
+         ketukan pemain adalah gestur, jadi video berbunyi dari tombol
+         itu. Selesai diputar, elemen di-mute lagi oleh finish() */
       var ultBroken = false;
       var ultPrimed = false;
       /* Empat video ultimate — keempatnya file EKSTERNAL di samping index.html
@@ -3242,9 +3254,12 @@
       }
       /* Membuka kunci pemutaran dari dalam gestur pengguna (ketukan
          "Mulai Bermain"): putar video sekejap dalam keadaan mute lalu
-         jeda & kembalikan ke awal. Setelah pernah diputar dari gestur,
-         webview mengizinkan play() programatis berikutnya. Gagal pun
-         tidak apa-apa — jalur tombol Putar di playUltimate tetap ada */
+         jeda & kembalikan ke awal. Prime SENGAJA tetap mute supaya tidak
+         ada bunyi sekilas di awal permainan — suara baru dinyalakan di
+         playUltimate, tepat sebelum video ultimate diputar. Setelah
+         pernah diputar dari gestur, webview mengizinkan play()
+         programatis berikutnya. Gagal pun tidak apa-apa — jalur tombol
+         Putar di playUltimate tetap ada */
       function primeUltimate() {
         if (ultPrimed || ultBroken) return;
         /* Pilihan acak pertama ditentukan di sini, supaya video yang
@@ -3253,6 +3268,7 @@
         var v = $("ultVideo");
         if (!v || v.networkState === 3) return;
         ultPrimed = true;
+        try { v.muted = true; } catch (e) {}
         try {
           var p = v.play();
           if (p && p.then) p.then(function () {
@@ -3284,6 +3300,10 @@
             ov.removeEventListener("click", onTap);
             if (btn) btn.removeEventListener("click", onTap);
             try { v.pause(); v.currentTime = 0; } catch (e) {}
+            /* Kembalikan elemen ke keadaan mute: video berikutnya yang
+               dimuat di latar (chooseUltimate di bawah) tidak boleh
+               sampai berbunyi sebelum giliran ultimate-nya tiba */
+            try { v.muted = true; } catch (e) {}
             ov.classList.remove("need-tap", "started");
             ov.classList.add("hidden");
             resolve();
@@ -3305,12 +3325,19 @@
             arm(left + 8000);
           }
           function tryPlay() {
+            /* Suara DINYALAKAN di sini, tepat sebelum diputar: file-file
+               video ultimate punya audio (AAC) dan Harith mau suaranya
+               tetap terdengar penuh. Prime di awal tadi tetap mute,
+               jadi tidak ada bunyi sekilas sebelum waktunya */
+            try { v.muted = false; v.volume = 1; } catch (e) {}
             try {
               var p = v.play();
               if (p && p.catch) p.catch(function () {
-                /* Ditolak (biasanya NotAllowedError dari webview):
-                   JANGAN menyerah — tampilkan tombol Putar supaya
-                   ketukan pemain yang memutarnya */
+                /* Ditolak (biasanya NotAllowedError dari webview, kini
+                   lebih mungkin karena autoplay BERSUARA): JANGAN
+                   menyerah — tampilkan tombol Putar supaya ketukan
+                   pemain yang memutarnya; ketukan itu gestur sungguhan,
+                   jadi video berbunyi saat tombol ditekan */
                 if (!done && !started) ov.classList.add("need-tap");
               });
             } catch (e) {
