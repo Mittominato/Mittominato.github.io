@@ -1180,11 +1180,11 @@
          Ukuran menyesuaikan layar HP seperti kartu sebelumnya: dibatasi lebar
          layar, tinggi layar (rasio gambar 2:3), dan lebar maksimum kartu lama.
          Lebar DIPERKECIL lagi atas permintaan Harith (94vw → 80vw, lalu
-         diperbesar sedikit jadi 85vw) supaya kiri-kanan kartu ada ruang
-         lega yang lebar, tidak mepet tepi layar ---------- */
+         diperbesar sedikit jadi 85vw), lalu DIPERBESAR lagi jadi 95vw
+         atas permintaan Harith supaya kartu tampil lebih besar ---------- */
       .tutorial-card {
         position: relative;
-        width: min(430px, 85vw, calc((100dvh - 44px) * 2 / 3));
+        width: min(430px, 95vw, calc((100dvh - 44px) * 2 / 3));
         flex: none;
         transition: opacity .38s ease, transform .38s ease;
       }
@@ -1223,17 +1223,17 @@
       /* ---------- Kartu KALAH baru: gambar desain Harith (rembg, sudut
          transparan, kotak statistiknya KOSONG dan teks deskripsinya sudah
          dihapus dari gambarnya) ditampilkan UTUH tanpa latar kotak apa pun
-         di belakangnya, sama seperti kartu tutorial. Skala & aturannya SAMA
-         seperti pop-up tutorial atas permintaan Harith: lebar ±85% layar,
-         rata tengah, dan dibatasi tinggi layar (rasio gambar 3:4) supaya
-         atas-bawahnya juga menyisakan ruang lega — tidak pernah memenuhi
-         layar. Nilai statistik LIVE dari game ditulis JS ke tiga .go-stat
+         di belakangnya, sama seperti kartu tutorial. Rata tengah, dan
+         dibatasi tinggi layar (rasio gambar 3:4) supaya atas-bawahnya
+         juga menyisakan ruang lega — tidak pernah memenuhi layar.
+         Lebar DIPERBESAR jadi 98vw atas permintaan Harith supaya kartu
+         tampil hampir selebar layar. Nilai statistik LIVE dari game ditulis JS ke tiga .go-stat
          yang duduk tepat di tengah tiap kotak pada gambar; tombol emas
          "Main Lagi" pada gambar BUKAN tombol sungguhan — di atasnya
          ditaruh tombol transparan (.go-play) persis seperti .tut-play ---------- */
       .gameover-card {
         position: relative;
-        width: min(430px, 85vw, calc((100dvh - 44px) * 3 / 4));
+        width: min(430px, 98vw, calc((100dvh - 44px) * 3 / 4));
         flex: none;
         container-type: inline-size;
       }
