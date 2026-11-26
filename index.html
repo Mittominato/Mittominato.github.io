@@ -2813,6 +2813,14 @@
          selama kedip nama mantra yang lama (950ms) lalu lanjut */
       function playBerhasil(id) {
         return new Promise(function (resolve) {
+          /* ATURAN JEDA 15 DETIK: mantra SELESAI di titik ini — suara
+             "berhasil" mulai berbunyi sekarang, SEBELUM video ultimate
+             diputar — jadi flag jeda 15 detik suara tanpa sebab
+             dipasang di sini (lihat wizTalkMantraDone). Mantra
+             selesai → suara berhasil → video ultimate → sigil
+             menyerang boss adalah SATU kejadian yang sama, jadi satu
+             titik reset ini sudah mencakup semuanya */
+          wizTalkMantraDone();
           if (S.muted) { sleep(950, id).then(resolve); return; }
           var el = berhasilElement();
           var done = false;
@@ -3036,14 +3044,20 @@
       var wizTalkTimer = null;   /* timer jadwal bicara yang sedang menunggu */
       var wizTalkSession = 0;    /* nomor sesi putar — sesi lama gugur begitu naik */
       var wizTalkPlaying = false;
-      /* ATURAN 2: flag jeda panjang pasca-ultimate — true berarti jeda
-         bicara BERIKUTNYA 10 detik (bukan 5). Dipasang di momen slam
-         sigil sesudah video ultimate (wizTalkAfterUltimate) dan
-         TERPAKAI SATU KALI: gugur begitu kalimat berikutnya mulai
-         berbunyi (playWizTalk), jadi sesudah itu semua jeda kembali
-         5 detik. Selama flag menyala, semua pemasangan ulang timer —
-         termasuk reset sentuhan Aturan 1 — memakai 10 detik */
-      var wizTalkLongGap = false;
+      /* ATURAN JEDA 15 DETIK SAAT MANTRA SELESAI: flag ini true
+         berarti jeda bicara BERIKUTNYA 15 detik (bukan 5). Dipasang
+         tepat saat mantra selesai — saat suara "berhasil" mulai
+         berbunyi di playBerhasil (wizTalkMantraDone), SEBELUM video
+         ultimate diputar — dan TERPAKAI SATU KALI: gugur begitu
+         kalimat berikutnya benar-benar mulai berbunyi
+         (playWizTalk), jadi sesudah itu semua jeda kembali 5 detik.
+         Selama flag menyala, semua pemasangan ulang timer —
+         termasuk reset sentuhan Aturan 1 — memakai 15 detik.
+         TIDAK ada lagi jeda khusus setelah animasi ultimate atau
+         setelah sigil menyerang boss: mantra selesai, suara
+         berhasil, video ultimate, dan serangan sigil adalah satu
+         kejadian yang sama, cukup diwakili reset 15 detik ini */
+      var wizTalkMantraGap = false;
       /* ATURAN 3: catatan reset tertunda — sentuhan yang datang saat
          kalimat SEDANG berbunyi TIDAK menghentikan suaranya; catatan
          ini hanya penanda bahwa reset jeda berlaku begitu kalimat
@@ -3058,10 +3072,10 @@
          (playWizTalk) saat suara berakhir & teks hilang, BUKAN
          dari awal kalimat. Siklusnya: bicara ±3 detik → hening
          5 detik → bicara lagi. Satu-satunya pengecualian: jeda
-         menuju bicara pertama sesudah ultimate memakai 10 detik
-         selama flag Aturan 2 menyala */
+         menuju bicara pertama sesudah mantra selesai memakai
+         15 detik selama flag wizTalkMantraGap menyala */
       function wizTalkDelay(first) {
-        return wizTalkLongGap ? 10000 : 5000;
+        return wizTalkMantraGap ? 15000 : 5000;
       }
       function scheduleWizTalk(first, runId) {
         if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
@@ -3102,11 +3116,13 @@
         wizTalkEl = el;
         var session = ++wizTalkSession;
         wizTalkPlaying = true;
-        /* ATURAN 2: kalimat ini adalah bicara pertama sesudah
-           ultimate bila flag menyala — jeda panjangnya sudah
-           terlayani selama menunggu kalimat ini, jadi flag TERPAKAI
-           di sini; jeda sesudah kalimat ini kembali normal 5 detik */
-        wizTalkLongGap = false;
+        /* ATURAN JEDA 15 DETIK: kalimat ini adalah bicara pertama
+           sesudah mantra selesai bila flag menyala — jeda 15
+           detiknya sudah terlayani selama menunggu kalimat ini,
+           jadi flag TERPAKAI (di-clear) di sini, tepat saat kalimat
+           mulai berbunyi; jeda sesudah kalimat ini kembali normal
+           5 detik */
+        wizTalkMantraGap = false;
         wizTalkResetPending = false;
         var finished = false;
         function finish() {
@@ -3143,9 +3159,10 @@
         wizTalkSession++;
         wizTalkPlaying = false;
         wizTalkResetPending = false;
-        /* Flag Aturan 2 SENGAJA tidak dibersihkan di sini: bila slam
-           ultimate baru saja memasangnya, jeda 10 detik itu tetap
-           berlaku untuk bicara pertama pada startGame berikutnya */
+        /* Flag jeda 15 detik SENGAJA tidak dibersihkan di sini:
+           bila mantra baru saja selesai memasangnya, jeda 15 detik
+           itu tetap berlaku untuk bicara pertama pada startGame
+           berikutnya */
         pauseWizVoices();
         hideWizBubble();
       }
@@ -3171,7 +3188,8 @@
          pemain TIDAK menyentuh layar selama jeda penuh.
          - TIDAK ada kalimat yang sedang berbunyi: timer yang sedang
            menunggu dibatalkan & dipasang ulang dengan jeda penuh
-           (5 detik, atau 10 detik selama flag Aturan 2 menyala).
+           (5 detik, atau 15 detik selama flag jeda mantra selesai
+           menyala).
          - ADA kalimat yang sedang berbunyi: suaranya TIDAK
            dihentikan (Aturan 3) — cukup dicatat sebagai reset
            tertunda; resetnya berlaku saat kalimat selesai (finish
@@ -3195,10 +3213,11 @@
          PAKSA seketika: elemen audionya di-pause, teksnya
          disembunyikan, status bicara yang berjalan dibersihkan —
          lalu timer bicara dipasang ulang dengan jeda penuh 5 detik
-         (reset ke 0, sama seperti Aturan 1; flag Aturan 2 sudah
-         terpakai saat kalimat itu mulai, jadi jedanya memang 5
-         detik). Bila TIDAK ada kalimat yang berbunyi (hanya timer
-         yang menunggu), cukup reset timer ke 0 seperti Aturan 1.
+         (reset ke 0, sama seperti Aturan 1; flag jeda 15 detik
+         mantra selesai sudah terpakai saat kalimat itu mulai, jadi
+         jedanya memang 5 detik). Bila TIDAK ada kalimat yang
+         berbunyi (hanya timer yang menunggu), cukup reset timer
+         ke 0 seperti Aturan 1.
          scheduleWizTalk selalu clearTimeout dulu sebelum memasang
          timer baru, jadi tidak pernah ada timer ganda. Dipanggil
          dari sfxWrong tepat saat suara salah diputar */
@@ -3215,17 +3234,20 @@
           scheduleWizTalk(false);
         }
       }
-      /* ATURAN 2: dipanggil di momen slam sigil sesudah video
-         ultimate (boss HP jadi 0 di ultimateSequence): flag jeda
-         10 detik dipasang & hitungannya dimulai dari momen ini —
-         timer yang sedang menunggu langsung dipasang ulang (10 detik
-         penuh dari slam). Bila kalimat kebetulan sedang berbunyi,
-         biarkan selesai: finish-nya memasang timer berikutnya yang
-         juga 10 detik selama flag belum terpakai, dan kalimat
-         sesudahnya yang memakai flag itu */
-      function wizTalkAfterUltimate(runId) {
-        wizTalkLongGap = true;
-        if (!wizTalkPlaying && S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false, runId);
+      /* ATURAN JEDA 15 DETIK: dipanggil dari playBerhasil tepat
+         saat mantra selesai (suara "berhasil" mulai berbunyi,
+         SEBELUM video ultimate diputar): flag jeda 15 detik
+         dipasang & hitungannya dimulai dari momen ini — timer yang
+         sedang menunggu langsung dipasang ulang dengan jeda penuh
+         15 detik. Bila kalimat kebetulan sedang berbunyi, biarkan
+         selesai: finish-nya memasang timer berikutnya yang juga
+         15 detik selama flag belum terpakai, dan kalimat
+         sesudahnya yang memakai flag itu. Tidak ada jeda khusus
+         lain sesudah ini: video ultimate & serangan sigil ke boss
+         adalah bagian dari kejadian mantra selesai yang sama */
+      function wizTalkMantraDone() {
+        wizTalkMantraGap = true;
+        if (!wizTalkPlaying && S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false);
       }
       function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, VOL.magic, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
@@ -4747,9 +4769,9 @@
         burstAtEl(catSprite, "#ffd23e", 14);
         var dmg = S.bossHp;
         S.bossHp = 0;
-        /* ATURAN 2: slam ultimate ini memasang flag jeda bicara
-           10 detik (satu kali) untuk bicara pertama sesudahnya */
-        wizTalkAfterUltimate(id);
+        /* Jeda suara tanpa sebab TIDAK diatur di sini: reset jeda
+           15 detik sudah dipasang di playBerhasil saat mantra
+           selesai (satu kejadian yang sama dengan serangan ini) */
         sfxMeow();
         catAnim("hit", 480);
         dmgNumber(dmg);
