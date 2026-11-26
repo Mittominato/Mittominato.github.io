@@ -1564,14 +1564,18 @@
          susunan lapis: overlay gelap (#0d0618), lalu gambar latar
          (.ult-bgimg), lalu video utama DI ATASNYA di dalam kotak
          gelapnya. Kotak gelap itu sudah diukur: y 0,430–0,645 dari
-         tinggi overlay (tinggi 21,5%), pusat y 53,7%, aspek
-         2,167:1 (lebih lebar dari video 16:9) dan LURUS horizontal
-         (tidak miring). Video 16:9 dipaskan DI DALAM kotak itu:
-         tinggi 21,5% (sama dengan tinggi kotak), lebar mengikuti
-         aspect 16/9, object-fit contain — seluruh video terlihat
-         tanpa crop; sisi kiri-kanan video menyisakan ruang gelap
-         kotak itu sendiri. Pusat video (50%, 53,7%) dari overlay,
-         transform translate(-50%,-50%) TANPA rotate.
+         tinggi overlay (tinggi 21,5%), pusat y 53,7%. Atas
+         permintaan Harith video TIDAK lagi dipaskan di dalam kotak
+         dengan contain: video sekarang FULL kiri-kanan dan SEDIKIT
+         MIRING — lebar 108% (sedikit lebih lebar dari overlay
+         supaya sudutnya tetap menutup saat dimiringkan), aspek 2/1
+         mengikuti video aslinya (~1280x640, jadi tidak ada lagi bar
+         hitam atas-bawah), object-fit cover, tinggi mengikuti aspek
+         sehingga video sedikit lebih tinggi dari kotak dan
+         menutupinya penuh, sudutnya sedikit menutupi gambar planet
+         di atas dan hutan di bawah (gaya panel komik miring).
+         Pusat video tetap (50%, 53,7%) dari overlay, transform
+         translate(-50%,-50%) rotate(-7.8deg).
          Setelah video mulai jalan, ketuk di mana
          saja = lewati. Bila autoplay ditolak webview (video belum mulai),
          ketuk justru MEMUTAR video, dan tombol "Putar Ultimate" besar
@@ -1621,28 +1625,29 @@
         pointer-events: none;
         z-index: 0;
       }
-      /* Video DI ATAS gambar latar, dipaskan DI DALAM kotak
-         gelapnya. Kotak gelapnya sudah diukur dari gambar Harith:
-         persegi panjang GELAP navy [39,45,93] membentang selebar
-         gambar, y 0,430–0,645 dari tinggi overlay (tinggi 21,5%),
-         pusat (50%, 53,7%) dari OVERLAY, aspek 2,167:1 — lebih
-         lebar dari video 16:9 — dan LURUS horizontal (tidak
-         miring). Video 16:9 dipaskan di dalam kotak menurut
-         tingginya: height 21,5% (sama dengan tinggi kotak), lebar
-         mengikuti aspect-ratio 16/9 (~85% lebar overlay di layar
-         20:9), object-fit contain — seluruh video terlihat tanpa
-         crop; sisi kiri-kanan menyisakan ruang gelap kotak itu
-         sendiri, jadi video terlihat seperti di dalam bingkai
-         gelap. transform translate(-50%,-50%) TANPA rotate.
+      /* Video DI ATAS gambar latar, menutupi kotak gelapnya
+         PENUH kiri-kanan dan SEDIKIT MIRING (permintaan Harith:
+         "full kiri kanan terus juga sedikit miring"). Pusat video
+         tetap di pusat kotak gelap (50%, 53,7%) dari OVERLAY.
+         Lebar 108% (sedikit lebih lebar dari overlay supaya sudut
+         video tetap menutup saat dimiringkan), aspek 2/1 mengikuti
+         video aslinya (~1280x640) — jadi tidak ada lagi bar hitam
+         atas-bawah — object-fit cover (video mengisi penuh
+         elemennya), tinggi mengikuti aspek (bukan height 21,5%
+         lagi): video jadi sedikit lebih tinggi dari kotak dan
+         menutupi kotaknya penuh, sudutnya sedikit menutupi gambar
+         planet di atas dan hutan di bawah — gaya panel komik
+         miring yang Harith mau, sama seperti kotak putih dulu.
+         transform translate(-50%,-50%) rotate(-7.8deg).
          z-index 1: di atas gambar latar (.ult-bgimg),
          di bawah tombol Putar (3) & speaker (2) */
       .ult-overlay video {
         position: absolute;
         left: 50%; top: 53.7%;
-        height: 21.5%;
-        aspect-ratio: 16 / 9;
-        object-fit: contain;
-        transform: translate(-50%, -50%);
+        width: 108%;
+        aspect-ratio: 2 / 1;
+        object-fit: cover;
+        transform: translate(-50%, -50%) rotate(-7.8deg);
         display: block;
         background: #000;
         z-index: 1;
@@ -2345,11 +2350,12 @@
            navy di tengah, hutan + lingkaran sihir di bawah): gambar
            itu adalah SATU-SATUNYA latar overlay — opak,
            memenuhi overlay penuh (object-fit cover) tanpa celah.
-           Video dipaskan DI DALAM kotak gelap di tengah gambar
-           (kotak y 0,430–0,645, lurus horizontal): tinggi video
-           21,5% tinggi overlay, lebar mengikuti aspect 16/9,
-           object-fit contain, pusat 50% / 53,7% dari overlay,
-           tanpa miring.
+           Video menutupi kotak gelap di tengah gambar PENUH
+           kiri-kanan dan SEDIKIT MIRING (permintaan Harith):
+           lebar video 108% lebar overlay, aspek 2/1 mengikuti
+           video aslinya (~1280x640), object-fit cover, pusat
+           50% / 53,7% dari overlay (pusat kotak), miring
+           rotate(-7.8deg).
            Latar game (.ult-bg) DISEMBUNYIKAN (display:none) selama
            overlay ini tampil.
            Bila webview
