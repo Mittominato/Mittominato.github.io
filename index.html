@@ -2377,13 +2377,115 @@
         o.connect(g); g.connect(ctx.destination);
         o.start(t); o.stop(t + dur + 0.05);
       }
-      function playRune(i) { tone(RUNES[i].freq, 0.32, "triangle", 0.26); tone(RUNES[i].freq * 2, 0.18, "sine", 0.07); }
-      function sfxWrong() { tone(170, 0.3, "sawtooth", 0.16, 75); }
-      function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { tone(RUNES[k].freq, 0.22, "triangle", 0.2, null, k * 0.055); }); }
+      /* Lonceng magis: nada dasar sinus + harmonik atas (2x, 3x, 4.16x)
+         yang memudar lebih cepat daripada nada dasarnya, dengan ekor
+         fade halus & panjang dari tone() — terdengar seperti lonceng /
+         denting kaca, bukan bip polos. Dibangun di atas tone() yang
+         sama, jadi tetap tunduk pada S.muted & AudioContext yang sama */
+      function bell(freq, vol, dur, delay) {
+        dur = dur || 0.6;
+        tone(freq, dur, "sine", vol, null, delay);
+        tone(freq * 2, dur * 0.72, "sine", vol * 0.42, null, delay);
+        tone(freq * 3, dur * 0.46, "sine", vol * 0.2, null, delay);
+        tone(freq * 4.16, dur * 0.3, "sine", vol * 0.09, null, delay);
+      }
+      /* Nada dasar tiap batu TETAP RUNES[i].freq seperti sebelumnya —
+         yang berubah hanya timbre-nya (kini lonceng), jadi suara tetap
+         membantu pemain menghafal urutan */
+      function playRune(i) { bell(RUNES[i].freq, 0.24, 0.6); }
+      function sfxWrong() {
+        /* Lebih lembut dari sebelumnya: segitiga halus yang meluncur
+           turun pelan + sub sinus di bawahnya — tetap rendah & jelas
+           "salah", tapi tanpa gerigi sawtooth yang menusuk */
+        tone(196, 0.34, "triangle", 0.13, 131);
+        tone(98, 0.34, "sine", 0.08, 73.4);
+      }
+      function sfxComplete() { [0, 1, 2, 3, 4].forEach(function (k) { bell(RUNES[k].freq, 0.17, 0.55, k * 0.055); }); }
       function sfxMeow() { tone(640, 0.34, "sawtooth", 0.07, 320); tone(880, 0.2, "sine", 0.1, 420, 0.02); }
-      function sfxLevel() { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, k) { tone(f, 0.24, "triangle", 0.2, null, k * 0.08); }); }
+      function sfxLevel() { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, k) { bell(f, 0.17, 0.5, k * 0.08); }); }
       function sfxOver() { [392, 329.63, 261.63, 196].forEach(function (f, k) { tone(f, 0.3, "triangle", 0.18, null, k * 0.13); }); }
-      function sfxWin() { [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach(function (f, k) { tone(f, 0.28, "triangle", 0.2, null, k * 0.07); }); }
+      function sfxWin() { [523.25, 587.33, 659.25, 783.99, 880, 1046.5].forEach(function (f, k) { bell(f, 0.17, 0.55, k * 0.07); }); }
+
+      /* ---------- Musik latar: music box / denting harpa sintetis ----------
+         Arpeggio mayor pelan (C mayor) yang berulang tanpa jeda: tiap
+         nada punya ekor fade panjang yang masih berbunyi saat nada
+         pertama putaran berikutnya mulai, jadi sambungan putarannya
+         mulus, tidak pernah berhenti mendadak. Dibuat murni dari Web
+         Audio lewat AudioContext yang sama — TANPA file audio.
+         Volumenya SENGAJA sangat kecil (nada ±0.055, sekitar 20–25%
+         dari volume SFX) supaya hanya menemani, tidak mengganggu.
+         Musik hanya mulai setelah gestur pemain: bgmWanted dinyalakan
+         tombol "Mulai Bermain" (pola buka kunci yang sama seperti
+         primeUltimate; ketukan berikutnya mencoba lagi lewat pendengar
+         pointerdown bila AudioContext sempat tertahan). Musik berhenti
+         total selama video ultimate (bgmUlt) dan tunduk pada tombol
+         mute (S.muted) — keduanya diatur bgmApply. Penjadwalnya ringan:
+         interval 200ms menjadwalkan nada sampai ±0.55s ke depan memakai
+         jam AudioContext; tidak menyentuh jalur input sama sekali */
+      var BGM_NOTES = [1046.5, 783.99, 659.25, 783.99, 880, 783.99, 659.25, 587.33,
+                       523.25, 659.25, 783.99, 659.25, 587.33, 659.25, 523.25, 0];
+      var BGM_BASS = { 0: 261.63, 8: 196 };   /* akar harpa pelan di awal tiap paruh putaran */
+      var BGM_STEP = 0.45;                    /* detik per nada — satu putaran ±7.2 detik */
+      var bgmWanted = false;  /* sudah diminta gestur "Mulai Bermain" */
+      var bgmUlt = false;     /* sedang ditahan video ultimate */
+      var bgmTimer = null, bgmStep = 0, bgmNext = 0, bgmBus = null;
+      function bgmGainNode() {
+        var ctx = ac(); if (!ctx) return null;
+        if (!bgmBus) { bgmBus = ctx.createGain(); bgmBus.gain.value = 1; bgmBus.connect(ctx.destination); }
+        return bgmBus;
+      }
+      function bgmNote(freq, t, vol, dur) {
+        var ctx = AC, bus = bgmBus;
+        if (!ctx || !bus || !freq) return;
+        /* Music box: sinus murni + harmonik tipis yang cepat padam */
+        var parts = [[1, 1], [3, 0.18], [4.24, 0.07]];
+        for (var j = 0; j < parts.length; j++) {
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = "sine";
+          o.frequency.setValueAtTime(freq * parts[j][0], t);
+          var v = vol * parts[j][1], d = dur * (parts[j][0] === 1 ? 1 : 0.45);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(Math.max(v, 0.0002), t + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+          o.connect(g); g.connect(bus);
+          o.start(t); o.stop(t + d + 0.05);
+        }
+      }
+      function bgmTick() {
+        var ctx = AC; if (!ctx) return;
+        /* Tab tidak aktif: jangan jadwalkan apa pun; jam dijepit ulang
+           saat tab aktif lagi supaya tidak ada semburan nada susulan */
+        if (document.hidden) { bgmNext = 0; return; }
+        if (!bgmNext || bgmNext < ctx.currentTime) { bgmNext = ctx.currentTime + 0.06; bgmStep = 0; }
+        while (bgmNext < ctx.currentTime + 0.55) {
+          var idx = bgmStep % BGM_NOTES.length;
+          if (BGM_NOTES[idx]) bgmNote(BGM_NOTES[idx], bgmNext, 0.055, 1.1);
+          if (BGM_BASS[idx]) bgmNote(BGM_BASS[idx], bgmNext, 0.04, 1.8);
+          bgmStep++;
+          bgmNext += BGM_STEP;
+        }
+      }
+      /* Satu-satunya pengatur hidup/mati musik: jalan hanya bila sudah
+         diminta gestur, tidak sedang ditahan ultimate, dan tidak mute.
+         Saat harus diam, bus musik dipudar cepat ke 0 supaya ekor nada
+         yang sudah terjadwal ikut padam total, bukan menggantung */
+      function bgmApply() {
+        var should = bgmWanted && !bgmUlt && !S.muted;
+        if (should && !bgmTimer) {
+          if (!bgmGainNode()) return;
+          bgmStep = 0; bgmNext = 0;
+          bgmTimer = setInterval(bgmTick, 200);
+          bgmTick();
+        } else if (!should && bgmTimer) {
+          clearInterval(bgmTimer); bgmTimer = null;
+        }
+        if (bgmBus && AC) {
+          var t = AC.currentTime;
+          bgmBus.gain.cancelScheduledValues(t);
+          bgmBus.gain.setTargetAtTime(should ? 1 : 0, t, 0.08);
+        }
+      }
+      function startBgm() { bgmWanted = true; bgmApply(); }
 
       /* ---------- Helpers ---------- */
       function sleep(ms, id) {
@@ -3596,6 +3698,10 @@
         return new Promise(function (resolve) {
           var ov = $("ultOverlay"), v = $("ultVideo"), btn = $("ultPlayBtn"), sbtn = $("ultSoundBtn");
           if (!v || ultBroken || v.networkState === 3) { resolve(); return; }
+          /* Musik latar berhenti total selama video ultimate diputar
+             supaya tidak bentrok dengan audio video; dilanjutkan lagi
+             di finish() bawah saat video selesai/dilewati */
+          bgmUlt = true; bgmApply();
           /* Video yang termuat sekarang resmi jadi "terakhir diputar" —
              pilihan berikutnya tidak boleh mengulanginya */
           ultLastPlayed = ultIdx;
@@ -3607,6 +3713,8 @@
           function finish() {
             if (done) return;
             done = true;
+            /* Video selesai/dilewati: musik latar lanjut lagi */
+            bgmUlt = false; bgmApply();
             if (timer) clearTimeout(timer);
             if (stallTimer) clearTimeout(stallTimer);
             v.removeEventListener("ended", finish);
@@ -4054,6 +4162,10 @@
            primeUltimate) — webview HP/Discord menolak play() yang
            dipanggil tanpa riwayat gestur pada elemen medianya */
         primeUltimate();
+        /* Gestur yang sama juga menyalakan musik latar: AudioContext
+           dibuka di dalam ketukan ini, jadi musik boleh mulai berbunyi
+           (lihat startBgm) — tidak ada autoplay sebelum gestur */
+        startBgm();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
@@ -4114,6 +4226,9 @@
         S.muted = !S.muted;
         $("soundUse").setAttribute("href", S.muted ? "#i-sound-off" : "#i-sound-on");
         soundBtnEl.setAttribute("aria-label", S.muted ? "Nyalakan suara" : "Matikan suara");
+        /* Musik latar tunduk pada tombol yang sama: mati saat suara
+           dimatikan, lanjut lagi saat dinyalakan (lihat bgmApply) */
+        bgmApply();
         if (!S.muted) playRune(0);
       });
       function setPaused(p) {
@@ -4290,7 +4405,7 @@
          — tombol mantra, tombol apa pun — adalah gestur segar untuk
          mencoba lagi, jauh lebih dekat ke saat ultimate benar-benar
          diputar. primeUltimate berhenti sendiri begitu berhasil */
-      document.addEventListener("pointerdown", function () { primeUltimate(); }, { passive: true });
+      document.addEventListener("pointerdown", function () { primeUltimate(); if (bgmWanted) bgmApply(); }, { passive: true });
     </script>
 
     <script>
