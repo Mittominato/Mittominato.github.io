@@ -1401,6 +1401,47 @@
       /* Petunjuk lewati hanya masuk akal setelah video benar-benar jalan */
       .ult-overlay:not(.started) .ult-skip { display: none; }
       @keyframes ultSkipPulse { from { opacity: .45; } to { opacity: .95; } }
+      /* Tombol SPEAKER (saklar suara) di sudut kanan atas overlay: ikon
+         speaker + label "Suara". Di webview Discord suara video sering
+         tertahan walau game sudah membuka kuncinya — ketukan LANGSUNG
+         pada tombol ini adalah gestur pada elemen itu sendiri, jadi
+         unmute darinya diizinkan webview yang paling ketat sekalipun.
+         Keadaan tampil mengikuti video: kelas .on (emas, ikon speaker
+         bergelombang) saat bersuara; tanpa .on (gelap, ikon speaker
+         berbisu) saat bisu — dan selama bisu tombol berdenyut halus
+         supaya mudah ditemukan. Ketukannya TIDAK memicu lewati:
+         penangan JS-nya menghentikan penyebaran klik (lihat
+         onSoundTap di playUltimate) */
+      .ult-sound {
+        position: absolute; z-index: 2;
+        top: calc(14px + env(safe-area-inset-top));
+        right: calc(14px + env(safe-area-inset-right));
+        display: inline-flex; align-items: center; gap: 7px;
+        font-family: "Baloo 2", "Nunito", sans-serif; font-weight: 700;
+        font-size: 15px; letter-spacing: .02em;
+        color: #fff;
+        background: rgba(9,3,22,.6);
+        border: 1.5px solid rgba(255,255,255,.45);
+        padding: 9px 15px; border-radius: 99px;
+        box-shadow: 0 4px 16px rgba(0,0,0,.45);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .ult-sound svg { width: 20px; height: 20px; flex: none; display: block; }
+      .ult-sound .ic-on { display: none; }
+      .ult-sound.on {
+        color: #2a1650;
+        background: linear-gradient(180deg, #ffe066, #ffb020);
+        border-color: #fff2b0;
+        box-shadow: 0 4px 18px rgba(255,176,32,.45);
+      }
+      .ult-sound.on .ic-on { display: block; }
+      .ult-sound.on .ic-off { display: none; }
+      .ult-sound:not(.on) { animation: ultSoundPulse 1.4s ease-in-out infinite alternate; }
+      @keyframes ultSoundPulse {
+        from { transform: scale(1); }
+        to   { transform: scale(1.07); }
+      }
       /* ---------- Layar loading pembuka ----------
          Lapisan PALING ATAS dan elemen PERTAMA di <body> (di luar <main>):
          position:fixed menutupi seluruh viewport dengan z-index tertinggi
@@ -1600,7 +1641,7 @@
         .pad.lit .pad-rays { animation: none; }
         .level-plaque, .level-plaque::before, .level-plaque::after { animation: none; }
         .slot.wrong { animation: none; }
-        .mantra-part.just-lit, .mantra.complete .mantra-words, .ult-skip, .ult-play { animation: none; }
+        .mantra-part.just-lit, .mantra.complete .mantra-words, .ult-skip, .ult-play, .ult-sound { animation: none; }
         * { transition-duration: .01s !important; }
       }
       /* ================================================================
@@ -1846,6 +1887,18 @@
         <video id="ultVideo" src="ult-01s.mp4" preload="auto" muted playsinline webkit-playsinline></video>
         <button type="button" class="ult-play" id="ultPlayBtn"><span class="ult-play-ic" aria-hidden="true">▶</span> Putar Ultimate</button>
         <div class="ult-skip">Ketuk untuk lewati</div>
+        <!-- Tombol SPEAKER: saklar suara video ultimate di sudut kanan
+             atas. Ketuk = nyalakan suara (video lanjut dari posisi saat
+             itu, tidak mengulang), ketuk lagi = bisu lagi. Ikon & gaya
+             tombol mengikuti keadaan suara (kelas .on saat bersuara,
+             diatur syncSoundBtn di playUltimate). Penangan kliknya
+             menghentikan penyebaran, jadi menekan tombol ini TIDAK
+             pernah memicu "ketuk untuk lewati" pada overlay -->
+        <button type="button" class="ult-sound" id="ultSoundBtn" aria-label="Saklar suara video" aria-pressed="false">
+          <svg class="ic-off" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.2v5.6h3.8L13 19V5L7.8 9.2H4z" fill="currentColor"/><path d="M16.2 9.4l5.3 5.3M21.5 9.4l-5.3 5.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="ic-on" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.2v5.6h3.8L13 19V5L7.8 9.2H4z" fill="currentColor"/><path d="M16.3 9a4.6 4.6 0 0 1 0 6M18.8 6.4a8.2 8.2 0 0 1 0 11.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Suara</span>
+        </button>
       </div>
 
       <!-- Pause overlay -->
@@ -3299,7 +3352,7 @@
       }
       function playUltimate(id) {
         return new Promise(function (resolve) {
-          var ov = $("ultOverlay"), v = $("ultVideo"), btn = $("ultPlayBtn");
+          var ov = $("ultOverlay"), v = $("ultVideo"), btn = $("ultPlayBtn"), sbtn = $("ultSoundBtn");
           if (!v || ultBroken || v.networkState === 3) { resolve(); return; }
           /* Video yang termuat sekarang resmi jadi "terakhir diputar" —
              pilihan berikutnya tidak boleh mengulanginya */
@@ -3319,6 +3372,7 @@
             v.removeEventListener("playing", onPlaying);
             ov.removeEventListener("click", onTap);
             if (btn) btn.removeEventListener("click", onTap);
+            if (sbtn) sbtn.removeEventListener("click", onSoundTap);
             try { v.pause(); v.currentTime = 0; } catch (e) {}
             /* Elemen SENGAJA TIDAK di-mute lagi di sini (dulu di-mute,
                dan itulah yang membisukan ultimate berikutnya): video
@@ -3349,9 +3403,40 @@
                dari elemen yang sudah dibuka kuncinya oleh gestur boleh
                dinyalakan suaranya tanpa gestur baru */
             try { if (v.muted) { v.removeAttribute("muted"); v.defaultMuted = false; v.muted = false; } v.volume = 1; } catch (e) {}
+            syncSoundBtn();
             /* Pengaman sejak video jalan: sisa durasi + kelonggaran */
             var left = (isFinite(v.duration) && v.duration > 0) ? (v.duration - v.currentTime) * 1000 : 15000;
             arm(left + 8000);
+          }
+          /* Tombol SPEAKER: tampilannya selalu mengikuti keadaan suara
+             video yang sebenarnya — kelas .on + aria-pressed saat
+             bersuara (mis. di browser, tempat prime berhasil), ikon
+             berbisu saat video masih bisu (mis. di webview Discord) */
+          function syncSoundBtn() {
+            if (!sbtn) return;
+            var on = !v.muted;
+            sbtn.classList.toggle("on", on);
+            sbtn.setAttribute("aria-pressed", on ? "true" : "false");
+          }
+          /* Saklar suara: ketukan pada tombol ini adalah gestur langsung
+             pada elemen video itu sendiri, jadi unmute darinya diizinkan
+             webview yang paling ketat (Discord). Menyalakan suara TIDAK
+             mengulang video: posisi putar dibiarkan, dan bila video
+             sempat terjeda ia dilanjutkan dari posisi saat itu juga.
+             stopPropagation + preventDefault WAJIB: tanpa itu klik
+             merambat ke overlay dan memicu "ketuk untuk lewati" */
+          function onSoundTap(e) {
+            if (e) { e.stopPropagation(); e.preventDefault(); }
+            if (done) return;
+            if (v.muted) {
+              try { v.removeAttribute("muted"); v.defaultMuted = false; v.muted = false; v.volume = 1; } catch (err) {}
+              if (started && v.paused && !v.ended) {
+                try { var p = v.play(); if (p && p.catch) p.catch(function () {}); } catch (err) {}
+              }
+            } else {
+              try { v.muted = true; } catch (err) {}
+            }
+            syncSoundBtn();
           }
           function tryPlay() {
             /* Suara dipastikan menyala tepat sebelum diputar: atribut
@@ -3393,8 +3478,13 @@
           v.addEventListener("playing", onPlaying);
           ov.addEventListener("click", onTap);
           if (btn) btn.addEventListener("click", onTap);
+          if (sbtn) sbtn.addEventListener("click", onSoundTap);
           try { v.currentTime = 0; } catch (e) {}
           tryPlay();
+          /* Keadaan awal tombol speaker mengikuti suara video saat ini
+             (tryPlay baru saja menyalakan suara; di webview yang tetap
+             membisukannya, tombol tampil berbisu & berdenyut) */
+          syncSoundBtn();
           /* Bila sesaat lagi video ternyata belum jalan juga (buffer
              lambat / autoplay setengah ditolak), tawarkan tombol Putar */
           stallTimer = setTimeout(function () {
