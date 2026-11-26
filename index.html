@@ -2079,7 +2079,7 @@
         <div class="victory" id="victory" hidden aria-hidden="true"><div class="rays"></div><div class="v-text">VICTORY!</div></div>
         <div class="cheer" id="cheer" hidden aria-hidden="true"></div>
         <div class="bubble" id="bubble" role="status"></div>
-        <!-- Balon bicara kecil PENYIHIR: hanya untuk kalimat acak "Sihir adalah bagian dari hidupku" — tampil saat suaranya berbunyi, hilang saat suaranya selesai (lihat blok suara sihir-hidup). Balon boss di atasnya tetap mati seperti keputusan sebelumnya -->
+        <!-- Balon bicara kecil PENYIHIR: hanya untuk kalimat acak penyihir (teksnya diisi JS mengikuti kalimat yang diputar: "Sihir adalah bagian dari hidupku" atau "Penduduk desa mengandalkanku, aku tidak boleh kalah.") — tampil saat suaranya berbunyi, hilang saat suaranya selesai (lihat blok suara bicara penyihir). Balon boss di atasnya tetap mati seperti keputusan sebelumnya -->
         <div class="wiz-bubble" id="wizBubble" role="status">Sihir adalah bagian dari hidupku</div>
         <div id="fxLayer"></div>
       </section>
@@ -2795,17 +2795,25 @@
           } catch (e) {}
         });
       }
-      /* ---------- Penyihir bicara sendiri: kalimat acak "Sihir adalah bagian dari hidupku" ----------
+      /* ---------- Penyihir bicara sendiri: DUA kalimat acak ----------
          Kebiasaan baru atas permintaan pemilik: selama permainan
          berjalan, PENYIHIR sesekali bicara sendiri TANPA sebab —
-         seperti suara latar — mengucapkan kalimat kiriman pemilik
-         "Sihir adalah bagian dari hidupku" (file "sihir_bagian_hidup.mp3",
-         3,00 detik, mono; suara sepanjang 0–3 detik) lewat elemen
+         seperti suara latar — mengucapkan SATU kalimat kiriman
+         pemilik yang dipilih ACAK dari dua kalimat (kalimat yang
+         sama diusahakan tidak terulang dua kali berturut-turut):
+         (1) "Sihir adalah bagian dari hidupku" (file
+         "sihir_bagian_hidup.mp3", 3,00 detik, mono; suara sepanjang
+         0–3 detik) dan (2) "Penduduk desa mengandalkanku, aku tidak
+         boleh kalah." (file "tidak_boleh_kalah.mp3", 4,13 detik,
+         mono; suara sepanjang 0–4 detik; kalimat diverifikasi lewat
+         transkripsi). Keduanya lewat elemen
          <audio> yang file-nya EKSTERNAL di samping index.html, sama
          seperti suara salah pencet & suara berhasil (TIDAK di-inline
          sebagai base64/data URI):
-           - "sihir-hidup-v1.ogg" — utama (34.195 byte)
-           - "sihir-hidup-v1.mp3" — cadangan (65.002 byte)
+           - "sihir-hidup-v1.ogg" — utama kalimat ke-1 (34.195 byte)
+           - "sihir-hidup-v1.mp3" — cadangan kalimat ke-1 (65.002 byte)
+           - "tidak-kalah-v1.ogg" — utama kalimat ke-2 (45.987 byte)
+           - "tidak-kalah-v1.mp3" — cadangan kalimat ke-2 (82.974 byte)
          Format dipilih lewat canPlayType seperti pola suara file
          lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan bila
          file utama gagal dimuat, format cadangan dicoba sekali.
@@ -2863,6 +2871,63 @@
       /* Preload sesudah gestur "Mulai Bermain": elemen dibuat & file
          dimuat sekarang, jadi kalimat pertama pun siap berbunyi */
       function preloadHidup() { try { hidupElement().load(); } catch (e) {} }
+      /* ---------- Kalimat ke-2: "Penduduk desa mengandalkanku, aku tidak boleh kalah." ----------
+         Elemen <audio> SENDIRI untuk kalimat ke-2, pola persis sama
+         seperti kalimat ke-1: file EKSTERNAL di samping index.html
+         (TIDAK di-inline), format dipilih lewat canPlayType (OGG
+         dulu, fallback MP3, dan format cadangan dicoba sekali bila
+         yang utama gagal dimuat), volume 0,8, ikut tombol mute
+         (S.muted) seperti SFX lain, dan di-PRELOAD sesudah gestur
+         "Mulai Bermain" (preloadKalah, dipanggil dari penangan
+         tombol yang sama dengan preloadHidup) */
+      var VOICE_KALAH_OGG = "tidak-kalah-v1.ogg";
+      var VOICE_KALAH_MP3 = "tidak-kalah-v1.mp3";
+      var kalahEl = null;  /* elemen <audio> kalimat ke-2, dibuat sekali */
+      function kalahElement() {
+        if (kalahEl) return kalahEl;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? VOICE_KALAH_OGG : VOICE_KALAH_MP3;
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = VOICE_KALAH_MP3; }
+        });
+        kalahEl = el;
+        return el;
+      }
+      function preloadKalah() { try { kalahElement().load(); } catch (e) {} }
+      /* Daftar kalimat bicara penyihir: tiap jadwal bicara tiba,
+         SATU kalimat dipilih ACAK dari daftar ini (pickWizLine) dan
+         teks balon diisi teks yang SAMA PERSIS dengan kalimat yang
+         diputar. guard = timer pengaman per kalimat (durasi file +
+         kelonggaran) bila event ended tak kunjung datang */
+      var WIZ_LINES = [
+        { el: hidupElement, text: "Sihir adalah bagian dari hidupku", guard: 3600 },
+        { el: kalahElement, text: "Penduduk desa mengandalkanku, aku tidak boleh kalah.", guard: 4800 }
+      ];
+      var wizTalkLast = -1;  /* indeks kalimat terakhir yang diputar */
+      var wizTalkEl = null;  /* elemen yang SEDANG berbunyi */
+      /* Pilih kalimat berikutnya secara acak; bila hasilnya sama
+         dengan kalimat sebelumnya, acak ulang — kalimat yang sama
+         tidak terulang dua kali berturut-turut */
+      function pickWizLine() {
+        var idx = Math.floor(Math.random() * WIZ_LINES.length);
+        if (WIZ_LINES.length > 1) {
+          while (idx === wizTalkLast) idx = Math.floor(Math.random() * WIZ_LINES.length);
+        }
+        wizTalkLast = idx;
+        return WIZ_LINES[idx];
+      }
+      /* Hentikan suara bicara mana pun yang sedang berbunyi (kedua
+         elemen kalimat) — dipakai stopWizTalk & wizTalkMuted */
+      function pauseWizVoices() {
+        [hidupEl, kalahEl].forEach(function (el) {
+          if (el) { try { el.pause(); el.currentTime = 0; } catch (e) {} }
+        });
+        wizTalkEl = null;
+      }
       /* Balon bicara penyihir: jangkarnya puncak sprite penyihir
          (topi) — left = 45% lebar sprite dari tepi kirinya (tengah
          topi), top = tepi atas sprite, lalu transform CSS
@@ -2931,15 +2996,20 @@
         }
         playWizTalk(runId);
       }
-      /* Putar kalimatnya sekarang: balon tampil bersamaan dengan
-         suara mulai, hilang begitu suara selesai (event ended).
-         Timer pengaman 3.600ms (durasi file 3,0 detik + kelonggaran)
-         memastikan balon tetap hilang & jadwal tetap lanjut bila
-         ended tak kunjung datang (mis. play() ditolak webview) —
-         jadwal bicara tidak boleh macet. Sesudah selesai, timer
-         berikutnya (tetap 5 detik) dipasang di sini */
+      /* Putar kalimatnya sekarang: SATU kalimat dipilih ACAK dari
+         WIZ_LINES (tidak mengulang kalimat sebelumnya), balon
+         tampil bersamaan dengan suara mulai dengan teks yang sama
+         persis dengan kalimat yang diputar, hilang begitu suara
+         selesai (event ended). Timer pengaman per kalimat
+         (line.guard: durasi file + kelonggaran) memastikan balon
+         tetap hilang & jadwal tetap lanjut bila ended tak kunjung
+         datang (mis. play() ditolak webview) — jadwal bicara tidak
+         boleh macet. Sesudah selesai, timer berikutnya (tetap
+         5 detik) dipasang di sini */
       function playWizTalk(runId) {
-        var el = hidupElement();
+        var line = pickWizLine();
+        var el = line.el();
+        wizTalkEl = el;
         var session = ++wizTalkSession;
         wizTalkPlaying = true;
         var finished = false;
@@ -2947,12 +3017,14 @@
           if (finished || session !== wizTalkSession) return;
           finished = true;
           wizTalkPlaying = false;
+          if (wizTalkEl === el) wizTalkEl = null;
           el.removeEventListener("ended", finish);
           hideWizBubble();
           if (runId === S.run && S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false, runId);
         }
         el.addEventListener("ended", finish);
-        setTimeout(finish, 3600);
+        setTimeout(finish, line.guard);
+        var b = wizBubble(); if (b) b.textContent = line.text;
         showWizBubble();
         try {
           el.currentTime = 0;
@@ -2969,7 +3041,7 @@
         if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
         wizTalkSession++;
         wizTalkPlaying = false;
-        if (hidupEl) { try { hidupEl.pause(); hidupEl.currentTime = 0; } catch (e) {} }
+        pauseWizVoices();
         hideWizBubble();
       }
       /* Tombol mute ditekan DI TENGAH kalimat: suara & balon berhenti
@@ -2979,7 +3051,7 @@
         if (!wizTalkPlaying) return;
         wizTalkSession++;
         wizTalkPlaying = false;
-        if (hidupEl) { try { hidupEl.pause(); hidupEl.currentTime = 0; } catch (e) {} }
+        pauseWizVoices();
         hideWizBubble();
         if (S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false);
       }
@@ -5132,6 +5204,10 @@
            ("sihir-hidup-v1") supaya siap berbunyi tanpa jeda saat
            jadwal acaknya tiba (lihat preloadHidup) */
         preloadHidup();
+        /* Gestur yang sama juga me-PRELOAD file suara kalimat ke-2
+           bicara penyihir ("tidak-kalah-v1") supaya siap berbunyi
+           tanpa jeda saat terpilih acak (lihat preloadKalah) */
+        preloadKalah();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
