@@ -1586,7 +1586,7 @@
          menampilkannya lama-lama */
       .stage > .ult-overlay {
         position: absolute; inset: 0; z-index: 30;
-        background: #0d0618;
+        background: transparent;
         /* Gambar latar (.ult-bgimg) diposisikan absolut memenuhi
            overlay — satu-satunya latar */
         display: flex; align-items: center; justify-content: center;
@@ -1620,10 +1620,10 @@
          pointer-events none — ketukan tetap jatuh ke overlay
          (ketuk-untuk-lewati tetap jalan) */
       .ult-bgimg {
+        display: none;
         position: absolute; inset: 0;
         width: 100%; height: 100%;
         object-fit: cover;
-        display: block;
         pointer-events: none;
         z-index: 0;
       }
