@@ -3016,7 +3016,7 @@
               try {
                 fetch(window.LB_API + "/auth/exchange", {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                  headers: { "Content-Type": "text/plain" },
                   body: JSON.stringify({ code: code })
                 }).then(function (res) {
                   if (!res.ok) return null;
@@ -7412,7 +7412,7 @@
         try {
           fetch(LB_API + "/scores", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "text/plain" },
             body: JSON.stringify({ session_token: s.token, score: S.score })
           }).then(function () {}, function () {});
         } catch (e) {}
