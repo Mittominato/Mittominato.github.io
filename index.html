@@ -1574,7 +1574,7 @@
          dan di bawah HUD,
          aspek 16/9, object-fit cover. Latar HITAM di sudut-sudut
          luar bingkai video dihapus dengan MASKER ALPHA
-         (ult-09s-mask.png, dipasang sekali lewat CSS pada elemen
+         (ult-09s-mask-v2.png, dipasang sekali lewat CSS pada elemen
          video) — MP4 tidak bisa menyimpan transparansi,
          jadi latar transparan dari editor berubah jadi hitam saat
          export; masker memotong empat sudut hitam itu sehingga
@@ -1668,7 +1668,7 @@
          (1278x720), object-fit cover.
          Latar HITAM di sudut-sudut luar bingkai video (sisa export
          MP4 dari latar transparan) dihapus dengan MASKER ALPHA —
-         ult-09s-mask.png (file eksternal di samping index.html):
+         ult-09s-mask-v2.png (file eksternal di samping index.html):
          alpha 255 di area bingkai/konten, alpha 0 di empat sudut.
          Masker dipasang SEKALI lewat CSS di sini pada elemen video
          (hanya ada satu video ultimate, jadi tidak perlu diganti JS).
@@ -1693,8 +1693,8 @@
            posisi video tidak bergeser; transisi transform murni
            kompositor, tidak mengulang / menyendat putaran video */
         transition: transform .5s ease-out;
-        -webkit-mask-image: url("ult-09s-mask.png");
-        mask-image: url("ult-09s-mask.png");
+        -webkit-mask-image: url("ult-09s-mask-v2.png");
+        mask-image: url("ult-09s-mask-v2.png");
         -webkit-mask-size: 100% 100%;
         mask-size: 100% 100%;
         -webkit-mask-repeat: no-repeat;
@@ -2384,7 +2384,7 @@
            (permintaan Harith — bingkai "ULTIMATE" ungu sudah jadi
            di dalam videonya), aspek 16/9, object-fit cover.
            Latar hitam di sudut luar bingkai video dihapus dengan
-           masker alpha ult-09s-mask.png yang dipasang sekali lewat
+           masker alpha ult-09s-mask-v2.png yang dipasang sekali lewat
            CSS pada elemen video.
            Latar game (.ult-bg) DISEMBUNYIKAN (display:none) selama
            overlay ini tampil.
@@ -5145,7 +5145,7 @@
          di samping index.html (bukan asset artifact, tidak
          di-inline), video kiriman Harith yang bingkai "ULTIMATE"
          ungunya sudah menyatu di dalam video. Masker alphanya
-         (ult-09s-mask.png, juga file eksternal di samping
+         (ult-09s-mask-v2.png, juga file eksternal di samping
          index.html) dipasang sekali lewat CSS pada elemen video,
          jadi tidak ada lagi pemilihan video oleh JS: playUltimate
          memutar ult-09s langsung dari src markup. Video ultimate
