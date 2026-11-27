@@ -2801,11 +2801,24 @@
         /* Beacon diagnosa auth: fire-and-forget, tidak pernah melempar
            error dan tidak mengubah alur apa pun — hanya mencatat tahap
            handshake terakhir ke backend (GET /health?auth=<status>) dan
-           ke window.__lbAuthDiag supaya bisa diperiksa dari konsol */
+           ke window.__lbAuthDiag supaya bisa diperiksa dari konsol.
+           Karena koneksi HP bisa jenuh saat halaman baru dimuat,
+           percobaan pertama ditunda 2000ms setelah status ditentukan,
+           dan bila fetch gagal diulang sampai total 3 percobaan dengan
+           jeda 2000ms antar percobaan */
         var lbAuthBeacon = function (status) {
           try {
             window.__lbAuthDiag = status;
-            fetch(window.LB_API + "/health?auth=" + encodeURIComponent(status)).catch(function () {});
+            var kirim = function (percobaan) {
+              try {
+                fetch(window.LB_API + "/health?auth=" + encodeURIComponent(status)).catch(function () {
+                  if (percobaan < 3) setTimeout(function () { kirim(percobaan + 1); }, 2000);
+                });
+              } catch (e) {
+                if (percobaan < 3) setTimeout(function () { kirim(percobaan + 1); }, 2000);
+              }
+            };
+            setTimeout(function () { kirim(1); }, 2000);
           } catch (e) { /* diagnosa gagal pun diam saja */ }
         };
         if (typeof window.DiscordSDK !== "function") { lbAuthBeacon("sdk_missing"); return; }
@@ -2826,32 +2839,47 @@
              di HUD menggantikan "Penyihir" (foto HUD tetap gambar
              penyihir). Gagal apa pun (backend tak terjangkau, 503, 502,
              timeout) → diam saja: game lanjut anonim, HUD tetap
-             "Penyihir". Satu kali coba, TANPA retry, TANPA error ke
-             pemain, TANPA memblokir game */
+             "Penyihir". Karena koneksi HP bisa jenuh saat halaman baru
+             dimuat, POST yang sama (kode yang sama, TANPA authorize
+             ulang) diulang sampai total 3 percobaan dengan jeda 2000ms
+             antar percobaan bila fetch gagal, respons tidak ok, atau
+             respons tidak membawa session_token; begitu satu percobaan
+             berhasil, berhenti dan tidak mengirim lagi. Bila ketiganya
+             gagal → beacon exchange_fail dan lanjut anonim. TANPA error
+             ke pemain, TANPA memblokir game */
           var tukarKode = function (code) {
-            try {
-              fetch(window.LB_API + "/auth/exchange", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ code: code })
-              }).then(function (res) {
-                if (!res.ok) return null;
-                return res.json();
-              }).then(function (data) {
-                if (!data || !data.session_token) { lbAuthBeacon("exchange_fail"); return; }
-                lbAuthBeacon("exchange_ok");
-                window.lbSession = {
-                  token: data.session_token,
-                  username: data.username || "",
-                  avatar_url: data.avatar_url || ""
-                };
-                if (data.username) {
-                  window.discordUserName = data.username;
-                  var nameEl = document.getElementById("playerName");
-                  if (nameEl) nameEl.textContent = data.username;
-                }
-              }, function () { lbAuthBeacon("exchange_fail"); /* backend tak terjangkau: lanjut anonim */ });
-            } catch (e) { lbAuthBeacon("exchange_fail"); /* fetch tak tersedia: lanjut anonim */ }
+            var percobaan = 0;
+            var coba = function () {
+              percobaan++;
+              var gagal = function () {
+                if (percobaan < 3) { setTimeout(coba, 2000); return; }
+                lbAuthBeacon("exchange_fail"); /* semua percobaan gagal: lanjut anonim */
+              };
+              try {
+                fetch(window.LB_API + "/auth/exchange", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ code: code })
+                }).then(function (res) {
+                  if (!res.ok) return null;
+                  return res.json();
+                }).then(function (data) {
+                  if (!data || !data.session_token) { gagal(); return; }
+                  lbAuthBeacon("exchange_ok");
+                  window.lbSession = {
+                    token: data.session_token,
+                    username: data.username || "",
+                    avatar_url: data.avatar_url || ""
+                  };
+                  if (data.username) {
+                    window.discordUserName = data.username;
+                    var nameEl = document.getElementById("playerName");
+                    if (nameEl) nameEl.textContent = data.username;
+                  }
+                }, gagal /* backend tak terjangkau: ulangi atau lanjut anonim */);
+              } catch (e) { gagal(); /* fetch tak tersedia: ulangi atau lanjut anonim */ }
+            };
+            coba();
           };
           var simpanKode = function (auth) {
             window.discordAuth = auth || null;
