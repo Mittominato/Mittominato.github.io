@@ -333,6 +333,14 @@
         padding: 5px 11px 3px;
       }
       .lb-row .score svg { width: 13px; height: 13px; }
+      /* Pesan kosong jujur: backend menjawab sukses tapi belum ada
+         skor sama sekali (bukan data contoh) */
+      .lb-empty {
+        text-align: center;
+        font-family: "Baloo 2", sans-serif; font-weight: 700;
+        font-size: 15.5px; color: #bda8e0;
+        padding: 18px 10px 8px;
+      }
       @media (max-width: 400px) {
         .lb-title { font-size: 23px; }
         .lb-pod .uname { font-size: 13px; }
@@ -2615,9 +2623,10 @@
       <!-- Pop-up leaderboard: tampil DI DALAM game (bukan tab/jendela
            baru — window.open diblokir webview Discord). Isinya meniru
            halaman "Papan Peringkat": podium 3 besar + daftar peringkat
-           4–12 yang bisa di-scroll; baris-barisnya dibangun JS dari
-           data contoh yang sama seperti halaman itu (sampai backend
-           leaderboard dibangun). Selama pop-up terbuka game berhenti
+           4–12 yang bisa di-scroll; baris-barisnya dibangun JS: data
+           contoh tampil dulu / jadi cadangan bila backend tak
+           terjangkau, lalu diganti data asli dari GET /api/leaderboard.
+           Selama pop-up terbuka game berhenti
            total — lihat openLbPopup di skrip game (flag __lbOpen +
            kelas .lb-open + bgmLb + S.paused). Ditutup lewat tombol X
            atau menekan latar gelap di luar panel -->
@@ -2783,6 +2792,12 @@
         var DISCORD_CLIENT_ID = "1574892570457153608";
         window.discordSdk = null;
         window.discordAuth = null;
+        /* Backend leaderboard asli: base URL final (jangan diubah).
+           Sesi hasil tukar kode authorize disimpan HANYA di memori
+           (variabel JS di window.lbSession) — tidak pernah di
+           localStorage, dan tidak ada secret apa pun di halaman ini */
+        window.LB_API = "https://ingatmantra.duckdns.org/api";
+        window.lbSession = null;
         if (typeof window.DiscordSDK !== "function") return;
         var sdk = null;
         try { sdk = new window.DiscordSDK(DISCORD_CLIENT_ID); } catch (e) { return; }
@@ -2793,14 +2808,50 @@
         readyResult.then(function (isDiscord) {
           if (!isDiscord) return; /* Bukan di dalam Discord: mode browser biasa */
           window.discordSdk = sdk;
+          /* Tukar kode authorize ke backend leaderboard untuk mendapat
+             sesi + profil Discord asli. Kode authorize SEKALI PAKAI dan
+             cepat kedaluwarsa, jadi ditukar SEGERA begitu diterima
+             (redirect_uri TIDAK dikirim — backend tidak membutuhkannya).
+             Sukses → sesi disimpan di memori & username Discord tampil
+             di HUD menggantikan "Penyihir" (foto HUD tetap gambar
+             penyihir). Gagal apa pun (backend tak terjangkau, 503, 502,
+             timeout) → diam saja: game lanjut anonim, HUD tetap
+             "Penyihir". Satu kali coba, TANPA retry, TANPA error ke
+             pemain, TANPA memblokir game */
+          var tukarKode = function (code) {
+            try {
+              fetch(window.LB_API + "/auth/exchange", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: code })
+              }).then(function (res) {
+                if (!res.ok) return null;
+                return res.json();
+              }).then(function (data) {
+                if (!data || !data.session_token) return;
+                window.lbSession = {
+                  token: data.session_token,
+                  username: data.username || "",
+                  avatar_url: data.avatar_url || ""
+                };
+                if (data.username) {
+                  window.discordUserName = data.username;
+                  var nameEl = document.getElementById("playerName");
+                  if (nameEl) nameEl.textContent = data.username;
+                }
+              }, function () { /* backend tak terjangkau: lanjut anonim */ });
+            } catch (e) { /* fetch tak tersedia: lanjut anonim */ }
+          };
           var simpanKode = function (auth) {
             window.discordAuth = auth || null;
             /* Bila respons otorisasi membawa profil user, pakai namanya sebagai
-               nama pemain di HUD atas. Alur kode biasa hanya membawa code (nama
-               user butuh penukaran token di server), jadi ini murni jaga-jaga:
-               tanpa profil, HUD tetap memakai nama bawaan "Penyihir" */
+               nama pemain di HUD atas. Alur kode biasa hanya membawa code;
+               nama aslinya datang dari tukarKode di backend (di bawah),
+               jadi ini murni jaga-jaga: tanpa profil, HUD tetap memakai
+               nama bawaan "Penyihir" */
             var u = auth && auth.user;
             if (u && (u.global_name || u.username)) window.discordUserName = u.global_name || u.username;
+            if (auth && auth.code) tukarKode(auth.code);
           };
           var abaikan = function () { /* Izin gagal/ditolak: game tetap berjalan */ };
           return sdk.commands.authorize({
@@ -2819,9 +2870,10 @@
               scope: ["identify"]
             }).then(simpanKode, abaikan);
           });
-          /* Kode otorisasi (window.discordAuth.code) ditukar menjadi access_token
-             lewat client secret di server sebelum commands.authenticate() bisa dipanggil;
-             halaman statis ini berhenti di authorize, sesuai alur tanpa backend. */
+          /* Kode otorisasi ditukar di backend lewat tukarKode di atas
+             (POST /auth/exchange): client secret hanya ada di server
+             (.env), tidak pernah masuk ke halaman ini. Sesi hasilnya
+             dipakai untuk nama HUD, kirim skor, dan leaderboard asli */
         });
       })();
     </script>
@@ -6524,6 +6576,7 @@
         S.run++;
         stopWizTalk();
         sfxOver();
+        lbSubmitScore();
         /* Pop-up kalah kini kartu gambar desain Harith: tidak ada judul/
            deskripsi teks lagi — hanya nilai statistik live yang ditulis
            fillEndStats ke tiga kotak pada gambarnya */
@@ -6535,6 +6588,7 @@
         S.run++;
         stopWizTalk();
         sfxWin();
+        lbSubmitScore();
         /* Kemenangan tampil di overlay kemenangannya sendiri (kartu teks
            lama), karena pop-up kalah sudah diganti kartu gambar "Kalah!" */
         $("winScore").textContent = S.score.toLocaleString("id-ID");
@@ -6983,9 +7037,11 @@
          contoh yang sama persis: podium 3 besar — peringkat 1
          mahkota + medali emas, 2 medali perunggu, 3 medali perak —
          dan daftar peringkat 4–12 yang bisa di-scroll; tiap baris
-         foto profil bulat + username Discord + skor). Nanti array
-         LB_PLAYERS ini diganti hasil dari server game begitu
-         backend leaderboard dibangun.
+         foto profil bulat + username Discord + skor). Array
+         LB_PLAYERS di bawah kini DATA CONTOH cadangan: tampil lebih
+         dulu saat pop-up dibuka dan tetap tampil bila fetch ke
+         backend gagal; begitu GET /api/leaderboard berhasil, isinya
+         diganti data asli (lihat lbFetchReal).
          Selama pop-up terbuka game BERHENTI TOTAL (pola flag yang
          sama seperti video ultimate):
            - window.__lbOpen: kedua loop kanvas (latar & efek depan)
@@ -7006,6 +7062,9 @@
          Saat ditutup semua flag dilepas & S.paused dikembalikan ke
          nilai sebelum pop-up dibuka — permainan lanjut tepat dari
          titik sebelum pop-up dibuka */
+      /* Base URL backend leaderboard (final, jangan diubah); nilai
+         yang sama juga dipasang skrip SDK sebagai window.LB_API */
+      var LB_API = window.LB_API || "https://ingatmantra.duckdns.org/api";
       var LB_PLAYERS = [
         { username: "ratu_mantra",   score: 12480, avatar: "data:image/webp;base64,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",  tag: "Juara bertahan" },
         { username: "kucing.oren",   score: 11935, avatar: "data:image/webp;base64,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",  tag: "Bos terakhir" },
@@ -7041,49 +7100,102 @@
         + '<circle cx="38" cy="21" r="2.4" fill="#38bdf8"/>'
         + '</svg>';
       function lbFmt(n) { return n.toLocaleString("id-ID"); }
-      /* Bangun isi pop-up SEKALI (datanya statis): podium ditampilkan
+      /* Render isi pop-up dari array pemain mana pun (data contoh
+         LB_PLAYERS atau data asli dari backend): podium ditampilkan
          dengan urutan 2–1–3 seperti halaman Papan Peringkat, daftar
-         di bawahnya peringkat 4–12 */
-      var lbBuilt = false;
-      function lbBuild() {
-        if (lbBuilt) return;
-        lbBuilt = true;
+         di bawahnya peringkat 4 dst. Peringkat memakai field rank
+         bila ada, selain itu urutan dalam array */
+      function lbEsc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+      function lbRender(players) {
         var kinds = ["gold", "bronze", "silver"]; /* peringkat 1 emas, 2 perunggu, 3 perak */
         var classes = ["first", "second", "third"];
         var order = [1, 0, 2]; /* urutan tampil podium: 2, 1, 3 */
         var podHTML = "";
         order.forEach(function (idx) {
-          var p = LB_PLAYERS[idx];
+          var p = players[idx];
+          if (!p) return;
+          var rank = p.rank || (idx + 1);
+          var uname = lbEsc(p.username);
           podHTML += '<article class="lb-pod ' + classes[idx] + '">'
             + '<div class="face">'
             + (idx === 0 ? LB_CROWN : "")
-            + '<img src="' + p.avatar + '" alt="Foto Discord ' + p.username + '" />'
-            + '<span class="medal">' + lbMedalSVG(kinds[idx], idx + 1) + '</span>'
+            + '<img src="' + lbEsc(p.avatar) + '" alt="Foto Discord ' + uname + '" />'
+            + '<span class="medal">' + lbMedalSVG(kinds[idx], rank) + '</span>'
             + '</div>'
-            + '<p class="uname">' + p.username + '</p>'
+            + '<p class="uname">' + uname + '</p>'
             + '<p class="score">' + LB_STAR + lbFmt(p.score) + '</p>'
-            + '<div class="stand">' + (idx + 1) + '</div>'
+            + '<div class="stand">' + rank + '</div>'
             + '</article>';
         });
         $("lbPodium").innerHTML = podHTML;
         var rowHTML = "";
-        LB_PLAYERS.slice(3).forEach(function (p, i) {
-          rowHTML += '<article class="lb-row">'
-            + '<span class="rank">' + (i + 4) + '</span>'
-            + '<span class="face"><img src="' + p.avatar + '" alt="Foto Discord ' + p.username + '" loading="lazy" /></span>'
-            + '<span class="who"><span class="uname">' + p.username + '</span>'
-            + (p.tag ? '<br /><span class="tag">' + p.tag + '</span>' : '')
-            + '</span>'
-            + '<span class="score">' + LB_STAR + lbFmt(p.score) + '</span>'
-            + '</article>';
-        });
+        if (!players.length) {
+          /* Backend menjawab sukses tapi belum ada skor sama sekali:
+             pesan kosong yang jujur, TANPA baris contoh */
+          rowHTML = '<p class="lb-empty">Belum ada skor — jadilah yang pertama!</p>';
+        } else {
+          players.slice(3).forEach(function (p, i) {
+            var uname = lbEsc(p.username);
+            rowHTML += '<article class="lb-row">'
+              + '<span class="rank">' + (p.rank || (i + 4)) + '</span>'
+              + '<span class="face"><img src="' + lbEsc(p.avatar) + '" alt="Foto Discord ' + uname + '" loading="lazy" /></span>'
+              + '<span class="who"><span class="uname">' + uname + '</span>'
+              + (p.tag ? '<br /><span class="tag">' + lbEsc(p.tag) + '</span>' : '')
+              + '</span>'
+              + '<span class="score">' + LB_STAR + lbFmt(p.score) + '</span>'
+              + '</article>';
+          });
+        }
         $("lbRows").innerHTML = rowHTML;
+      }
+      /* Ambil papan peringkat ASLI dari backend setiap pop-up dibuka.
+         Sukses & entries berisi → render HANYA data asli (data contoh
+         hilang dari render). Sukses tapi entries kosong → pesan
+         kosong jujur dari lbRender. Gagal apa pun (backend tak
+         terjangkau / error) → data contoh yang sudah tampil dibiarkan
+         (fallback, perilaku lama dipertahankan) */
+      function lbFetchReal() {
+        try {
+          fetch(LB_API + "/leaderboard").then(function (res) {
+            if (!res.ok) return null;
+            return res.json();
+          }).then(function (data) {
+            if (!data || !Array.isArray(data.entries)) return;
+            lbRender(data.entries.map(function (e) {
+              return { username: e.username, score: e.score, avatar: e.avatar_url, rank: e.rank, tag: "" };
+            }));
+          }, function () { /* backend tak terjangkau: data contoh tetap tampil */ });
+        } catch (e) { /* fetch tak tersedia: data contoh tetap tampil */ }
+      }
+      /* Kirim skor akhir ke backend leaderboard (POST /api/scores)
+         bila pemain punya sesi Discord (auth/exchange berhasil).
+         Fire-and-forget:
+         layar game-over TIDAK menunggu balasan; gagal → lewati
+         diam-diam. Tanpa sesi (anonim / auth gagal) tidak mengirim
+         apa pun. Satu kiriman per game berakhir */
+      function lbSubmitScore() {
+        var s = window.lbSession;
+        if (!s || !s.token) return;
+        try {
+          fetch(LB_API + "/scores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_token: s.token, score: S.score })
+          }).then(function () {}, function () {});
+        } catch (e) {}
       }
       var lbIsOpen = false, lbPrevPaused = false;
       function openLbPopup() {
         if (lbIsOpen) return;
         lbIsOpen = true;
-        lbBuild();
+        /* Pop-up dibuka LANGSUNG dengan data contoh (tidak menunggu
+           fetch), lalu diganti data asli begitu fetch kembali */
+        lbRender(LB_PLAYERS);
+        lbFetchReal();
         window.__lbOpen = true;
         lbPrevPaused = S.paused;
         S.paused = true;
