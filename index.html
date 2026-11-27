@@ -3052,11 +3052,19 @@
         var DISCORD_CLIENT_ID = "1574892570457153608";
         window.discordSdk = null;
         window.discordAuth = null;
-        /* Backend leaderboard asli: base URL final (jangan diubah).
-           Sesi hasil tukar kode authorize disimpan HANYA di memori
-           (variabel JS di window.lbSession) — tidak pernah di
-           localStorage, dan tidak ada secret apa pun di halaman ini */
-        window.LB_API = "https://ingatmantra.duckdns.org/api";
+        /* Backend leaderboard asli: base URL dinamis. Di dalam
+           Discord Activity halaman dimuat lewat proxy
+           *.discordsays.com dan CSP Discord memblokir fetch langsung
+           ke domain lain, jadi di sana dipakai path relatif ("/api")
+           agar request pergi ke asal yang sama dan diteruskan proxy
+           ke backend; di luar Activity dipakai domain backend
+           langsung. Sesi hasil tukar kode authorize disimpan HANYA
+           di memori (variabel JS di window.lbSession) — tidak pernah
+           di localStorage, dan tidak ada secret apa pun di halaman
+           ini */
+        window.LB_API = window.location.hostname.endsWith(".discordsays.com")
+          ? "/api"
+          : "https://ingatmantra.duckdns.org/api";
         window.lbSession = null;
         window.__lbAuthError = null;
         /* Beacon diagnosa auth: fire-and-forget, tidak pernah melempar
@@ -7492,9 +7500,13 @@
          Saat ditutup semua flag dilepas & S.paused dikembalikan ke
          nilai sebelum pop-up dibuka — permainan lanjut tepat dari
          titik sebelum pop-up dibuka */
-      /* Base URL backend leaderboard (final, jangan diubah); nilai
-         yang sama juga dipasang skrip SDK sebagai window.LB_API */
-      var LB_API = window.LB_API || "https://ingatmantra.duckdns.org/api";
+      /* Base URL backend leaderboard; nilai yang sama juga dipasang
+         skrip SDK sebagai window.LB_API. Fallback di sini memakai
+         aturan dinamis yang sama: path relatif di dalam Discord
+         Activity (*.discordsays.com), domain backend di luar itu */
+      var LB_API = window.LB_API || (window.location.hostname.endsWith(".discordsays.com")
+        ? "/api"
+        : "https://ingatmantra.duckdns.org/api");
       var LB_PLAYERS = [
         { username: "ratu_mantra",   score: 12480, avatar: "avatar-3.webp",  tag: "Juara bertahan" },
         { username: "kucing.oren",   score: 11935, avatar: "avatar-2.webp",  tag: "Bos terakhir" },
