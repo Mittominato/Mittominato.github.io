@@ -233,6 +233,14 @@
       }
       .lb-close:active { transform: scale(.94); }
       .lb-close svg { width: 17px; height: 17px; display: block; }
+      /* Baris diagnosa auth di dasar panel: kecil & redup, hanya
+         untuk membaca status login dari layar (boleh dihapus nanti) */
+      .lb-panel .lb-authline {
+        flex: none; margin-top: 12px; text-align: center;
+        font-family: "Baloo 2", sans-serif; font-weight: 600;
+        font-size: 11px; line-height: 1.4; color: rgba(244,236,255,.55);
+        overflow-wrap: anywhere;
+      }
       /* Podium 3 besar — gaya sama seperti halaman Papan Peringkat,
          ukuran sedikit diperkecil supaya muat di dalam pop-up */
       .lb-podium {
@@ -2663,6 +2671,11 @@
           </div>
           <section class="lb-podium" id="lbPodium" aria-label="Tiga peringkat teratas"></section>
           <div class="lb-rows" id="lbRows" aria-label="Daftar peringkat 4 sampai 12"></div>
+          <!-- Baris diagnosa auth: kecil di dasar panel, hanya untuk
+               membaca status login Discord langsung dari layar HP
+               (diisi lbAuthLineUpdate di skrip game; boleh dihapus
+               nanti bersama CSS .lb-authline) -->
+          <p class="lb-authline" id="lbAuthLine">Auth: …</p>
         </div>
       </div>
 
@@ -2921,6 +2934,7 @@
            localStorage, dan tidak ada secret apa pun di halaman ini */
         window.LB_API = "https://ingatmantra.duckdns.org/api";
         window.lbSession = null;
+        window.__lbAuthError = null;
         /* Beacon diagnosa auth: fire-and-forget, tidak pernah melempar
            error dan tidak mengubah alur apa pun — hanya mencatat tahap
            handshake terakhir ke backend (GET /health?auth=<status>) dan
@@ -2929,12 +2943,30 @@
            percobaan pertama ditunda 2000ms setelah status ditentukan,
            dan bila fetch gagal diulang sampai total 3 percobaan dengan
            jeda 2000ms antar percobaan */
-        var lbAuthBeacon = function (status) {
+        /* Pesan error asli dari blok catch handshake: hanya nama +
+           pesan error JavaScript (e.name + ": " + e.message), dipotong
+           maks 200 karakter — TANPA rahasia apa pun (bukan kode
+           authorize, bukan token sesi) */
+        var lbErrMsg = function (e) {
+          try {
+            var m = (e && e.name ? String(e.name) : "Error") + ": " + (e && e.message ? String(e.message) : String(e));
+            return m.slice(0, 200);
+          } catch (x) { return "Error"; }
+        };
+        var lbAuthBeacon = function (status, err) {
           try {
             window.__lbAuthDiag = status;
+            var beaconStatus = status;
+            if (err) {
+              window.__lbAuthError = lbErrMsg(err);
+              beaconStatus = status + ":" + window.__lbAuthError;
+            }
+            /* Baris diagnosa di pop-up leaderboard ikut diperbarui
+               bila pop-up sedang terbuka (hook dari skrip game) */
+            try { if (typeof window.__lbAuthLineRefresh === "function") window.__lbAuthLineRefresh(); } catch (x) {}
             var kirim = function (percobaan) {
               try {
-                fetch(window.LB_API + "/health?auth=" + encodeURIComponent(status)).catch(function () {
+                fetch(window.LB_API + "/health?auth=" + encodeURIComponent(beaconStatus)).catch(function () {
                   if (percobaan < 3) setTimeout(function () { kirim(percobaan + 1); }, 2000);
                 });
               } catch (e) {
@@ -2946,13 +2978,14 @@
         };
         if (typeof window.DiscordSDK !== "function") { lbAuthBeacon("sdk_missing"); return; }
         var sdk = null;
-        try { sdk = new window.DiscordSDK(DISCORD_CLIENT_ID); } catch (e) { lbAuthBeacon("sdk_ctor_fail"); return; }
+        try { sdk = new window.DiscordSDK(DISCORD_CLIENT_ID); } catch (e) { lbAuthBeacon("sdk_ctor_fail", e); return; }
+        var readyErr = null;
         var readyResult = Promise.race([
-          sdk.ready().then(function () { return true; }, function () { return false; }),
+          sdk.ready().then(function () { return true; }, function (e) { readyErr = e; return false; }),
           new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 15000); })
         ]);
         readyResult.then(function (isDiscord) {
-          if (!isDiscord) { lbAuthBeacon("ready_false"); return; } /* Bukan di dalam Discord: mode browser biasa */
+          if (!isDiscord) { if (readyErr) lbAuthBeacon("ready_false", readyErr); else lbAuthBeacon("ready_false"); return; } /* Bukan di dalam Discord: mode browser biasa */
           window.discordSdk = sdk;
           /* Tukar kode authorize ke backend leaderboard untuk mendapat
              sesi + profil Discord asli. Kode authorize SEKALI PAKAI dan
@@ -2972,11 +3005,13 @@
              ke pemain, TANPA memblokir game */
           var tukarKode = function (code) {
             var percobaan = 0;
+            var lastErr = null;
             var coba = function () {
               percobaan++;
-              var gagal = function () {
+              var gagal = function (err) {
+                if (err) lastErr = err;
                 if (percobaan < 3) { setTimeout(coba, 2000); return; }
-                lbAuthBeacon("exchange_fail"); /* semua percobaan gagal: lanjut anonim */
+                lbAuthBeacon("exchange_fail", lastErr); /* semua percobaan gagal: lanjut anonim */
               };
               try {
                 fetch(window.LB_API + "/auth/exchange", {
@@ -2999,8 +3034,11 @@
                     var nameEl = document.getElementById("playerName");
                     if (nameEl) nameEl.textContent = data.username;
                   }
+                  /* Sesi sudah tersimpan: baris diagnosa di pop-up
+                     leaderboard kini bisa menulis "Auth: OK" */
+                  try { if (typeof window.__lbAuthLineRefresh === "function") window.__lbAuthLineRefresh(); } catch (x) {}
                 }, gagal /* backend tak terjangkau: ulangi atau lanjut anonim */);
-              } catch (e) { gagal(); /* fetch tak tersedia: ulangi atau lanjut anonim */ }
+              } catch (e) { gagal(e); /* fetch tak tersedia: ulangi atau lanjut anonim */ }
             };
             coba();
           };
@@ -3016,7 +3054,7 @@
             if (auth && auth.code) { lbAuthBeacon("auth_ok"); tukarKode(auth.code); }
             else { lbAuthBeacon("auth_nocode"); }
           };
-          var abaikan = function () { lbAuthBeacon("auth_fail"); /* Izin gagal/ditolak: game tetap berjalan */ };
+          var abaikan = function (err) { lbAuthBeacon("auth_fail", err); /* Izin gagal/ditolak: game tetap berjalan */ };
           return sdk.commands.authorize({
             client_id: DISCORD_CLIENT_ID,
             response_type: "code",
@@ -7343,6 +7381,25 @@
           }, function () { /* backend tak terjangkau: data contoh tetap tampil */ });
         } catch (e) { /* fetch tak tersedia: data contoh tetap tampil */ }
       }
+      /* Baris diagnosa auth di dasar pop-up: menulis status auth
+         terakhir dari skrip handshake (window.__lbAuthDiag +
+         window.__lbAuthError), atau "Auth: OK — <username>" bila
+         sesi Discord sudah didapat. Hanya teks diagnosa kecil;
+         tidak mengubah alur auth/leaderboard/skor sama sekali.
+         Dipanggil saat pop-up dibuka, dan skrip handshake memanggil
+         window.__lbAuthLineRefresh setiap status auth berubah */
+      function lbAuthLineUpdate() {
+        var el = $("lbAuthLine");
+        if (!el) return;
+        if (window.lbSession && window.lbSession.username) {
+          el.textContent = "Auth: OK — " + window.lbSession.username;
+        } else if (window.__lbAuthDiag) {
+          el.textContent = "Auth: " + window.__lbAuthDiag + (window.__lbAuthError ? " — " + window.__lbAuthError : "");
+        } else {
+          el.textContent = "Auth: belum ada status";
+        }
+      }
+      window.__lbAuthLineRefresh = lbAuthLineUpdate;
       /* Kirim skor akhir ke backend leaderboard (POST /api/scores)
          bila pemain punya sesi Discord (auth/exchange berhasil).
          Fire-and-forget:
@@ -7368,6 +7425,7 @@
            fetch), lalu diganti data asli begitu fetch kembali */
         lbRender(LB_PLAYERS);
         lbFetchReal();
+        lbAuthLineUpdate();
         window.__lbOpen = true;
         lbPrevPaused = S.paused;
         S.paused = true;
