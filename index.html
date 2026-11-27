@@ -665,6 +665,24 @@
       .sigil.shine .sig-orb .sig-glow {
         filter: brightness(1.8) saturate(1.25);
       }
+      /* Elemen efek orb ultimate (peningkatan versi disesuaikan): cincin
+         hantaman/pop, titik jejak cahaya saat orb meluncur, dan kilat boss.
+         Semuanya elemen mungil di fxLayer yang hanya dianimasikan lewat
+         transform & opacity oleh JS lalu dibuang — tanpa filter besar,
+         tanpa kilat se-layar, dan tanpa getar layar */
+      .orb-ring {
+        position: absolute; border-radius: 50%;
+        pointer-events: none; will-change: transform, opacity;
+      }
+      .orb-trail {
+        position: absolute; border-radius: 50%;
+        pointer-events: none; will-change: transform, opacity;
+      }
+      .boss-flash {
+        position: absolute; border-radius: 50%;
+        pointer-events: none; opacity: 0; z-index: 6;
+        will-change: transform, opacity;
+      }
       /* ---------- Hantu kecil si kucing & perayaan VICTORY seperti akhir video ---------- */
       .ghost {
         position: absolute; right: 13%; bottom: 58%; width: clamp(34px, 9vw, 52px);
@@ -4475,6 +4493,9 @@
       function makeOrb(i, cls, glowBall) {
         var o = document.createElement("div");
         o.className = "sig-orb" + (cls ? " " + cls : "") + (glowBall ? " glowball" : "");
+        /* Warna rune orb ini dicatat di elemennya: jejak cahaya, cincin &
+           ledakan saat slam memakai warna orb itu sendiri (lihat slamSigils) */
+        o.dataset.color = RUNES[i].color;
         if (glowBall) {
           /* Bola CAHAYA murni (mode cerita setelah video ultimate): inti terang
              sewarna rune + halo radial lebar (.sig-glow), TANPA gambar permata
@@ -4674,40 +4695,283 @@
           anim.onfinish = function () { ring.remove(); };
         });
       }
+      /* ---------- Peningkatan animasi orb ultimate (versi DISESUAIKAN,
+         persetujuan Harith): hanya MENINGKATKAN sistem yang sudah ada —
+         (1) pop saat orb muncul, (2) lintasan MELENGKUNG + jejak cahaya
+         saat slam, (3) ledakan per-orb + kilat singkat di boss, dan
+         (4) ledakan akhir yang lebih kuat di boss saja. Mekanisme, HP,
+         damage, urutan & timing besarnya (shine, ring burst ungu, jeda
+         700ms, slam ~540ms) TIDAK berubah. Semua efek hanya transform &
+         opacity, partikelnya sedikit, elemennya selalu dibuang sesudah
+         selesai, dan TIDAK ada getar layar maupun kilat se-layar ---------- */
+      function orbColor(o) {
+        if (o.dataset.color) return o.dataset.color;
+        var p = o.parentElement;
+        if (p) { var c = p.style.getPropertyValue("--c"); if (c) return c.trim(); }
+        return "#b26bff";
+      }
+      /* Satu cincin kecil mengembang lalu memudar di satu titik arena
+         (koordinat relatif arena, pola yang sama seperti cincin
+         sigilBurst & sigilRingBurst) */
+      function orbRingFx(cx, cy, color, size, toScale, dur, widthPx, z) {
+        var ring = document.createElement("div");
+        ring.className = "orb-ring";
+        ring.style.left = cx + "px"; ring.style.top = cy + "px";
+        ring.style.width = size + "px"; ring.style.height = size + "px";
+        ring.style.marginLeft = (-size / 2) + "px"; ring.style.marginTop = (-size / 2) + "px";
+        ring.style.border = (widthPx || 2) + "px solid " + color;
+        ring.style.boxShadow = "0 0 10px " + color + ", inset 0 0 8px " + color;
+        ring.style.zIndex = String(z || 4);
+        ring.style.opacity = "0";
+        fxLayer.appendChild(ring);
+        var anim = ring.animate([
+          { transform: "scale(.35)", opacity: .95 },
+          { transform: "scale(" + toScale + ")", opacity: 0 }
+        ], { duration: dur, easing: "ease-out", fill: "backwards" });
+        anim.onfinish = function () { ring.remove(); };
+        /* Jaring pengaman: elemen tetap dibuang walau animasi batal */
+        setTimeout(function () { ring.remove(); }, dur + 150);
+      }
+      /* Sedikit percikan kecil beterbangan dari satu titik arena lalu dibuang */
+      function orbSparkFx(cx, cy, color, n, dist, sizePx, dur) {
+        for (var k = 0; k < n; k++) {
+          var sp = document.createElement("div");
+          sp.className = "orb-trail";
+          var s = sizePx * (0.7 + Math.random() * 0.6);
+          sp.style.width = s + "px"; sp.style.height = s + "px";
+          sp.style.left = cx + "px"; sp.style.top = cy + "px";
+          sp.style.marginLeft = (-s / 2) + "px"; sp.style.marginTop = (-s / 2) + "px";
+          sp.style.background = color;
+          sp.style.boxShadow = "0 0 7px " + color;
+          sp.style.zIndex = "5";
+          fxLayer.appendChild(sp);
+          var ang = Math.random() * Math.PI * 2, dd = dist * (0.5 + Math.random() * 0.7);
+          var anim = sp.animate([
+            { transform: "translate(0,0) scale(1)", opacity: 1 },
+            { transform: "translate(" + (Math.cos(ang) * dd) + "px," + (Math.sin(ang) * dd) + "px) scale(.3)", opacity: 0 }
+          ], { duration: dur * (0.8 + Math.random() * 0.4), easing: "ease-out" });
+          (function (el, a) { a.onfinish = function () { el.remove(); }; })(sp, anim);
+          setTimeout(function () { sp.remove(); }, dur + 200);
+        }
+      }
+      /* (1) POP saat orb ultimate muncul (dipanggil spawnAllSigils tepat
+         saat orb-nya tampil; skala pop-nya sendiri diatur animasi muncul
+         di sana): denyut glow singkat pada bola cahayanya + satu cincin
+         kecil mengembang & memudar + sedikit percikan di sekitar orb.
+         Suaranya tetap sfxPop yang sudah ada — tidak ada suara baru */
+      function spawnPopFx(o) {
+        if (reducedMotion) return;
+        var color = orbColor(o);
+        var glow = o.querySelector(".sig-glow");
+        if (glow) {
+          glow.animate([
+            { transform: "scale(.72)", opacity: .55 },
+            { transform: "scale(1.14)", opacity: 1, offset: 0.45 },
+            { transform: "scale(1)", opacity: 1 }
+          ], { duration: 320, easing: "ease-out" });
+        }
+        var ar = arena.getBoundingClientRect(), r = o.getBoundingClientRect();
+        if (!r.width) return;
+        var cx = r.left - ar.left + r.width / 2, cy = r.top - ar.top + r.height / 2;
+        orbRingFx(cx, cy, color, Math.max(16, r.width * 0.8), 1.6, 300, 2, 4);
+        orbSparkFx(cx, cy, color, 3, 18, 4, 320);
+      }
       /* Bola-bola melesat menghentak boss, lalu lenyap.
-         Gerakannya LAMBAT -> CEPAT (ease-in kuat): mulai perlahan lalu makin
+         Gerakannya LAMBAT -> CEPAT (ease-in kuat, mendekati
+         cubic-bezier(.55,0,1,.65) lama): mulai perlahan lalu makin
          cepat sampai menghantam boss — bukan langsung cepat / linear.
-         Durasi diperpanjang 380 -> 540ms supaya rampung percepatannya
-         terasa, tetap animasi WAAPI transform di lapis GPU seperti sebelumnya.
-         Parameter stagger = jeda antar bola (ms): panggilan lama (mode
-         bebas) memakai bawaan 45ms seperti sebelumnya; rentetan terakhir
-         mode cerita memanggilnya dengan stagger lebih rapat (26ms) supaya
-         SEMUA sigil dari semua ronde meluncur sebagai rentetan cepat satu
-         demi satu */
+         Durasi dasar tetap 540ms (sedikit divariasikan per orb) supaya
+         rampung percepatannya terasa. Parameter stagger = jeda antar
+         bola (ms): panggilan lama (mode bebas) memakai bawaan 45ms
+         seperti sebelumnya; rentetan terakhir mode cerita memanggilnya
+         dengan stagger lebih rapat (26ms) supaya SEMUA sigil dari
+         semua ronde meluncur sebagai rentetan cepat satu demi satu.
+         PENINGKATAN: lintasannya kini MELENGKUNG (kurva kuadratik per
+         orb — arah, besar lengkung, kecepatan & jeda luncur beda-beda,
+         titik kontrol dijepit di dalam arena), ada JEJAK cahaya pendek
+         sewarna orb di belakang tiap orb, tiap hantaman memicu LEDAKAN
+         KECIL sewarna orb + KILAT SINGKAT di boss saja, orb yang
+         menghantam paling akhir ledakannya lebih kuat, dan sesudahnya
+         ada LEDAKAN AKHIR yang lebih besar di boss (kilat putih-ungu
+         di boss saja + shockwave + percikan akhir, ~300-500ms).
+         Penjaga slamBusy mencegah dua rentetan berjalan bersamaan;
+         panggilan kedua selagi rentetan berjalan menerima janji yang
+         sama. Logika damage/HP TIDAK disentuh sama sekali */
+      var slamBusy = false;
+      var slamPromise = null;
       function slamSigils(stagger) {
+        if (slamBusy && slamPromise) return slamPromise;
         var stag = (typeof stagger === "number") ? stagger : 45;
-        return new Promise(function (resolve) {
+        slamBusy = true;
+        slamPromise = new Promise(function (resolve) {
+          var finish = function () { slamBusy = false; slamPromise = null; resolve(); };
           var orbs = allOrbs();
-          if (!orbs.length || reducedMotion) { resetSigils(); resolve(); return; }
+          if (!orbs.length || reducedMotion) { resetSigils(); finish(); return; }
           var cr = catSprite.getBoundingClientRect();
-          var tx = cr.left + cr.width * 0.45, ty = cr.top + cr.height * 0.45;
-          var done = 0;
-          orbs.forEach(function (o, k) {
+          var baseTx = cr.left + cr.width * 0.45, baseTy = cr.top + cr.height * 0.45;
+          var ar = arena.getBoundingClientRect();
+          /* Kilat boss: SATU elemen cahaya menempel di boss (BUKAN
+             se-layar dan BUKAN animasi combat catHit), dipakai ulang
+             tiap hantaman — kedip singkat murni lewat opacity */
+          var flash = document.createElement("div");
+          flash.className = "boss-flash";
+          var fSize = Math.max(54, cr.width * 1.05);
+          flash.style.width = fSize + "px"; flash.style.height = fSize + "px";
+          flash.style.left = (baseTx - ar.left) + "px"; flash.style.top = (baseTy - ar.top) + "px";
+          flash.style.marginLeft = (-fSize / 2) + "px"; flash.style.marginTop = (-fSize / 2) + "px";
+          flash.style.background = "radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(216,180,254,.55) 42%, transparent 70%)";
+          fxLayer.appendChild(flash);
+          var flashAnim = null;
+          function bossFlash(peak, dur) {
+            if (flashAnim) flashAnim.cancel();
+            flashAnim = flash.animate([
+              { opacity: peak, transform: "scale(.85)" },
+              { opacity: 0, transform: "scale(1.12)" }
+            ], { duration: dur, easing: "ease-out" });
+          }
+          var fxHit = fxApi();
+          /* (3) Ledakan per-orb saat orb mencapai boss: semburan canvas
+             yang sudah ada (fxApi().burst) + cincin cepat (150-250ms) +
+             partikel kecil menyebar + kilat singkat di boss */
+          function orbImpact(d, strong) {
+            var ix = d.endX - ar.left, iy = d.endY - ar.top;
+            if (fxHit) fxHit.burst(d.endX, d.endY, d.color, strong ? 9 : 5);
+            orbRingFx(ix, iy, d.color, strong ? 34 : 24, strong ? 2.1 : 1.7, strong ? 250 : 200, 2.5, 6);
+            orbSparkFx(ix, iy, d.color, strong ? 5 : 3, strong ? 30 : 22, 4, 300);
+            bossFlash(strong ? 0.75 : 0.5, strong ? 220 : 170);
+          }
+          /* (4) Ledakan akhir sesudah orb terakhir menghantam: sedikit
+             lebih besar + kilat putih-ungu DI BOSS SAJA + shockwave
+             mengembang + percikan akhir — total ~300-500ms, tanpa
+             getar layar & tanpa kilat se-layar */
+          function finalImpact(lastColor) {
+            if (fxHit) {
+              fxHit.burst(baseTx, baseTy, "#ffffff", 7);
+              fxHit.burst(baseTx, baseTy, "#b26bff", 9);
+              fxHit.burst(baseTx, baseTy, lastColor, 7);
+            }
+            var ix = baseTx - ar.left, iy = baseTy - ar.top;
+            orbRingFx(ix, iy, "#d8b4fe", 56, 3.1, 460, 3.5, 7);
+            orbRingFx(ix, iy, "#ffffff", 38, 2.6, 380, 2.5, 7);
+            orbSparkFx(ix, iy, "#e9d5ff", 5, 40, 5, 420);
+            bossFlash(1, 430);
+          }
+          /* Siapkan lintasan tiap orb: dari posisi tumpukannya sekarang
+             ke titik hantam di boss — target ASLI yang sama seperti
+             sebelumnya (tengah badan boss) ditambah jitter kecil supaya
+             hantaman menyebar di badan boss, bukan menumpuk di satu
+             piksel. Titik kontrol kurva digeser tegak lurus arah
+             terbang (tanda bergantian + acak) lalu dijepit ke dalam
+             arena supaya lintasan sebisa mungkin tetap di area main */
+          var flights = orbs.map(function (o, k) {
             var r = o.getBoundingClientRect();
             var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
             var lvl = parseInt(o.dataset.lvl || "0", 10);
             var off = stackOff(lvl);
             var startTx = off.tx / 100 * r.width;
             var startTy = off.ty / 100 * r.height;
-            var dx = tx - cx + startTx, dy = ty - cy + startTy;
-            var anim = o.animate([
-              { transform: "translate(" + startTx + "px," + startTy + "px) scale(" + off.s + ")", opacity: 1 },
-              { transform: "translate(" + dx + "px," + dy + "px) scale(.45) rotate(20deg)", opacity: .9, offset: 0.8 },
-              { transform: "translate(" + dx + "px," + dy + "px) scale(.15)", opacity: 0 }
-            ], { duration: 540, delay: k * stag, easing: "cubic-bezier(.55,0,1,.65)", fill: "forwards" });
-            anim.onfinish = function () { if (++done === orbs.length) { resetSigils(); resolve(); } };
+            var endX = baseTx + (Math.random() - 0.5) * cr.width * 0.3;
+            var endY = baseTy + (Math.random() - 0.5) * cr.height * 0.26;
+            var dx = endX - cx + startTx, dy = endY - cy + startTy;
+            var vx = dx - startTx, vy = dy - startTy;
+            var len = Math.max(1, Math.sqrt(vx * vx + vy * vy));
+            var side = (k % 2 === 0 ? 1 : -1) * (0.55 + Math.random() * 0.65);
+            var curve = Math.min(95, len * 0.30) * side;
+            var ctrlX = (startTx + dx) / 2 + (-vy / len) * curve;
+            var ctrlY = (startTy + dy) / 2 + (vx / len) * curve - len * 0.05;
+            var ccx = cx - startTx + ctrlX, ccy = cy - startTy + ctrlY;
+            ccx = Math.max(ar.left + 8, Math.min(ar.right - 8, ccx));
+            ccy = Math.max(ar.top + 8, Math.min(ar.bottom - 8, ccy));
+            ctrlX = ccx - (cx - startTx); ctrlY = ccy - (cy - startTy);
+            /* Animasi lama pada orb (muncul / denyut bersinar, fill
+               forwards) dibatalkan dulu supaya gerak rAF di bawah yang
+               memegang kendali penuh; transform inline orb memang
+               sudah berada di posisi awal tumpukannya */
+            if (o.getAnimations) o.getAnimations().forEach(function (a) { a.cancel(); });
+            return {
+              o: o, color: orbColor(o),
+              x0: startTx, y0: startTy, x1: ctrlX, y1: ctrlY, x2: dx, y2: dy,
+              s0: off.s, endX: endX, endY: endY, w: r.width,
+              delay: k * stag + Math.random() * 10,
+              dur: 540 * (0.92 + Math.random() * 0.16),
+              lastTrail: 0, hit: false
+            };
           });
+          /* Orb yang menghantam PALING AKHIR (delay + durasi terbesar):
+             ledakannya sedikit lebih kuat dari orb-orb lain */
+          var lastFlight = flights[0];
+          flights.forEach(function (d) { if (d.delay + d.dur > lastFlight.delay + lastFlight.dur) lastFlight = d; });
+          /* Jejak dibuat lebih jarang bila orb sangat banyak (≤26)
+             supaya layar & CPU HP tetap ringan */
+          var trailGap = flights.length > 16 ? 58 : 44;
+          var hitCount = 0;
+          var startTs = null;
+          /* (2) Jejak cahaya pendek di belakang orb: titik gradasi
+             sewarna orb yang mengecil & memudar sendiri lalu dibuang */
+          function spawnTrail(d, x, y) {
+            var t = document.createElement("div");
+            t.className = "orb-trail";
+            var s = Math.max(4, d.w * 0.34);
+            t.style.width = s + "px"; t.style.height = s + "px";
+            t.style.left = x + "px"; t.style.top = y + "px";
+            t.style.marginLeft = (-s / 2) + "px"; t.style.marginTop = (-s / 2) + "px";
+            t.style.background = "radial-gradient(circle, #fff 0%, " + d.color + " 45%, transparent 72%)";
+            t.style.zIndex = "3";
+            fxLayer.appendChild(t);
+            var anim = t.animate([
+              { transform: "scale(1)", opacity: .75 },
+              { transform: "scale(.35)", opacity: 0 }
+            ], { duration: 210, easing: "ease-out" });
+            anim.onfinish = function () { t.remove(); };
+            setTimeout(function () { t.remove(); }, 330);
+          }
+          function frame(ts) {
+            if (startTs === null) startTs = ts;
+            var t = ts - startTs;
+            var flying = false;
+            flights.forEach(function (d) {
+              if (d.hit) return;
+              var lt = (t - d.delay) / d.dur;
+              if (lt < 0) { flying = true; return; }
+              if (lt >= 1) {
+                d.hit = true;
+                d.o.style.opacity = "0";
+                orbImpact(d, d === lastFlight);
+                hitCount++;
+                if (hitCount === flights.length) finalImpact(d.color);
+                return;
+              }
+              flying = true;
+              /* Akselerasi ease-in: pangkat 2,15 mendekati rasa
+                 cubic-bezier(.55,0,1,.65) yang lama */
+              var e = Math.pow(lt, 2.15);
+              var u = 1 - e;
+              var x = u * u * d.x0 + 2 * u * e * d.x1 + e * e * d.x2;
+              var y = u * u * d.y0 + 2 * u * e * d.y1 + e * e * d.y2;
+              var sc = d.s0 + (0.18 - d.s0) * e;
+              d.o.style.transform = "translate(" + x + "px," + y + "px) scale(" + sc + ") rotate(" + (e * 20) + "deg)";
+              d.o.style.opacity = lt > 0.86 ? String(1 - (lt - 0.86) / 0.14 * 0.35) : "1";
+              if (t - d.lastTrail >= trailGap) {
+                d.lastTrail = t;
+                var r2 = d.o.getBoundingClientRect();
+                spawnTrail(d, r2.left - ar.left + r2.width / 2, r2.top - ar.top + r2.height / 2);
+              }
+            });
+            if (!flying && hitCount === flights.length) {
+              /* Semua orb sudah menghantam: ledakan akhir dibiarkan
+                 menuntaskan animasinya sendiri (~300-500ms), elemen
+                 kilat dibuang sesudah memudar, tumpukan sigil direset
+                 persis seperti sebelumnya, dan rentetan selesai */
+              setTimeout(function () { flash.remove(); }, 540);
+              resetSigils();
+              finish();
+              return;
+            }
+            requestAnimationFrame(frame);
+          }
+          requestAnimationFrame(frame);
         });
+        return slamPromise;
       }
       /* MODE CERITA, setelah video ultimate: SEMUA sigil dari semua ronde
          MUNCUL SATU PER SATU di sekitar tongkat — dibuat dari jumlah
@@ -4757,11 +5021,16 @@
              kemunculannya yang makin rapat */
           sfxPop();
           if (!reducedMotion) {
+            /* POP muncul (peningkatan versi disesuaikan): skala
+               0.3 → 1.15 → 1.0, disertai denyut glow singkat + cincin
+               kecil mengembang + sedikit percikan dari spawnPopFx —
+               semua kecil & singkat, transform/opacity saja */
             o.animate([
-              { transform: stackTf(p.lvl, 0.2), opacity: 0 },
-              { transform: stackTf(p.lvl, 1.25), opacity: 1, offset: 0.6 },
+              { transform: stackTf(p.lvl, 0.3), opacity: 0 },
+              { transform: stackTf(p.lvl, 1.15), opacity: 1, offset: 0.55 },
               { transform: stackTf(p.lvl, 1), opacity: 1 }
             ], { duration: 380, easing: "cubic-bezier(.2,1.6,.4,1)", fill: "forwards" });
+            spawnPopFx(o);
           }
           /* Jeda sebelum sigil berikutnya: mulai 300ms, lalu menyusut
              ×0,94 tiap sigil sampai batas cepat 60ms (lambat → cepat) */
