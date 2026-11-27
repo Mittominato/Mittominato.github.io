@@ -2909,6 +2909,14 @@
          dimuat sekarang, jadi salah pencet pertama pun langsung bunyi */
       function preloadSalah() { try { salahElement().load(); } catch (e) {} }
       function sfxWrong() {
+        /* ANTI-TABRAKAN TAWA: salah pencet BARU membatalkan urutan
+           tawa dari salah pencet sebelumnya — baik yang masih
+           MENUNGGU (jeda 3 detik sesudah suara salah selesai) maupun
+           yang SEDANG berbunyi: timer dibatalkan, suara tawa
+           dihentikan, sesi dinaikkan supaya rantai lama mati — lalu
+           urutannya mulai lagi dari suara salah yang baru ini
+           (lihat cancelKetawa & armKetawaAfterSalah) */
+        cancelKetawa();
         if (S.muted) return;
         /* ATURAN 4: suara salah yang berbunyi MEMAKSA menghentikan
            kalimat tanpa sebab penyihir yang sedang berbunyi &
@@ -2920,6 +2928,216 @@
           var p = el.play();
           /* play() yang ditolak webview tidak dibiarkan jadi error
              tak tertangani */
+          if (p && p.catch) p.catch(function () {});
+        } catch (e) {}
+        /* Rantai tawa boss: begitu suara salah ini BENAR-BENAR
+           selesai, tunggu 3 detik lalu SATU suara tawa berbunyi
+           acak (lihat armKetawaAfterSalah) */
+        armKetawaAfterSalah();
+      }
+      /* ---------- Suara tawa boss sesudah salah pencet: DUA file kiriman pemilik ----------
+         Sesudah suara "sihirnya salah" selesai, boss MENERTAWAKAN
+         pemain: 3 detik sesudah suara salah BENAR-BENAR selesai
+         berbunyi, SATU dari dua suara tawa kiriman pemilik berbunyi
+         ACAK (dipilih seperti pickWizLine pada suara tanpa sebab —
+         suara yang sama tidak terulang dua kali berturut-turut):
+         (1) "hahahah, sihirmu meleset" (file "lvl3_ketawa.mp3",
+         2,77 detik) dan (2) "KAU LUPA!" (file "lvl4_ketawa.mp3",
+         2,12 detik). Keduanya lewat elemen <audio> SENDIRI yang
+         file-nya EKSTERNAL di samping index.html, sama seperti
+         suara salah pencet & kalimat tanpa sebab (TIDAK di-inline
+         sebagai base64/data URI):
+           - "ketawa-lvl3-v1.ogg" — utama tawa ke-1 (26.920 byte)
+           - "ketawa-lvl3-v1.mp3" — cadangan tawa ke-1 (61.240 byte)
+           - "ketawa-lvl4-v1.ogg" — utama tawa ke-2 (22.548 byte)
+           - "ketawa-lvl4-v1.mp3" — cadangan tawa ke-2 (50.791 byte)
+         Format dipilih lewat canPlayType seperti pola suara file
+         lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan
+         bila file utama gagal dimuat, format cadangan dicoba
+         sekali. Elemen dibuat sekali dan di-PRELOAD sesudah gestur
+         "Mulai Bermain" (preloadKetawa3/preloadKetawa4, dipanggil
+         dari penangan tombol itu bersama preloadSalah dkk.) supaya
+         siap berbunyi tanpa jeda saat gilirannya tiba. Volume
+         elemen 0,8 (sama seperti suara salah pencet), ikut tombol
+         mute (S.muted) seperti SFX lain: saat mute tawa tidak
+         berbunyi sama sekali.
+         URUTAN (dipicu dari sfxWrong lewat armKetawaAfterSalah):
+         suara salah diputar → event 'ended' elemen salah (dengan
+         timer pengaman seperti pola playBerhasil supaya game tidak
+         menggantung bila ended tak kunjung datang) → tunggu 3.000ms
+         → tawa acak berbunyi → begitu tawa SELESAI, jeda suara
+         tanpa sebab di-reset mulai dari 0 (scheduleWizTalk dipasang
+         ulang di finish playKetawa, jadi jeda acak 7–10 detik yang
+         baru dihitung sejak tawa selesai).
+         ANTI-TABRAKAN: salah pencet lagi saat tawa masih menunggu
+         atau sedang berbunyi MEMBATALKAN tawa itu (cancelKetawa,
+         dipanggil di awal sfxWrong) dan urutan mulai lagi dari
+         suara salah yang baru. Tawa juga TIDAK berbunyi bersamaan
+         dengan kalimat tanpa sebab: kalimat yang sedang berbunyi
+         saat tawa mau mulai DIHENTIKAN PAKSA dulu (tawa yang
+         menang, sama seperti suara salah — lihat playKetawa), dan
+         jadwal bicara menunda kalimatnya selama tawa berbunyi
+         (lihat wizTalkFire) */
+      var KETAWA3_OGG = "ketawa-lvl3-v1.ogg";
+      var KETAWA3_MP3 = "ketawa-lvl3-v1.mp3";
+      var ketawa3El = null;  /* elemen <audio> tawa ke-1, dibuat sekali */
+      function ketawa3Element() {
+        if (ketawa3El) return ketawa3El;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        /* Pilih format berdasarkan dukungan browser: pakai OGG bila
+           bisa diputar, kalau tidak pakai MP3 */
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? KETAWA3_OGG : KETAWA3_MP3;
+        /* Jaring pengaman: bila format utama gagal dimuat, coba
+           format cadangan sekali */
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = KETAWA3_MP3; }
+        });
+        ketawa3El = el;
+        return el;
+      }
+      /* Preload sesudah gestur "Mulai Bermain": elemen dibuat & file
+         dimuat sekarang, jadi tawanya siap berbunyi tanpa jeda */
+      function preloadKetawa3() { try { ketawa3Element().load(); } catch (e) {} }
+      /* ---------- Tawa ke-2: "KAU LUPA!" ----------
+         Elemen <audio> SENDIRI untuk tawa ke-2, pola persis sama
+         seperti tawa ke-1: file EKSTERNAL di samping index.html,
+         format dipilih lewat canPlayType (OGG dulu, fallback MP3,
+         format cadangan dicoba sekali bila yang utama gagal
+         dimuat), volume 0,8, ikut tombol mute (S.muted), dan
+         di-PRELOAD sesudah gestur "Mulai Bermain" (preloadKetawa4) */
+      var KETAWA4_OGG = "ketawa-lvl4-v1.ogg";
+      var KETAWA4_MP3 = "ketawa-lvl4-v1.mp3";
+      var ketawa4El = null;  /* elemen <audio> tawa ke-2, dibuat sekali */
+      function ketawa4Element() {
+        if (ketawa4El) return ketawa4El;
+        var el = document.createElement("audio");
+        el.volume = 0.8;
+        el.preload = "auto";
+        var oggOk = false;
+        try { oggOk = !!(el.canPlayType && el.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+        el.src = oggOk ? KETAWA4_OGG : KETAWA4_MP3;
+        el.addEventListener("error", function () {
+          if (el.src.indexOf(".ogg") >= 0) { el.src = KETAWA4_MP3; }
+        });
+        ketawa4El = el;
+        return el;
+      }
+      function preloadKetawa4() { try { ketawa4Element().load(); } catch (e) {} }
+      /* Daftar suara tawa: tiap urutan tawa tiba, SATU suara dipilih
+         ACAK dari daftar ini (pickKetawa). guard = timer pengaman
+         per suara (durasi file + kelonggaran) bila event ended tak
+         kunjung datang */
+      var KETAWA_LINES = [
+        { el: ketawa3Element, guard: 3400 },
+        { el: ketawa4Element, guard: 2800 }
+      ];
+      var ketawaLast = -1;       /* indeks tawa terakhir yang diputar */
+      var ketawaTimer = null;    /* timer jeda 3 detik yang sedang menunggu */
+      var ketawaSession = 0;     /* nomor sesi urutan — sesi lama gugur begitu naik */
+      var ketawaPlaying = false; /* tawa sedang berbunyi */
+      var ketawaEl = null;       /* elemen tawa yang SEDANG berbunyi */
+      /* Pilih tawa berikutnya secara acak; bila hasilnya sama
+         dengan tawa sebelumnya, acak ulang — tawa yang sama tidak
+         terulang dua kali berturut-turut (pola pickWizLine) */
+      function pickKetawa() {
+        var idx = Math.floor(Math.random() * KETAWA_LINES.length);
+        if (KETAWA_LINES.length > 1) {
+          while (idx === ketawaLast) idx = Math.floor(Math.random() * KETAWA_LINES.length);
+        }
+        ketawaLast = idx;
+        return KETAWA_LINES[idx];
+      }
+      /* Hentikan SEMUA urutan tawa: timer jeda 3 detik dibatalkan,
+         suara tawa yang sedang berbunyi dihentikan, sesi dinaikkan
+         supaya rantai & timer pengaman lama mati. Dipanggil di awal
+         sfxWrong (salah pencet baru membatalkan tawa lama), dari
+         stopWizTalk (game berakhir / kembali ke menu), dan dari
+         tombol mute (tawa tunduk pada S.muted) */
+      function cancelKetawa() {
+        ketawaSession++;
+        if (ketawaTimer) { clearTimeout(ketawaTimer); ketawaTimer = null; }
+        [ketawa3El, ketawa4El].forEach(function (el) {
+          if (el) { try { el.pause(); el.currentTime = 0; } catch (e) {} }
+        });
+        ketawaPlaying = false;
+        ketawaEl = null;
+      }
+      /* Pasang rantai tawa untuk suara salah yang BARU diputar
+         (dipanggil dari sfxWrong tepat sesudah play()): tawa hanya
+         mulai SETELAH suara salah BENAR-BENAR selesai — ditandai
+         event 'ended' pada elemen salah. PENGAMAN seperti pola
+         playBerhasil: bila ended tak kunjung datang (file gagal
+         dimuat/diputar), timer pengaman (durasi file salah 1,72
+         detik + 1 detik = 2.720ms) tetap menjalankan rantainya —
+         game tidak menggantung menunggu suara. Sesudah suara salah
+         selesai, TUNGGU 3.000ms, lalu tawa acak berbunyi
+         (playKetawa). Semua langkah memeriksa nomor sesi: salah
+         pencet baru (cancelKetawa) menaikkan sesi, jadi rantai
+         lama gugur di setiap titik */
+      function armKetawaAfterSalah() {
+        var session = ketawaSession;
+        var el = salahElement();
+        var fired = false;
+        function onSalahDone() {
+          if (fired) return; fired = true;
+          el.removeEventListener("ended", onSalahDone);
+          if (session !== ketawaSession) return;
+          ketawaTimer = setTimeout(function () {
+            ketawaTimer = null;
+            if (session !== ketawaSession) return;
+            playKetawa(session);
+          }, 3000);
+        }
+        el.addEventListener("ended", onSalahDone);
+        setTimeout(onSalahDone, 2720);
+      }
+      /* Putar tawanya sekarang: SATU suara dipilih ACAK dari
+         KETAWA_LINES (tidak mengulang tawa sebelumnya). TAWA
+         MENANG atas bicara tanpa sebab: kalimat acak penyihir yang
+         kebetulan sedang berbunyi saat tawa mau mulai DIHENTIKAN
+         PAKSA seketika (pola yang sama seperti interupsi suara
+         salah pencet) sebelum tawa mulai. Begitu tawa SELESAI
+         (event ended; timer pengaman line.guard bila ended tak
+         kunjung datang), jeda suara tanpa sebab di-RESET mulai
+         dari 0: scheduleWizTalk dipasang ulang di finish, jadi
+         jeda acak 7–10 detik yang baru dihitung sejak tawa
+         selesai — bukan sejak salah pencet */
+      function playKetawa(session) {
+        if (S.muted) return;
+        if (S.phase === "idle" || S.phase === "over") return;
+        if (wizTalkPlaying) {
+          wizTalkSession++;
+          wizTalkPlaying = false;
+          wizTalkResetPending = false;
+          pauseWizVoices();
+          hideWizBubble();
+        }
+        var line = pickKetawa();
+        var el = line.el();
+        ketawaEl = el;
+        ketawaPlaying = true;
+        var finished = false;
+        function finish() {
+          if (finished || session !== ketawaSession) return;
+          finished = true;
+          ketawaPlaying = false;
+          if (ketawaEl === el) ketawaEl = null;
+          el.removeEventListener("ended", finish);
+          /* RESET JEDA BICARA DARI 0: jadwal bicara dipasang ulang
+             sekarang, tepat saat tawa selesai */
+          if (S.phase !== "idle" && S.phase !== "over") scheduleWizTalk(false);
+        }
+        el.addEventListener("ended", finish);
+        setTimeout(finish, line.guard);
+        try {
+          el.currentTime = 0;
+          var p = el.play();
+          /* play() yang ditolak webview tidak dibiarkan jadi error
+             tak tertangani — timer pengaman yang menyelesaikan */
           if (p && p.catch) p.catch(function () {});
         } catch (e) {}
       }
@@ -3396,7 +3614,9 @@
         if (S.phase === "idle" || S.phase === "over") return;
         var ultShowing = bgmUlt || !$("ultOverlay").classList.contains("hidden");
         var berhasilPlaying = !!(berhasilEl && !berhasilEl.paused && !berhasilEl.ended);
-        if (S.paused || document.hidden || S.muted || ultShowing || berhasilPlaying || wizTalkPlaying) {
+        /* Tawa boss yang sedang berbunyi juga menunda kalimat:
+           keduanya tidak boleh berbunyi bersamaan */
+        if (S.paused || document.hidden || S.muted || ultShowing || berhasilPlaying || wizTalkPlaying || ketawaPlaying) {
           scheduleWizTalk(false, runId);
           return;
         }
@@ -3466,6 +3686,10 @@
         wizTalkSession++;
         wizTalkPlaying = false;
         wizTalkResetPending = false;
+        /* Urutan tawa boss ikut berhenti total bersama bicara
+           penyihir: game berakhir / kembali ke menu tidak boleh
+           menyisakan tawa yang menunggu atau sedang berbunyi */
+        cancelKetawa();
         /* Flag jeda 15 detik SENGAJA tidak dibersihkan di sini:
            bila mantra baru saja selesai memasangnya, jeda 15 detik
            itu tetap berlaku untuk bicara pertama pada startGame
@@ -5789,6 +6013,12 @@
            bicara penyihir ("tidak-takut-v1") supaya siap berbunyi
            tanpa jeda saat terpilih acak (lihat preloadTakut) */
         preloadTakut();
+        /* Gestur yang sama juga me-PRELOAD kedua file suara tawa
+           boss ("ketawa-lvl3-v1" & "ketawa-lvl4-v1") supaya siap
+           berbunyi tanpa jeda saat urutan tawa sesudah salah pencet
+           tiba (lihat preloadKetawa3/preloadKetawa4) */
+        preloadKetawa3();
+        preloadKetawa4();
         btn.classList.add("pressed");
         card.classList.add("leaving");
         ov.classList.add("fading");
@@ -5866,6 +6096,10 @@
         /* Kalimat penyihir yang sedang berbunyi ikut berhenti saat
            suara dimatikan (lihat wizTalkMuted) */
         if (S.muted) wizTalkMuted();
+        /* Urutan tawa boss ikut dibatalkan saat suara dimatikan:
+           tawa yang masih menunggu atau sedang berbunyi tunduk
+           pada S.muted seperti suara file lain (lihat cancelKetawa) */
+        if (S.muted) cancelKetawa();
         if (!S.muted) playRune(0);
       });
       function setPaused(p) {
