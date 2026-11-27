@@ -2111,6 +2111,11 @@
         font-size: 15px; font-weight: 400; color: var(--muted); line-height: 1.4;
       }
       .gate-msg.err { color: var(--red); }
+      .gate-url {
+        margin: 10px 0 0; font-size: 10px; line-height: 1.45;
+        color: rgba(189,168,224,.75); overflow-wrap: anywhere; word-break: break-all;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
       .card {
         width: 100%; max-width: 430px;
         background: linear-gradient(180deg, rgba(44,21,80,.94), rgba(24,9,46,.94));
@@ -2439,6 +2444,7 @@
         <button type="button" class="gate-btn" id="gateLoginBtn">Masuk dengan Discord</button>
         <button type="button" class="gate-btn alt" id="gateAnonBtn">Main Tanpa Login</button>
         <p class="gate-msg" id="gateMsg" role="alert"></p>
+        <p class="gate-url" id="gateUrl"></p>
       </div>
     </div>
 
@@ -3230,6 +3236,8 @@
         var btnLogin = document.getElementById("gateLoginBtn"),
             btnAnon = document.getElementById("gateAnonBtn"),
             msg = document.getElementById("gateMsg");
+        var urlEl = document.getElementById("gateUrl");
+        if (urlEl) { try { urlEl.textContent = window.location.href; } catch (e) {} }
         var sudahLewat = false;
         function lanjut() {
           if (sudahLewat) return;
