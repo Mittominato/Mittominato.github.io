@@ -3266,7 +3266,11 @@
          terisi, suara mulai berbunyi selagi nama mantra berkedip
          (.complete), dan video ultimate MENUNGGU sampai suara
          SELESAI SEPENUHNYA (event ended) — lihat playBerhasil &
-         ultimateSequence. Mode bebas tidak berubah */
+         ultimateSequence. Mode bebas tidak berubah.
+         PERAN BARU: suara ini kini CADANGAN — yang diutamakan di
+         momen yang sama adalah SUARA MANTRA per nama file (bagian
+         berikutnya); suara "berhasil" berbunyi hanya bila file
+         suara untuk mantra level itu belum ada atau gagal diputar */
       var SFX_BERHASIL_OGG = "berhasil-v1.ogg";
       var SFX_BERHASIL_MP3 = "berhasil-v1.mp3";
       var berhasilEl = null;  /* elemen <audio> suara berhasil, dibuat sekali */
@@ -3291,34 +3295,59 @@
       /* Preload sesudah gestur "Mulai Bermain": elemen dibuat & file
          dimuat sekarang, jadi suaranya siap saat mantra lengkap */
       function preloadBerhasil() { try { berhasilElement().load(); } catch (e) {} }
-      /* Putar suara berhasil & kembalikan janji yang selesai begitu
-         suara SELESAI SEPENUHNYA (event ended dari elemen audio).
-         PENGAMAN WAJIB: bila elemen gagal dimuat/diputar atau ended
-         tak kunjung datang (file tidak ada, browser memblokir),
-         janji tetap selesai lewat timer pengaman (durasi file
-         1,8 detik + 1 detik = 2.800ms) — game TIDAK BOLEH macet
-         menunggu suara, video ultimate tetap diputar sesudahnya.
-         Janji bernilai false bila run sudah berganti di tengah jalan.
-         Saat mute suara tidak diputar sama sekali; jedanya cukup
-         selama kedip nama mantra yang lama (950ms) lalu lanjut */
+      /* Putar suara mantra lengkap & kembalikan janji yang selesai
+         begitu suara SELESAI SEPENUHNYA (event ended dari elemen
+         audio). Yang berbunyi di momen ini sekarang adalah SUARA
+         MANTRA level ini (lihat playMantraVoice sesudah bagian ini):
+         rekaman pemilik yang MENGUCAPKAN mantra itu sendiri, dari
+         file bernama sesuai mantranya. Bila file mantra itu BELUM
+         ADA atau gagal diputar, suara "berhasil" lama yang berbunyi
+         (playBerhasilFile) — persis seperti sebelumnya, jadi game
+         tidak pernah rusak selagi pemilik merekam mantra satu per
+         satu. PENGAMAN WAJIB: bila elemen gagal dimuat/diputar atau
+         ended tak kunjung datang (file tidak ada, browser
+         memblokir), janji tetap selesai lewat timer pengaman —
+         game TIDAK BOLEH macet menunggu suara, video ultimate tetap
+         diputar sesudahnya. Janji bernilai false bila run sudah
+         berganti di tengah jalan. Saat mute suara tidak diputar
+         sama sekali; jedanya cukup selama kedip nama mantra yang
+         lama (950ms) lalu lanjut */
       function playBerhasil(id) {
         return new Promise(function (resolve) {
           /* ATURAN JEDA 15 DETIK: mantra SELESAI di titik ini — suara
-             "berhasil" mulai berbunyi sekarang, SEBELUM video ultimate
-             diputar — jadi flag jeda 15 detik suara tanpa sebab
-             dipasang di sini (lihat wizTalkMantraDone). Mantra
-             selesai → suara berhasil → video ultimate → sigil
+             mantra/"berhasil" mulai berbunyi sekarang, SEBELUM video
+             ultimate diputar — jadi flag jeda 15 detik suara tanpa
+             sebab dipasang di sini (lihat wizTalkMantraDone). Mantra
+             selesai → suara mantra/berhasil → video ultimate → sigil
              menyerang boss adalah SATU kejadian yang sama, jadi satu
              titik reset ini sudah mencakup semuanya */
           wizTalkMantraDone();
           if (S.muted) { sleep(950, id).then(resolve); return; }
-          /* Suara "berhasil" juga MENANG atas bicara tanpa sebab:
-             kalimat acak penyihir yang kebetulan sedang berbunyi
-             saat suara ini mulai dihentikan paksa seketika, persis
-             seperti interupsi suara salah pencet — timer berikutnya
-             tetap jeda mantra 15 detik karena flag-nya baru saja
-             dipasang wizTalkMantraDone di atas */
+          /* Suara mantra/"berhasil" juga MENANG atas bicara tanpa
+             sebab: kalimat acak penyihir yang kebetulan sedang
+             berbunyi saat suara ini mulai dihentikan paksa seketika,
+             persis seperti interupsi suara salah pencet — timer
+             berikutnya tetap jeda mantra 15 detik karena flag-nya
+             baru saja dipasang wizTalkMantraDone di atas */
           wizTalkBerhasilInterrupt();
+          /* Coba SUARA MANTRA dulu: playMantraVoice selesai true
+             bila suara mantra yang mengisi momen ini (video ultimate
+             menunggu sampai ia selesai sepenuhnya); selesai false —
+             diam-diam — bila file mantra level ini belum ada/gagal,
+             dan hanya saat itulah suara "berhasil" lama berbunyi */
+          playMantraVoice(id).then(function (mantraDipakai) {
+            if (mantraDipakai) { resolve(id === S.run); return; }
+            playBerhasilFile(id).then(resolve);
+          });
+        });
+      }
+      /* Putar file "berhasil-v1" persis seperti semula: janji
+         selesai begitu suara SELESAI SEPENUHNYA (event ended),
+         dengan timer pengaman 2.800ms (durasi file 1,8 detik +
+         1 detik) supaya game tidak macet bila ended tak kunjung
+         datang. Janji bernilai false bila run sudah berganti */
+      function playBerhasilFile(id) {
+        return new Promise(function (resolve) {
           var el = berhasilElement();
           var done = false;
           function finish() {
@@ -3335,6 +3364,176 @@
                tak tertangani — timer pengaman yang menyelesaikan */
             if (p && p.catch) p.catch(function () {});
           } catch (e) {}
+        });
+      }
+      /* ---------- Suara mantra: rekaman pengucapan mantra per nama file ----------
+         Permintaan pemilik: suara "sihirnya berhasil" DIGANTI rekaman
+         yang MENGUCAPKAN mantra level itu sendiri. Tiap mantra punya
+         file suaranya sendiri, dinamai dari mantra-nya: bagian-bagian
+         mantra aktif digabung "-" lalu dibuat huruf kecil semua —
+         mis. mantra PIM-POM → "pim-pom"; LALA-LILI-LULU-LA →
+         "lala-lili-lulu-la"; PIM-PIM-POM-POM-POW-POW →
+         "pim-pim-pom-pom-pow-pow". File yang dicari EKSTERNAL di
+         samping index.html, pola persis suara file lain (TIDAK
+         di-inline sebagai base64/data URI):
+           - "<nama-mantra>.ogg" — utama
+           - "<nama-mantra>.mp3" — cadangan
+         Format dipilih lewat canPlayType seperti pola suara file
+         lain: OGG bila bisa diputar, kalau tidak pakai MP3; dan bila
+         file utama gagal dimuat, format cadangan dicoba sekali.
+         SATU elemen <audio> dipakai ulang untuk semua mantra:
+         src-nya diganti mengikuti mantra level yang sedang berjalan.
+         File di-PRELOAD saat level dimulai (preloadMantraVoice,
+         dipanggil dari setupBoss tepat sesudah pickMantra memilih
+         mantra level itu) supaya sudah siap saat mantra selesai.
+         Volume elemen 0,8 (sama seperti suara berhasil), ikut tombol
+         mute (S.muted) lewat jalur playBerhasil — suara mantra hanya
+         berbunyi dari playBerhasil, sama seperti suara berhasil.
+         FALLBACK WAJIB & DIAM-DIAM: pemilik merekam mantra satu per
+         satu, jadi file untuk mantra tertentu bisa BELUM ADA —
+         kegagalan memuat/memutar file mantra TIDAK PERNAH tampil ke
+         pemain dan TIDAK PERNAH menghentikan game: playMantraVoice
+         selesai false dan suara "berhasil" (berhasil-v1) berbunyi
+         menggantikannya, persis seperti sebelum mekanisme ini ada.
+         Dalam perubahan ini BELUM ada file suara mantra yang
+         di-deploy (pemilik belum mengirim rekamannya) — yang
+         dibangun hanya mekanismenya, dan jalur fallback ke suara
+         berhasil itulah yang berjalan sampai file pertamanya tiba */
+      var mantraEl = null;        /* elemen <audio> suara mantra, dibuat sekali */
+      var mantraElName = "";      /* nama mantra yang src-nya sedang dimuat mantraEl */
+      var mantraElFailed = false; /* file mantra ini dipastikan tidak ada / gagal total */
+      var mantraElReady = false;  /* file mantra ini sudah termuat & siap diputar */
+      /* Nama file (tanpa ekstensi) dari mantra AKTIF level ini:
+         bagian-bagian mantra digabung "-" dan dihurufkecilkan.
+         Hasilnya kosong di luar mode cerita / bila belum ada mantra
+         terpilih (mode bebas tidak punya mantra) */
+      function mantraVoiceName() {
+        if (!storyMode() || !S.mantra || !S.mantra.length) return "";
+        return S.mantra.join("-").toLowerCase();
+      }
+      function mantraElement(name) {
+        if (!mantraEl) {
+          var el = document.createElement("audio");
+          el.volume = 0.8;
+          el.preload = "auto";
+          el.addEventListener("canplay", function () { mantraElReady = true; });
+          el.addEventListener("loadedmetadata", function () { mantraElReady = true; });
+          /* Jaring pengaman format, pola yang sama seperti suara
+             file lain: format utama (OGG) gagal dimuat → coba format
+             cadangan (MP3) sekali; MP3 pun gagal → file mantra ini
+             memang belum ada: tandai gagal secara diam-diam supaya
+             playMantraVoice langsung memakai suara "berhasil" */
+          el.addEventListener("error", function () {
+            if (el.src.indexOf(".ogg") >= 0 && mantraElName) {
+              el.src = mantraElName + ".mp3";
+            } else {
+              mantraElFailed = true;
+            }
+          });
+          mantraEl = el;
+        }
+        if (mantraElName !== name) {
+          mantraElName = name;
+          mantraElFailed = false;
+          mantraElReady = false;
+          /* Pilih format berdasarkan dukungan browser: pakai OGG
+             bila bisa diputar, kalau tidak pakai MP3 */
+          var oggOk = false;
+          try { oggOk = !!(mantraEl.canPlayType && mantraEl.canPlayType('audio/ogg; codecs="vorbis"')); } catch (e) {}
+          mantraEl.src = name + (oggOk ? ".ogg" : ".mp3");
+        }
+        return mantraEl;
+      }
+      /* Preload saat level dimulai (dari setupBoss, tepat sesudah
+         pickMantra): elemen diarahkan ke file mantra level ini &
+         file dimuat sekarang, jadi suaranya siap saat mantra
+         selesai. Bila file belum ada, pemuatan gagal diam-diam
+         (mantraElFailed) dan fallback suara "berhasil" yang
+         berlaku saat mantra selesai — tidak ada error ke pemain */
+      function preloadMantraVoice() {
+        try {
+          var name = mantraVoiceName();
+          if (name) mantraElement(name).load();
+        } catch (e) {}
+      }
+      /* Coba putar suara mantra level ini & kembalikan janji.
+         Janji selesai TRUE bila suara mantra yang mengisi momen
+         mantra selesai ini: video ultimate tetap MENUNGGU sampai
+         suara SELESAI SEPENUHNYA (event ended), pola yang sama
+         seperti playBerhasil. Karena durasi suara mantra berbeda
+         per mantra (2 bagian pendek, 6 bagian lebih panjang),
+         timer pengamannya MENGIKUTI durasi file itu sendiri —
+         durasi + 1 detik bila sudah diketahui, dengan batas atas
+         longgar 15 detik; 8 detik bila durasi belum diketahui —
+         supaya mantra panjang tidak terpotong dan game tidak
+         menggantung menunggu ended yang tak kunjung datang.
+         Janji selesai FALSE — diam-diam, tanpa error apa pun ke
+         pemain — bila tidak ada mantra aktif, file mantra belum
+         ada / gagal dimuat, atau putarannya gagal, supaya
+         pemanggil (playBerhasil) memakai suara "berhasil" */
+      function playMantraVoice(id) {
+        return new Promise(function (resolve) {
+          var name = mantraVoiceName();
+          if (!name) { resolve(false); return; }
+          var el = mantraElement(name);
+          if (mantraElFailed) { resolve(false); return; }
+          var done = false;
+          var safetyTimer = null, waitPoll = null;
+          function cleanup() {
+            el.removeEventListener("ended", onEnded);
+            el.removeEventListener("error", onPlayError);
+            el.removeEventListener("canplay", onCanPlay);
+            if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+            if (waitPoll) { clearInterval(waitPoll); waitPoll = null; }
+          }
+          function finish(used) {
+            if (done) return; done = true;
+            cleanup();
+            resolve(used);
+          }
+          function onEnded() { finish(true); }
+          function onPlayError() { finish(false); }
+          function onCanPlay() {
+            if (done) return;
+            el.removeEventListener("canplay", onCanPlay);
+            if (waitPoll) { clearInterval(waitPoll); waitPoll = null; }
+            startPlay();
+          }
+          function startPlay() {
+            el.addEventListener("ended", onEnded);
+            el.addEventListener("error", onPlayError);
+            /* Timer pengaman mengikuti durasi file mantra ini */
+            var d = (typeof el.duration === "number" && isFinite(el.duration) && el.duration > 0) ? el.duration : 0;
+            var guardMs = d > 0 ? Math.min(Math.round((d + 1) * 1000), 15000) : 8000;
+            safetyTimer = setTimeout(function () { finish(true); }, guardMs);
+            try {
+              el.currentTime = 0;
+              var p = el.play();
+              /* play() yang ditolak/gagal berarti file tidak bisa
+                 berbunyi: menyerah diam-diam ke suara "berhasil" —
+                 timer pengaman TIDAK dipakai di jalur ini supaya
+                 suara berhasil tidak tertunda percuma */
+              if (p && p.catch) p.catch(function () { finish(false); });
+            } catch (e) { finish(false); }
+          }
+          if (mantraElReady || el.readyState >= 2) { startPlay(); return; }
+          /* Preload belum tuntas (file masih diunduh): tunggu siap
+             sebentar lewat canplay. Bila file ternyata tidak ada,
+             mantraElFailed menyala & jajak di bawah menyerah
+             diam-diam dengan cepat; bila 2,5 detik belum siap juga,
+             menyerah diam-diam — elemen dijeda dulu supaya suara
+             mantra yang terlambat tidak berbunyi menimpa suara
+             "berhasil" yang menggantikannya */
+          el.addEventListener("canplay", onCanPlay);
+          var waited = 0;
+          waitPoll = setInterval(function () {
+            waited += 150;
+            if (mantraElFailed) { finish(false); return; }
+            if (waited >= 2500) {
+              try { el.pause(); } catch (e) {}
+              finish(false);
+            }
+          }, 150);
         });
       }
       /* ---------- Suara hitung mundur 3-2-1: rekaman suara pemilik ----------
@@ -3682,9 +3881,13 @@
         if (S.phase === "idle" || S.phase === "over") return;
         var ultShowing = bgmUlt || !$("ultOverlay").classList.contains("hidden");
         var berhasilPlaying = !!(berhasilEl && !berhasilEl.paused && !berhasilEl.ended);
+        /* Suara mantra (pengganti suara "berhasil" di momen mantra
+           selesai) yang sedang berbunyi juga menunda kalimat, sama
+           seperti suara berhasil: keduanya tidak boleh bersamaan */
+        var mantraPlaying = !!(mantraEl && !mantraEl.paused && !mantraEl.ended);
         /* Tawa boss yang sedang berbunyi juga menunda kalimat:
            keduanya tidak boleh berbunyi bersamaan */
-        if (S.paused || document.hidden || S.muted || ultShowing || berhasilPlaying || wizTalkPlaying || ketawaPlaying) {
+        if (S.paused || document.hidden || S.muted || ultShowing || berhasilPlaying || mantraPlaying || wizTalkPlaying || ketawaPlaying) {
           scheduleWizTalk(false, runId);
           return;
         }
@@ -5477,6 +5680,12 @@
            level. Sigil terkumpul juga mulai bersih untuk boss baru */
         S.mantraLit = 0;
         pickMantra();
+        /* Preload file SUARA mantra level ini (file bernama sesuai
+           mantra yang baru dipilih pickMantra) supaya siap berbunyi
+           tanpa jeda saat mantra selesai; gagal diam-diam bila
+           file-nya belum ada, dan suara "berhasil" yang menjadi
+           penggantinya (lihat preloadMantraVoice) */
+        preloadMantraVoice();
         buildMantra();
         resetSigils();
         S.stage++;
