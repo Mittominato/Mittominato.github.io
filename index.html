@@ -1592,12 +1592,13 @@
         position: absolute; inset: 0; z-index: 30;
         background: transparent;
         /* BLUR LATAR (permintaan Harith): papan permainan di belakang
-           overlay menjadi kabur TIPIS 4px saja selama video diputar —
-           cukup agar video ultimate lebih menonjol, papan di belakang
-           tetap agak terlihat. Video di dalam overlay TIDAK ikut blur
-           dan tetap tajam. Blur hanya aktif selama overlay tampil */
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+           overlay menjadi kabur SANGAT TIPIS 2px saja selama video
+           diputar — latar game di belakang tetap jelas kelihatan,
+           video ultimate hanya sedikit lebih menonjol. Video di
+           dalam overlay TIDAK ikut blur dan tetap tajam. Blur hanya
+           aktif selama overlay tampil */
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
         /* Gambar latar (.ult-bgimg) diposisikan absolut memenuhi
            overlay — satu-satunya latar */
         display: flex; align-items: center; justify-content: center;
@@ -1657,12 +1658,12 @@
         pointer-events: none;
         z-index: 0;
       }
-      /* Video DI ATAS latar game, DI TENGAH layar (permintaan
+      /* Video DI ATAS latar game, selebar PENUH layar (permintaan
          Harith untuk video ult-08s yang bingkainya sudah jadi di
-         dalam video): left 5% — margin kiri-kanan seimbang 5% di
-         kedua sisi; lebar 90% dari lebar overlay. Tengah video di
-         50% tinggi layar (top 50% + translateY(-50%)): tepat di
-         tengah vertikal layar, di atas karakter dan di bawah HUD.
+         dalam video): left 0%, lebar 100% dari lebar overlay — tepi
+         kiri sampai tepi kanan tanpa margin. Tengah video sedikit
+         DI ATAS tengah layar (top 45% + translateY(-50%)), di atas
+         karakter dan di bawah HUD.
          LURUS tanpa rotasi, aspek 16/9 mengikuti video aslinya
          (1278x720), object-fit cover.
          Latar HITAM di sudut-sudut luar bingkai video (sisa export
@@ -1681,8 +1682,8 @@
          & speaker (2) */
       .ult-overlay video {
         position: absolute;
-        left: 5%; top: 50%;
-        width: 90%;
+        left: 0%; top: 45%;
+        width: 100%;
         aspect-ratio: 16 / 9;
         object-fit: cover;
         transform: translateY(-50%);
