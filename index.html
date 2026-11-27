@@ -2798,15 +2798,25 @@
            localStorage, dan tidak ada secret apa pun di halaman ini */
         window.LB_API = "https://ingatmantra.duckdns.org/api";
         window.lbSession = null;
-        if (typeof window.DiscordSDK !== "function") return;
+        /* Beacon diagnosa auth: fire-and-forget, tidak pernah melempar
+           error dan tidak mengubah alur apa pun — hanya mencatat tahap
+           handshake terakhir ke backend (GET /health?auth=<status>) dan
+           ke window.__lbAuthDiag supaya bisa diperiksa dari konsol */
+        var lbAuthBeacon = function (status) {
+          try {
+            window.__lbAuthDiag = status;
+            fetch(window.LB_API + "/health?auth=" + encodeURIComponent(status)).catch(function () {});
+          } catch (e) { /* diagnosa gagal pun diam saja */ }
+        };
+        if (typeof window.DiscordSDK !== "function") { lbAuthBeacon("sdk_missing"); return; }
         var sdk = null;
         try { sdk = new window.DiscordSDK(DISCORD_CLIENT_ID); } catch (e) { return; }
         var readyResult = Promise.race([
           sdk.ready().then(function () { return true; }, function () { return false; }),
-          new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 5000); })
+          new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 15000); })
         ]);
         readyResult.then(function (isDiscord) {
-          if (!isDiscord) return; /* Bukan di dalam Discord: mode browser biasa */
+          if (!isDiscord) { lbAuthBeacon("ready_false"); return; } /* Bukan di dalam Discord: mode browser biasa */
           window.discordSdk = sdk;
           /* Tukar kode authorize ke backend leaderboard untuk mendapat
              sesi + profil Discord asli. Kode authorize SEKALI PAKAI dan
@@ -2828,7 +2838,8 @@
                 if (!res.ok) return null;
                 return res.json();
               }).then(function (data) {
-                if (!data || !data.session_token) return;
+                if (!data || !data.session_token) { lbAuthBeacon("exchange_fail"); return; }
+                lbAuthBeacon("exchange_ok");
                 window.lbSession = {
                   token: data.session_token,
                   username: data.username || "",
@@ -2839,8 +2850,8 @@
                   var nameEl = document.getElementById("playerName");
                   if (nameEl) nameEl.textContent = data.username;
                 }
-              }, function () { /* backend tak terjangkau: lanjut anonim */ });
-            } catch (e) { /* fetch tak tersedia: lanjut anonim */ }
+              }, function () { lbAuthBeacon("exchange_fail"); /* backend tak terjangkau: lanjut anonim */ });
+            } catch (e) { lbAuthBeacon("exchange_fail"); /* fetch tak tersedia: lanjut anonim */ }
           };
           var simpanKode = function (auth) {
             window.discordAuth = auth || null;
@@ -2851,9 +2862,10 @@
                nama bawaan "Penyihir" */
             var u = auth && auth.user;
             if (u && (u.global_name || u.username)) window.discordUserName = u.global_name || u.username;
-            if (auth && auth.code) tukarKode(auth.code);
+            if (auth && auth.code) { lbAuthBeacon("auth_ok"); tukarKode(auth.code); }
+            else { lbAuthBeacon("auth_nocode"); }
           };
-          var abaikan = function () { /* Izin gagal/ditolak: game tetap berjalan */ };
+          var abaikan = function () { lbAuthBeacon("auth_fail"); /* Izin gagal/ditolak: game tetap berjalan */ };
           return sdk.commands.authorize({
             client_id: DISCORD_CLIENT_ID,
             response_type: "code",
