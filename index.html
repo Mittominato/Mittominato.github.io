@@ -4794,6 +4794,17 @@
          menghantam paling akhir ledakannya lebih kuat, dan sesudahnya
          ada LEDAKAN AKHIR yang lebih besar di boss (kilat putih-ungu
          di boss saja + shockwave + percikan akhir, ~300-500ms).
+         TERBANG BERGELOMBANG (permintaan pemilik): orb TIDAK meluncur
+         sekaligus, melainkan dalam beberapa TAHAP — jumlah tahap =
+         jumlah bagian mantra level yang sedang dimainkan
+         (mantraParts().length). Total orb dibagi rata ke tahap-tahap
+         itu mengikuti urutan spawn, sisa pembagian masuk ke tahap
+         TERAKHIR (mis. 26 orb di level bermantra 3 bagian → 8, 8, 10).
+         Orb satu tahap meluncur bersamaan; tahap berikutnya baru
+         berangkat ~120ms setelah tahap sebelumnya seluruhnya
+         menghantam. LEDAKAN AKHIR tetap hanya sesudah tahap terakhir
+         tuntas. Di luar mode cerita tidak ada mantra → 1 tahap saja,
+         perilaku persis seperti sebelumnya.
          Penjaga slamBusy mencegah dua rentetan berjalan bersamaan;
          panggilan kedua selagi rentetan berjalan menerima janji yang
          sama. Logika damage/HP TIDAK disentuh sama sekali */
@@ -4840,7 +4851,8 @@
             orbSparkFx(ix, iy, d.color, strong ? 5 : 3, strong ? 30 : 22, 4, 300);
             bossFlash(strong ? 0.75 : 0.5, strong ? 220 : 170);
           }
-          /* (4) Ledakan akhir sesudah orb terakhir menghantam: sedikit
+          /* (4) Ledakan akhir HANYA sesudah orb terakhir dari TAHAP
+             TERAKHIR menghantam (bukan di tengah gelombang): sedikit
              lebih besar + kilat putih-ungu DI BOSS SAJA + shockwave
              mengembang + percikan akhir — total ~300-500ms, tanpa
              getar layar & tanpa kilat se-layar */
@@ -4897,15 +4909,45 @@
               lastTrail: 0, hit: false
             };
           });
-          /* Orb yang menghantam PALING AKHIR (delay + durasi terbesar):
-             ledakannya sedikit lebih kuat dari orb-orb lain */
+          /* BAGI ORB KE TAHAP-TAHAP TERBANG: jumlah tahap = jumlah
+             bagian mantra level ini (mantraParts().length — mantra
+             acak yang terpilih saat level dimulai). Pembagian rata
+             mengikuti urutan spawn yang sudah ada; kelebihan sisa
+             pembagian masuk ke tahap TERAKHIR. Jeda luncur dihitung
+             ulang per tahap (indeks di dalam tahapnya) supaya orb
+             satu tahap berangkat bersamaan */
+          var stageCount = 1;
+          var mp = mantraParts();
+          if (mp && mp.length) stageCount = Math.min(mp.length, flights.length);
+          var perStage = Math.floor(flights.length / stageCount);
+          var fi = 0;
+          for (var sj = 0; sj < stageCount; sj++) {
+            var stageSize = (sj === stageCount - 1) ? flights.length - perStage * (stageCount - 1) : perStage;
+            for (var sk = 0; sk < stageSize; sk++, fi++) {
+              flights[fi].stage = sj;
+              flights[fi].delay = sk * stag + Math.random() * 10;
+            }
+          }
+          /* Orb yang menghantam PALING AKHIR: karena tahap berjalan
+             berurutan, ia pasti orb tahap terakhir dengan delay +
+             durasi terbesar di tahapnya — ledakannya sedikit lebih
+             kuat dari orb-orb lain */
           var lastFlight = flights[0];
-          flights.forEach(function (d) { if (d.delay + d.dur > lastFlight.delay + lastFlight.dur) lastFlight = d; });
+          flights.forEach(function (d) {
+            if (d.stage > lastFlight.stage ||
+                (d.stage === lastFlight.stage && d.delay + d.dur > lastFlight.delay + lastFlight.dur)) lastFlight = d;
+          });
           /* Jejak dibuat lebih jarang bila orb sangat banyak (≤26)
              supaya layar & CPU HP tetap ringan */
           var trailGap = flights.length > 16 ? 58 : 44;
           var hitCount = 0;
           var startTs = null;
+          /* Gelombang tahap: tahap yang sedang terbang & waktu mulai
+             tahap itu (relatif terhadap startTs). Tahap 0 mulai di 0;
+             tahap berikutnya dimulai 120ms setelah tahap sebelumnya
+             seluruhnya menghantam (lihat akhir frame()) */
+          var curStage = 0;
+          var stageStart = 0;
           /* (2) Jejak cahaya pendek di belakang orb: titik gradasi
              sewarna orb yang mengecil & memudar sendiri lalu dibuang */
           function spawnTrail(d, x, y) {
@@ -4931,7 +4973,10 @@
             var flying = false;
             flights.forEach(function (d) {
               if (d.hit) return;
-              var lt = (t - d.delay) / d.dur;
+              /* Orb tahap yang belum giliran: diam di tumpukannya,
+                 menunggu tahapnya dimulai */
+              if (d.stage > curStage) { flying = true; return; }
+              var lt = (t - stageStart - d.delay) / d.dur;
               if (lt < 0) { flying = true; return; }
               if (lt >= 1) {
                 d.hit = true;
@@ -4957,6 +5002,17 @@
                 spawnTrail(d, r2.left - ar.left + r2.width / 2, r2.top - ar.top + r2.height / 2);
               }
             });
+            /* Tahap berjalan sudah SELURUHNYA menghantam → tahap
+               berikutnya berangkat setelah jeda singkat ~120ms
+               (stageStart digeser ke depan; orb tahap berikutnya
+               menunggu karena lt-nya masih negatif selama jeda itu).
+               Ledakan akhir TIDAK terjadi di sini — ia hanya terpicu
+               oleh hantaman orb terakhir tahap terakhir di atas */
+            if (curStage < stageCount - 1) {
+              var stageDone = true;
+              flights.forEach(function (d) { if (d.stage === curStage && !d.hit) stageDone = false; });
+              if (stageDone) { curStage++; stageStart = t + 120; }
+            }
             if (!flying && hitCount === flights.length) {
               /* Semua orb sudah menghantam: ledakan akhir dibiarkan
                  menuntaskan animasinya sendiri (~300-500ms), elemen
@@ -5550,8 +5606,10 @@
          game tidak macet) — lalu overlay video
          ultimate tampil fullscreen; begitu video selesai atau dilewati,
          SEMUA sigil yang terkumpul dari semua ronde meluncur ke boss
-         sebagai rentetan cepat satu demi satu, dan bar HP boss yang selama
-         ini penuh langsung kosong sekaligus → alur victory yang sudah ada */
+         BERGELOMBANG dalam beberapa tahap (jumlah tahap = jumlah
+         bagian mantra level ini, lihat slamSigils), dan bar HP boss yang
+         selama ini penuh langsung kosong sekaligus sesudah ledakan
+         akhir → alur victory yang sudah ada */
       async function ultimateSequence(id) {
         var parts = mantraParts();
         setPrompt("MANTRA LENGKAP: " + parts.join("-") + "!", "good");
