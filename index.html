@@ -1200,6 +1200,7 @@
         position: relative;
         width: min(430px, 95vw, calc((100dvh - 44px) * 2 / 3));
         flex: none;
+        transform: translateY(-26px);
         transition: opacity .38s ease, transform .38s ease;
       }
       .tutorial-card img {
@@ -1208,7 +1209,7 @@
         pointer-events: none;
       }
       /* Kartu menghilang dengan fade + mengecil sedikit sebelum game dimulai */
-      .tutorial-card.leaving { opacity: 0; transform: scale(.94); }
+      .tutorial-card.leaving { opacity: 0; transform: translateY(-26px) scale(.94); }
       /* Tombol "Mulai Bermain" TRANSPARAN tepat di atas tombol ungu pada gambar
          (posisi dalam fraksi gambar: kiri 22,7%, atas 86,6%, lebar 56,2%,
          tinggi 8,9%). Tidak terlihat sama sekali saat diam; saat ditekan area
@@ -3376,7 +3377,7 @@
          menuju bicara pertama sesudah mantra selesai memakai
          15 detik selama flag wizTalkMantraGap menyala */
       function wizTalkDelay(first) {
-        return wizTalkMantraGap ? 15000 : 5000;
+        return wizTalkMantraGap ? 15000 : 7000 + Math.random() * 3000;
       }
       function scheduleWizTalk(first, runId) {
         if (wizTalkTimer) { clearTimeout(wizTalkTimer); wizTalkTimer = null; }
@@ -5664,7 +5665,7 @@
           num.classList.remove("pop");
           void num.offsetWidth;
           num.classList.add("pop");
-          setTimeout(tick, reducedMotion ? 300 : 1000);
+          setTimeout(tick, reducedMotion ? 300 : 600);
         })();
       }
       /* Kabut terbuka: transisi antara kartu tutorial keluar dan hitung
