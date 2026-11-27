@@ -3260,11 +3260,13 @@
          itu) supaya siap saat dibutuhkan. Volume elemen 0,8 (sama
          seperti suara salah pencet), ikut tombol mute (S.muted)
          seperti SFX lain. Suara ini HANYA berbunyi di jalur mantra
-         lengkap mode cerita: saat ronde benar & semua bagian mantra
-         terisi, suara mulai berbunyi selagi nama mantra berkedip
-         (.complete), dan video ultimate MENUNGGU sampai suara
-         SELESAI SEPENUHNYA (event ended) — lihat playBerhasil &
-         ultimateSequence. Mode bebas tidak berubah.
+         lengkap mode cerita: suara mulai berbunyi TEPAT SAAT sigil
+         ronde terakhir mengecil (lihat slotFlightToMantra — lebih
+         awal dari kedip nama mantra, supaya pemain tidak menunggu
+         lama), berjalan bersamaan dengan sisa urutan visual, dan
+         video ultimate MENUNGGU sampai suara SELESAI SEPENUHNYA
+         (event ended) — lihat playBerhasil & ultimateSequence.
+         Mode bebas tidak berubah.
          PERAN BARU: suara ini kini CADANGAN — yang diutamakan di
          momen yang sama adalah SUARA MANTRA per nama file (bagian
          berikutnya); suara "berhasil" berbunyi hanya bila file
@@ -5596,6 +5598,21 @@
           };
         });
       }
+      /* Janji suara mantra/"berhasil" yang SUDAH mulai berbunyi lebih
+         awal — tepat saat sigil ronde TERAKHIR mengecil (langkah (2)
+         di slotFlightToMantra di bawah) — supaya pemain tidak menunggu
+         lama sebelum video ultimate: suara mantra cukup panjang
+         (4–5 detik), jadi ia berjalan BERSAMAAN dengan sisa urutan
+         visual (orb meleleh → terbang → bagian terakhir menyala →
+         nama mantra berkedip), dan ultimateSequence tinggal MENUNGGU
+         janji ini selesai (video tetap baru diputar setelah suara
+         benar-benar selesai — pola ended + timer pengaman yang sama
+         di playBerhasil). Berbentuk { run, promise } supaya janji
+         dari run lama tidak pernah dipakai run baru; null bila suara
+         belum dimulai lebih awal (ronde bukan terakhir, mode gerak
+         dikurangi, atau mute — jalur-jalur itu tetap memanggil
+         playBerhasil seperti semula dari ultimateSequence) */
+      var earlyMantraSound = null;
       async function slotFlightToMantra(id) {
         var filled = [];
         Array.prototype.forEach.call(slotsEl.children, function (d, k) {
@@ -5628,6 +5645,23 @@
            Mengecilnya kini lebih gesit (.24s, kurva cepat di awal), jadi
            tunggunya pun dipersingkat (320ms → 250ms) */
         filled.forEach(function (k) { slotsEl.children[k].classList.add("fly-shrink"); });
+        /* SUARA MANTRA MULAI TEPAT DI SINI — saat sigil mengecil —
+           tapi HANYA pada ronde TERAKHIR (ronde ini menyalakan bagian
+           mantra terakhir: S.mantraLit + 1 mencapai jumlah bagian),
+           dan hanya bila tidak mute. playBerhasil TIDAK ditunggu di
+           sini: janjinya disimpan di earlyMantraSound dan sisa urutan
+           visual di bawah berjalan seperti biasa SELAGI suara
+           berbunyi; ultimateSequence menunggu janji itu selesai
+           sebelum memutar video. Karena playBerhasil yang dipanggil,
+           aturan bicaranya ikut mulai dari momen ini juga:
+           wizTalkMantraDone (jeda bicara 15 detik) dan
+           wizTalkBerhasilInterrupt (bicara acak yang sedang berbunyi
+           dihentikan paksa) sama-sama dipasang playBerhasil di awal
+           pemanggilannya. Ronde-ronde sebelumnya tidak memicu apa
+           pun di sini — tidak ada suara mantra sebelum mantra lengkap */
+        if (!S.muted && S.mantraLit + 1 >= mantraParts().length) {
+          earlyMantraSound = { run: id, promise: playBerhasil(id) };
+        }
         if (!(await sleep(250, id))) { window.__slotFlightBusy = false; return false; }
         /* (3) MELEBUR JADI CAHAYA: mengecilnya DITERUSKAN (.fly-melt) —
            gambar permata memudar & menyusut habis, sinar & percikannya
@@ -5873,10 +5907,12 @@
         nextRound(id);
       }
       /* ---------- ULTIMATE (mode cerita): mantra lengkap → video → K.O. ----------
-         Urutannya: nama mantra lengkap berkilat sesaat SAMBIL suara
-         "berhasil" berbunyi — video ultimate MENUNGGU sampai suara itu
-         selesai sepenuhnya (playBerhasil, dengan timer pengaman supaya
-         game tidak macet) — lalu overlay video
+         Urutannya: suara mantra/"berhasil" SUDAH mulai berbunyi lebih
+         awal (tepat saat sigil ronde terakhir mengecil, lihat
+         slotFlightToMantra) dan nama mantra lengkap berkilat sesaat
+         selagi suara itu berbunyi — video ultimate MENUNGGU sampai
+         suara selesai sepenuhnya (janji playBerhasil yang sama, dengan
+         timer pengaman supaya game tidak macet) — lalu overlay video
          ultimate tampil fullscreen; begitu video selesai atau dilewati,
          SEMUA sigil yang terkumpul dari semua ronde meluncur ke boss
          BERGELOMBANG dalam beberapa tahap (jumlah tahap = jumlah
@@ -5890,12 +5926,28 @@
         sfxLevel();
         var box = $("mantra");
         box.classList.add("complete");
-        /* Nama mantra berkedip (.complete) SAMBIL suara "berhasil"
-           berbunyi; video ultimate baru diputar SETELAH suara itu
-           selesai sepenuhnya (playBerhasil menunggu event ended,
-           dengan timer pengaman 2.800ms supaya game tidak macet bila
-           suara gagal berbunyi) */
-        if (!(await playBerhasil(id))) { box.classList.remove("complete"); return; }
+        /* Nama mantra berkedip (.complete) SAMBIL suara mantra/
+           "berhasil" berbunyi; video ultimate baru diputar SETELAH
+           suara itu selesai sepenuhnya (playBerhasil menunggu event
+           ended, dengan timer pengaman supaya game tidak macet bila
+           suara gagal berbunyi). Suaranya sendiri biasanya SUDAH
+           mulai berbunyi lebih awal — tepat saat sigil ronde terakhir
+           mengecil di slotFlightToMantra — jadi yang ditunggu di sini
+           adalah janji yang sama itu (earlyMantraSound): sisa
+           visualnya (orb meleleh → terbang → bagian terakhir menyala
+           → kedip ini) sudah berjalan selagi suara berbunyi, dan
+           tunggu sebelum video tinggal sisa durasi suaranya saja.
+           Bila janji awal itu tidak ada (mute, mode gerak dikurangi,
+           atau run berbeda), playBerhasil dipanggil seperti semula */
+        var berhasilOk;
+        if (earlyMantraSound && earlyMantraSound.run === id) {
+          berhasilOk = await earlyMantraSound.promise;
+          earlyMantraSound = null;
+        } else {
+          earlyMantraSound = null;
+          berhasilOk = await playBerhasil(id);
+        }
+        if (!berhasilOk) { box.classList.remove("complete"); return; }
         box.classList.remove("complete");
         await playUltimate(id);
         if (id !== S.run) return;
