@@ -3168,10 +3168,10 @@
          VOL.heart = 0,50 — di bawah suara salah pencet (0,8) supaya
          keduanya tidak bertabrakan. Ikut tombol mute (S.muted) dan
          memakai AudioContext yang sama (ac()) seperti SFX lain */
-      function burstNoise(vol, dur, fFrom, fTo, thumpFrom, thumpTo, thumpVol, thumpDur) {
+      function burstNoise(vol, dur, fFrom, fTo, thumpFrom, thumpTo, thumpVol, thumpDur, delay) {
         if (S.muted) return;
         var ctx = ac(); if (!ctx) return;
-        var t = ctx.currentTime;
+        var t = ctx.currentTime + (delay || 0);
         /* Semburan noise melemah (letupan) */
         var len = Math.max(1, Math.ceil(ctx.sampleRate * dur));
         var buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -3202,22 +3202,50 @@
       /* ---------- Suara HANTAMAN per TAHAP serangan sigil bertahap ----------
          Berbunyi SEKALI tiap kali satu tahap BUKAN terakhir selesai
          menghantam boss di slamSigils (momen tahap itu tuntas & tahap
-         berikutnya bersiap berangkat). Pola sintesisnya SAMA PERSIS
-         dengan letupan ledakan yang sudah ada di game (burstNoise —
-         pola yang sama dengan ledakan hati): semburan noise lewat
-         lowpass menyapu turun + dentum sinus rendah. Bedanya hanya
-         dibuat sedikit LEBIH RINGAN & lebih pendek dari ledakan hati
-         (volume 0,38 < VOL.heart 0,50, durasi 0,18 < 0,22, sapuan
-         filter & dentum sedikit lebih tinggi) supaya tiap tahap
-         terasa seperti hantaman yang menanjak menuju ledakan akhir —
-         BUKAN suara kemenangan/win chime. Tahap TERAKHIR tidak
-         memakai suara ini: suaranya tetap persis seperti sekarang
-         (alur sesudah slam: sfxMeow + kemenangan), tidak digandakan.
-         Tanpa file audio baru; ikut tombol mute (S.muted) & memakai
-         AudioContext yang sama (ac()) seperti SFX lain, persis pola
-         burstNoise di atas */
+         berikutnya bersiap berangkat).
+         PERBAIKAN "tidak ada suaranya" (keluhan pemilik): versi lama
+         memakai pola ledakan hati yang dilemahkan (puncak 0,38,
+         lowpass 1000→260 Hz, dentum 170→65 Hz, 0,18 detik) — hampir
+         seluruh energinya berada di bawah ~300 Hz, dan speaker HP
+         kecil nyaris tidak membunyikan frekuensi serendah itu, jadi
+         di HP suaranya hilang sama sekali walau kodenya berbunyi.
+         Versi ini dibangun dari burstNoise yang sama tetapi JAUH
+         lebih keras & terang supaya benar-benar terdengar di
+         speaker HP: puncak 0,9, sapuan lowpass lebar 3400→320 Hz,
+         durasi 0,30 detik, dentum 210→60 Hz yang kuat, DITAMBAH dua
+         lapisan yang hidup di frekuensi menengah/tinggi (wilayah
+         yang sanggup dibunyikan speaker HP): "badan" segitiga
+         300→90 Hz dan retakan awal singkat 1500→600 Hz. Tetap pola
+         letupan ledakan (BUKAN suara kemenangan/win chime), dan
+         tetap di bawah ledakan akhir (sfxFinalBoom) supaya tahapan
+         terasa menanjak. Tanpa file audio baru; ikut tombol mute
+         (S.muted) & memakai AudioContext yang sama (ac()) */
       function sfxStageHit() {
-        burstNoise(0.38, 0.18, 1000, 260, 170, 65, 0.38 * 0.7, 0.15);
+        burstNoise(0.9, 0.3, 3400, 320, 210, 60, 0.8, 0.26);
+        tone(300, 0.18, "triangle", 0.5, 90);
+        tone(1500, 0.05, "square", 0.16, 600);
+      }
+      /* ---------- Suara LEDAKAN AKHIR serangan sigil ----------
+         Berbunyi TEPAT saat orb terakhir menghantam boss di
+         slamSigils (momen finalImpact), di mode cerita maupun mode
+         bebas. PERBAIKAN "ledakan terakhir terlalu pelan" (keluhan
+         pemilik): sebelumnya momen ledakan akhir TIDAK punya suara
+         ledakan sama sekali — finalImpact hanya visual, dan satu-
+         satunya bunyi sesudahnya adalah sfxMeow bervolume sangat
+         kecil (0,07) plus win chime. Kini ada ledakan sungguhan
+         yang PALING KERAS di antara suara tahap: burstNoise puncak
+         penuh 1,0 selama 0,7 detik dengan sapuan sangat lebar
+         4200→120 Hz dan dentum dalam 160→38 Hz, disusul gema
+         letupan kedua yang lebih kecil 90ms kemudian, plus badan
+         segitiga 240→50 Hz di frekuensi menengah supaya dentumnya
+         tetap terasa di speaker HP. Alur sesudahnya tidak berubah
+         (sfxMeow + kemenangan tetap berbunyi seperti sebelumnya).
+         Tanpa file audio baru; ikut tombol mute (S.muted) lewat
+         burstNoise & tone, AudioContext yang sama (ac()) */
+      function sfxFinalBoom() {
+        burstNoise(1.0, 0.7, 4200, 120, 160, 38, 1.0, 0.6);
+        burstNoise(0.5, 0.4, 2000, 200, 120, 45, 0.5, 0.35, 0.09);
+        tone(240, 0.5, "triangle", 0.55, 50);
       }
       /* ---------- Suara "berhasil": file kiriman pemilik ----------
          File kiriman pemilik "berhasil.mp3" (1,80 detik, mono; suara
@@ -4829,10 +4857,11 @@
          perilaku persis seperti sebelumnya.
          SUARA PER TAHAP (permintaan pemilik): tiap tahap BUKAN
          terakhir yang selesai menghantam diiringi SATU suara
-         hantaman (sfxStageHit — pola letupan ledakan yang sudah ada,
-         sedikit lebih ringan); tahap terakhir TIDAK ditambah suara —
-         bunyinya tetap ledakan akhir + alur kemenangan seperti
-         sekarang, tanpa bunyi ganda.
+         hantaman (sfxStageHit — pola letupan ledakan burstNoise,
+         dibuat keras & terang supaya terdengar di speaker HP);
+         tahap terakhir diiringi suara LEDAKAN AKHIR khusus
+         (sfxFinalBoom, paling keras) tepat di momen finalImpact,
+         lalu alur kemenangan seperti sekarang, tanpa bunyi ganda.
          Penjaga slamBusy mencegah dua rentetan berjalan bersamaan;
          panggilan kedua selagi rentetan berjalan menerima janji yang
          sama. Logika damage/HP TIDAK disentuh sama sekali */
@@ -5011,7 +5040,7 @@
                 d.o.style.opacity = "0";
                 orbImpact(d, d === lastFlight);
                 hitCount++;
-                if (hitCount === flights.length) finalImpact(d.color);
+                if (hitCount === flights.length) { finalImpact(d.color); sfxFinalBoom(); }
                 return;
               }
               flying = true;
@@ -5040,12 +5069,11 @@
                tahap ini tuntas menghantam (blok ini hanya berjalan
                untuk tahap BUKAN terakhir, karena syaratnya
                curStage < stageCount - 1) berbunyi SATU suara
-               hantaman sfxStageHit — varian lebih ringan dari pola
-               letupan ledakan yang sudah ada. Tahap terakhir TIDAK
-               berbunyi di sini: blok ini tidak pernah berjalan untuk
-               tahap terakhir, jadi suaranya tetap persis seperti
-               sekarang (ledakan akhir + alur kemenangan), tanpa
-               bunyi ganda */
+               hantaman sfxStageHit — pola letupan ledakan burstNoise
+               yang keras & terang. Tahap terakhir TIDAK berbunyi di
+               sini: suaranya adalah ledakan akhir sfxFinalBoom yang
+               dipicu di momen finalImpact di atas, lalu alur
+               kemenangan seperti sekarang, tanpa bunyi ganda */
             if (curStage < stageCount - 1) {
               var stageDone = true;
               flights.forEach(function (d) { if (d.stage === curStage && !d.hit) stageDone = false; });
