@@ -233,21 +233,24 @@
       }
       .lb-close:active { transform: scale(.94); }
       .lb-close svg { width: 17px; height: 17px; display: block; }
-      /* Baris diagnosa auth di dasar panel: kecil & redup, hanya
-         untuk membaca status login dari layar (boleh dihapus nanti) */
-      .lb-panel .lb-authline {
-        flex: none; margin-top: 12px; text-align: center;
-        font-family: "Baloo 2", sans-serif; font-weight: 600;
-        font-size: 11px; line-height: 1.4; color: rgba(244,236,255,.55);
-        overflow-wrap: anywhere;
-      }
       /* Podium 3 besar — gaya sama seperti halaman Papan Peringkat,
          ukuran sedikit diperkecil supaya muat di dalam pop-up */
       .lb-podium {
         display: grid; grid-template-columns: 1fr 1.18fr 1fr;
         align-items: end; gap: 9px;
+        width: 100%;
         margin-top: 22px; flex: none;
       }
+      /* Kolom podium DIKUNCI per peringkat, berapa pun jumlah
+         pemainnya: juara 2 selalu di kolom KIRI, juara 1 selalu di
+         kolom TENGAH (kolom paling lebar, kartu paling menonjol),
+         juara 3 selalu di kolom KANAN. Tanpa kunci kolom ini, grid
+         menaruh kartu pertama yang dirender di sel kiri — itulah
+         sebabnya kartu juara 1 sendirian dulu bergeser ke kiri,
+         menyempit, dan medalinya terpotong tepi kartu */
+      .lb-pod.second { grid-column: 1; }
+      .lb-pod.first  { grid-column: 2; }
+      .lb-pod.third  { grid-column: 3; }
       .lb-pod {
         background: linear-gradient(180deg, #2e1652, #22103f);
         border: 3px solid #4b2a7a;
@@ -255,7 +258,7 @@
         padding: 13px 6px 0;
         text-align: center;
         box-shadow: 0 5px 0 rgba(5,1,14,.55);
-        overflow: hidden;
+        min-width: 0;
       }
       .lb-pod .face { position: relative; width: 60px; height: 60px; margin: 0 auto; }
       .lb-pod.first .face { width: 78px; height: 78px; }
@@ -291,6 +294,11 @@
         font-size: 26px; line-height: 1;
         padding: 8px 0 10px;
         color: rgba(12,5,24,.72);
+        /* Sudut bawah strip mengikuti lengkung kartu (radius kartu
+           24px dikurangi border 3px) — kartu podium tidak lagi
+           memakai overflow:hidden, supaya medali & mahkota yang
+           menjorok keluar dari lingkaran foto tidak terpotong */
+        border-radius: 0 0 21px 21px;
       }
       .lb-pod.first { padding-top: 30px; }
       .lb-pod.first .stand { background: linear-gradient(180deg, #ffd23e, #ffc94d); font-size: 32px; padding: 11px 0 13px; }
@@ -2672,11 +2680,6 @@
           </div>
           <section class="lb-podium" id="lbPodium" aria-label="Tiga peringkat teratas"></section>
           <div class="lb-rows" id="lbRows" aria-label="Daftar peringkat 4 sampai 12"></div>
-          <!-- Baris diagnosa auth: kecil di dasar panel, hanya untuk
-               membaca status login Discord langsung dari layar HP
-               (diisi lbAuthLineUpdate di skrip game; boleh dihapus
-               nanti bersama CSS .lb-authline) -->
-          <p class="lb-authline" id="lbAuthLine">Auth: …</p>
         </div>
       </div>
 
@@ -7443,25 +7446,6 @@
           }, function () { /* backend tak terjangkau: data contoh tetap tampil */ });
         } catch (e) { /* fetch tak tersedia: data contoh tetap tampil */ }
       }
-      /* Baris diagnosa auth di dasar pop-up: menulis status auth
-         terakhir dari skrip handshake (window.__lbAuthDiag +
-         window.__lbAuthError), atau "Auth: OK — <username>" bila
-         sesi Discord sudah didapat. Hanya teks diagnosa kecil;
-         tidak mengubah alur auth/leaderboard/skor sama sekali.
-         Dipanggil saat pop-up dibuka, dan skrip handshake memanggil
-         window.__lbAuthLineRefresh setiap status auth berubah */
-      function lbAuthLineUpdate() {
-        var el = $("lbAuthLine");
-        if (!el) return;
-        if (window.lbSession && window.lbSession.username) {
-          el.textContent = "Auth: OK — " + window.lbSession.username;
-        } else if (window.__lbAuthDiag) {
-          el.textContent = "Auth: " + window.__lbAuthDiag + (window.__lbAuthError ? " — " + window.__lbAuthError : "");
-        } else {
-          el.textContent = "Auth: belum ada status";
-        }
-      }
-      window.__lbAuthLineRefresh = lbAuthLineUpdate;
       /* Kirim skor akhir ke backend leaderboard (POST /api/scores)
          bila pemain punya sesi Discord (auth/exchange berhasil).
          Fire-and-forget:
@@ -7487,7 +7471,6 @@
            fetch), lalu diganti data asli begitu fetch kembali */
         lbRender(LB_PLAYERS);
         lbFetchReal();
-        lbAuthLineUpdate();
         window.__lbOpen = true;
         lbPrevPaused = S.paused;
         S.paused = true;
