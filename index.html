@@ -1603,8 +1603,27 @@
         display: flex; align-items: center; justify-content: center;
         cursor: pointer;
         overflow: hidden;
+        /* TRANSISI MASUK overlay (permintaan Harith): overlay tidak
+           lagi muncul mendadak — opacity bertransisi halus .5s
+           ease-out dari keadaan .ult-fade (opacity 0) ke tampil
+           penuh. Transisi murni visual (opacity saja di overlay,
+           scale halus di video — lihat aturan video di bawah):
+           tanpa kilat, glow, partikel, rotasi, goyang, atau bounce */
+        transition: opacity .5s ease-out;
       }
       .ult-overlay.hidden { display: none; }
+      /* Keadaan AWAL transisi masuk: playUltimate melepas .hidden
+         sambil memasang kelas ini, memaksa reflow, lalu melepasnya —
+         opacity pun beranimasi 0 → 1 selama .5s ease-out (transisi
+         pada aturan .ult-overlay di atas) */
+      .ult-overlay.ult-fade { opacity: 0; }
+      /* TRANSISI KELUAR: saat video selesai / dilewati, finish()
+         memasang kelas ini — opacity beranimasi 1 → 0 selama .3s,
+         BARU sesudah itu overlay disembunyikan (.hidden) */
+      .ult-overlay.ult-out {
+        opacity: 0;
+        transition-duration: .3s;
+      }
       /* Latar game di belakang gambar latar: DISEMBUNYIKAN
          (display:none) atas permintaan Harith — gambar latar
          ultimate-bg-v3 adalah satu-satunya latar overlay ultimate,
@@ -1668,6 +1687,13 @@
         aspect-ratio: 16 / 9;
         object-fit: cover;
         transform: translateY(-50%);
+        /* Pendamping transisi masuk overlay: video mengembang halus
+           bersama fade-in — dari scale .96 (keadaan .ult-fade pada
+           overlay, aturan di bawah) ke scale 1.0 selama .5s ease-out.
+           translateY(-50%) dipertahankan di kedua keadaan supaya
+           posisi video tidak bergeser; transisi transform murni
+           kompositor, tidak mengulang / menyendat putaran video */
+        transition: transform .5s ease-out;
         -webkit-mask-image: url("ult-07s-mask.png");
         mask-image: url("ult-07s-mask.png");
         -webkit-mask-size: 100% 100%;
@@ -1676,6 +1702,12 @@
         mask-repeat: no-repeat;
         display: block;
         z-index: 1;
+      }
+      /* Keadaan awal video selama transisi masuk overlay: sedikit
+         lebih kecil (scale .96, translateY tetap) — melepas kelas
+         .ult-fade dari overlay menganimasikannya ke scale 1.0 */
+      .ult-overlay.ult-fade video {
+        transform: translateY(-50%) scale(.96);
       }
       /* JEDA animasi game selama video ultimate (permintaan Harith):
          kelas .ult-playing dipasang playUltimate pada .stage selama
@@ -5259,9 +5291,20 @@
                sedangkan mengembalikan mute berarti ultimate berikutnya
                harus membuka kunci suara lagi dari alur async, yang
                ditolak webview. Biarkan tidak mute & bervolume penuh */
-            ov.classList.remove("need-tap", "started");
-            ov.classList.add("hidden");
-            resolve();
+            ov.classList.remove("need-tap", "started", "ult-fade");
+            /* TRANSISI KELUAR (permintaan Harith): overlay tidak
+               langsung hilang — fade-out halus dulu (.ult-out:
+               opacity 1 → 0 selama .3s), BARU sesudah itu overlay
+               disembunyikan (.hidden) dan janji diselesaikan, jadi
+               rentetan sigil menyusul tepat saat overlay sudah
+               lenyap. Papan sudah dicairkan di atas, jadi permainan
+               lanjut mengalir di balik fade-out yang transparan */
+            ov.classList.add("ult-out");
+            setTimeout(function () {
+              ov.classList.add("hidden");
+              ov.classList.remove("ult-out");
+              resolve();
+            }, 320);
             /* Elemen sudah kembali ke awal (currentTime 0 di atas),
                siap diputar lagi oleh playUltimate berikutnya — video
                ultimate hanya satu (ult-07s), jadi tidak ada yang
@@ -5349,7 +5392,17 @@
               if (!done && !started) ov.classList.add("need-tap");
             }, 2500);
           }
-          ov.classList.remove("hidden", "need-tap", "started");
+          /* TRANSISI MASUK (permintaan Harith): tampilkan overlay
+             dalam keadaan .ult-fade (opacity 0, video scale .96),
+             paksa reflow supaya keadaan awal itu tercatat, lalu lepas
+             kelasnya — CSS menganimasikan opacity 0 → 1 dan video
+             scale .96 → 1.0 selama .5s ease-out. Video mulai diputar
+             seperti biasa tepat sesudah ini (tryPlay di bawah):
+             transisi murni visual, tidak menunda / mengulang video */
+          ov.classList.remove("hidden", "need-tap", "started", "ult-out");
+          ov.classList.add("ult-fade");
+          void ov.offsetWidth;
+          ov.classList.remove("ult-fade");
           v.addEventListener("ended", finish);
           v.addEventListener("error", onError);
           v.addEventListener("playing", onPlaying);
