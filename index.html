@@ -2111,6 +2111,18 @@
         font-size: 15px; font-weight: 400; color: var(--muted); line-height: 1.4;
       }
       .gate-msg.err { color: var(--red); }
+      /* Baris error MENTAH dari SDK, tepat di bawah .gate-msg: teks
+         monospace kecil berisi pesan error asli persis seperti
+         ditangkap handshake (window.__lbAuthError — nama + pesan),
+         tanpa disingkat atau diterjemahkan, supaya mudah dibaca dan
+         difoto saat login gagal. Kosong = tidak tampil sama sekali
+         (belum ada kegagalan login) */
+      .gate-raw {
+        margin: 8px 0 0; font-size: 12px; line-height: 1.5;
+        color: #e6dcff; overflow-wrap: anywhere;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .gate-raw:empty { display: none; }
       .gate-url {
         margin: 10px 0 0; font-size: 10px; line-height: 1.45;
         color: rgba(189,168,224,.75); overflow-wrap: anywhere; word-break: break-all;
@@ -2444,6 +2456,7 @@
         <button type="button" class="gate-btn" id="gateLoginBtn">Masuk dengan Discord</button>
         <button type="button" class="gate-btn alt" id="gateAnonBtn">Main Tanpa Login</button>
         <p class="gate-msg" id="gateMsg" role="alert"></p>
+        <p class="gate-raw" id="gateRaw"></p>
         <p class="gate-url" id="gateUrl"></p>
       </div>
     </div>
@@ -3223,7 +3236,11 @@
              tukar kode). Berhasil → lanjut seperti di atas, dengan
              sesi aktif dan nama Discord di HUD. Gagal → tombol aktif
              lagi dan pesan "Login gagal: <alasan>" tampil di layar
-             masuk; pemain bebas mencoba lagi atau main tanpa login.
+             masuk; tepat di bawahnya baris #gateRaw menampilkan pesan
+             error MENTAH dari SDK (window.__lbAuthError, nama + pesan,
+             tanpa diterjemahkan — atau "(tidak ada pesan error)" bila
+             handshake tidak menangkap apa pun); pemain bebas mencoba
+             lagi atau main tanpa login.
          Tidak ada authorize otomatis di sini maupun di tempat lain:
          login hanya terjadi dari klik tombol itu. */
       (function () {
@@ -3235,7 +3252,8 @@
         if (!gate) { mulaiUnduh(); return; } /* jaga-jaga: tanpa elemen gerbang, game tidak boleh terkunci */
         var btnLogin = document.getElementById("gateLoginBtn"),
             btnAnon = document.getElementById("gateAnonBtn"),
-            msg = document.getElementById("gateMsg");
+            msg = document.getElementById("gateMsg"),
+            raw = document.getElementById("gateRaw");
         var urlEl = document.getElementById("gateUrl");
         if (urlEl) { try { urlEl.textContent = window.location.href; } catch (e) {} }
         var sudahLewat = false;
@@ -3252,6 +3270,16 @@
           if (isErr) msg.classList.add("err");
           else msg.classList.remove("err");
         }
+        /* Baris error mentah di bawah pesan ramah: isi persis dari
+           window.__lbAuthError (nama + pesan error SDK seperti
+           ditangkap handshake, tanpa diubah); bila handshake tidak
+           menangkap pesan apa pun, tulis "(tidak ada pesan error)" */
+        function setRaw() {
+          if (!raw) return;
+          var mentah = "";
+          try { mentah = window.__lbAuthError ? String(window.__lbAuthError) : ""; } catch (e) {}
+          raw.textContent = mentah || "(tidak ada pesan error)";
+        }
         function setSibuk(on) {
           if (btnLogin) btnLogin.disabled = on;
           if (btnAnon) btnAnon.disabled = on;
@@ -3259,8 +3287,13 @@
         if (btnAnon) btnAnon.addEventListener("click", lanjut);
         if (btnLogin) btnLogin.addEventListener("click", function () {
           setPesan("");
+          /* Percobaan baru: kosongkan baris mentah dan tangkapan error
+             lama, supaya yang tampil nanti hanya error percobaan ini */
+          if (raw) raw.textContent = "";
+          try { window.__lbAuthError = null; } catch (e) {}
           if (typeof window.__discordLogin !== "function") {
             setPesan("Login gagal: fitur login tidak tersedia", true);
+            setRaw();
             return;
           }
           setSibuk(true);
@@ -3269,6 +3302,7 @@
             if (ok) { lanjut(); return; }
             setSibuk(false);
             setPesan("Login gagal: " + (alasan || "coba lagi"), true);
+            setRaw();
           });
         });
       })();
