@@ -1388,15 +1388,19 @@
       }
       .pad-center.lit { transform: translate(-50%, -50%) scale(1.12); }
       .pad:disabled { cursor: default; }
-      /* ---------- SURGE permata: keadaan menyala sesaat (1 detik) saat sigil terakhir
-         selesai masuk & bagian mantra terakhir menyala — dipasang & dilepas skrip (gemSurgeFx). Tombol
+      /* ---------- SURGE permata: keadaan menyala yang BERTAHAN sejak sigil terakhir
+         selesai masuk & bagian mantra terakhir menyala sampai video ultimate
+         mulai diputar — dipasang & dilepas skrip (gemSurgeFx/stopGemSurge). Tombol
          seolah menyalurkan energi ke penyihir: gambar permata terang seperti
          .lit (filter bertukar SEKALI, tidak dianimasikan per frame), halo &
-         glow lapisan .pad-fx menyala penuh, dan sinar .pad-rays berputar CEPAT
+         glow lapisan .pad-fx, dan sinar .pad-rays yang berputar CEPAT
          (5 detik/putaran, bandingkan 24 detik saat .lit) sebagai tanda energi
-         sedang mengalir kencang. Muncul/hilangnya cahaya tetap lewat transisi
-         opacity .24s yang sudah ada di lapisan-lapisan itu, jadi awal & akhir
-         1 detiknya memudar halus. Getaran tombolnya sendiri BUKAN di sini:
+         sedang mengalir kencang. Terang lapisan-lapisan itu diskala variabel
+         --surge-i yang ditulis skrip (0,12 → 1 selama ramp ±1,8 detik, lalu
+         bertahan 1): efek mulai redup & lembut, berangsur kuat, lalu bertahan
+         kuat — pada --surge-i penuh tampilannya persis surge sebelumnya.
+         Muncul/hilangnya cahaya tetap lewat transisi opacity .24s yang sudah
+         ada di lapisan-lapisan itu. Getaran tombolnya sendiri BUKAN di sini:
          digerakkan skrip lewat WAAPI (transform saja) supaya tombol tengah
          tetap membawa translate(-50%,-50%) posisinya di tiap keyframe ---------- */
       .pad.surge .pad-img {
@@ -1405,9 +1409,9 @@
           drop-shadow(0 0 6px color-mix(in srgb, var(--c) 50%, transparent))
           drop-shadow(0 0 10px color-mix(in srgb, var(--c) 30%, transparent));
       }
-      .pad.surge .pad-fx::before { opacity: .95; animation: none; }
-      .pad.surge .pad-fx::after { opacity: 1; }
-      .pad.surge .pad-rays { opacity: .9; animation: sigRaysSpin 5s linear infinite; }
+      .pad.surge .pad-fx::before { opacity: calc(.95 * var(--surge-i, 1)); animation: none; }
+      .pad.surge .pad-fx::after { opacity: var(--surge-i, 1); }
+      .pad.surge .pad-rays { opacity: calc(.9 * var(--surge-i, 1)); animation: sigRaysSpin 5s linear infinite; }
 
       /* ---------- Overlays ---------- */
       .overlay {
@@ -5309,35 +5313,52 @@
           (function (el, a) { a.onfinish = function () { el.remove(); }; })(sp, anim);
         }
       }
-      /* ---------- SURGE ENERGI PERMATA (tepat 1 detik, saat suara mantra mulai) ----------
+      /* ---------- SURGE ENERGI PERMATA (menyala terus sampai video ultimate) ----------
          Efek VISUAL MURNI atas permintaan Harith: suara mantra lengkap
          ("Rasakanlah kekuatan sihirku ini...") cukup panjang dan ada jeda
-         menunggu ia selesai sebelum video ultimate — selama 1 detik
-         pertama jeda itu, kelima tombol permata BERGETAR cepat dan
-         MENYALURKAN ENERGI ke penyihir: partikel cahaya sewarna tiap
-         permata keluar dari tombolnya lalu terbang melengkung ke bola
-         tongkat penyihir (kiri layar), seolah batu-batu sihir itu memberi
-         tenaga ke karakter. Dipicu TEPAT saat sigil ronde terakhir
-         SELESAI masuk ke mantra — penerbangan orb tuntas dan bagian
-         mantra terakhir menyala (lihat pemanggilnya: alur ronde mode
-         cerita sesudah drawMantra, lewat fireGemSurgeOnce; jalur
-         cadangan ultimateSequence hanya memakainya bila pemicu utama
-         itu tidak jalan) — BUKAN lagi serentak dengan suara mantra,
-         yang tetap mulai lebih awal saat slot mengecil. Berhenti
-         SENDIRI sesudah 1 detik. Intensitasnya beramplop KUAT → KUAT → MELEMAH: getaran,
-         cahaya & semburan penuh sejak awal dan tetap penuh di tengah,
-         lalu mereda sampai hilang di akhir detik itu.
+         menunggu ia selesai sebelum video ultimate — selama jeda itu,
+         kelima tombol permata BERGETAR dan MENYALURKAN ENERGI ke
+         penyihir: partikel cahaya sewarna tiap permata keluar dari
+         tombolnya lalu terbang melengkung ke bola tongkat penyihir
+         (kiri layar), seolah batu-batu sihir itu memberi tenaga ke
+         karakter. Dipicu TEPAT saat sigil ronde terakhir SELESAI masuk
+         ke mantra — penerbangan orb tuntas dan bagian mantra terakhir
+         menyala (lihat pemanggilnya: alur ronde mode cerita sesudah
+         drawMantra, lewat fireGemSurgeOnce; jalur cadangan
+         ultimateSequence hanya memakainya bila pemicu utama itu tidak
+         jalan) — BUKAN serentak dengan suara mantra, yang tetap mulai
+         lebih awal saat slot mengecil.
+         TANPA DURASI TETAP: efek menyala terus dari pemicunya sampai
+         video ultimate mulai diputar — playUltimate memanggil
+         stopGemSurge() tepat di awalnya — dan ikut mati bila alur
+         dibatalkan/di-reset (penjaga run di surgeTick: semua jalur
+         batal & reset menaikkan S.run). Intensitasnya NAIK PERLAHAN
+         (amplop LEMBUT → MENGUAT → KUAT BERTAHAN): ramp halus ±1,8
+         detik dari getaran halus, cahaya redup & partikel sedikit,
+         berangsur penuh, lalu BERTAHAN KUAT selama efek menyala —
+         tidak ada fase melemah lagi.
          TIDAK menyentuh gameplay, suara, hitung mundur, fade, atau
          timing video ultimate sama sekali — tombol memang sudah tidak
          interaktif pada momen ini (ronde selesai).
          Hemat di HP: getaran & partikel hanya memakai transform &
          opacity (WAAPI — pola yang sama seperti castParticles &
-         burstAtEl), jumlah partikel dibatasi (4 gelombang × maks 13
-         titik per gelombang ≈ 52 titik mungil), cahaya tombol memakai
-         kelas .surge (opacity & filter yang bertukar sekali, BUKAN
-         filter animasi per frame), dan semburan canvas memakai mesin
-         partikel yang sudah ada (fxApi().burst, pool-nya terbatas) */
-      var surgeTimers = [];
+         burstAtEl); partikel DOM DIDAUR ULANG dari pool dan jumlah
+         yang hidup bersamaan DIBATASI (SURGE_MAX_SPARKS), jadi tidak
+         menumpuk selama efek menyala; cahaya tombol memakai kelas
+         .surge yang opacity lapisannya diskala variabel --surge-i
+         (filter gambar tetap bertukar sekali, BUKAN filter animasi
+         per frame), dan semburan canvas memakai mesin partikel yang
+         sudah ada (fxApi().burst, pool-nya terbatas) */
+      var SURGE_RAMP_MS = 1800;
+      var SURGE_MAX_SPARKS = 46;
+      var surgeActive = false;
+      var surgeRunId = -1;
+      var surgeStartedAt = 0;
+      var surgeTickTimer = null;
+      var surgeTickCount = 0;
+      var surgeVibAnims = [];
+      var surgeSparks = [];
+      var surgeSparkPool = [];
       /* Penjaga SEKALI PER MANTRA: id run yang surge-nya sudah dipicu.
          Pemicu utama (sigil terakhir masuk & bagian mantra terakhir
          menyala) dan jalur cadangan ultimateSequence sama-sama lewat
@@ -5350,92 +5371,155 @@
         surgeDoneRun = id;
         gemSurgeFx();
       }
+      /* Intensitas surge saat ini: 0,12 (lembut) → 1 (kuat penuh),
+         naik halus (smoothstep) selama SURGE_RAMP_MS lalu bertahan 1 */
+      function surgeIntensity() {
+        var f = (performance.now() - surgeStartedAt) / SURGE_RAMP_MS;
+        if (f >= 1) return 1;
+        if (f <= 0) return 0.12;
+        return 0.12 + 0.88 * (f * f * (3 - 2 * f));
+      }
       function gemSurgeFx() {
         if (reducedMotion) return;
-        /* Jaga-jaga pemanggilan tumpang tindih: bersihkan sisa efek lama */
-        surgeTimers.forEach(clearTimeout); surgeTimers = [];
-        pads.forEach(function (p) { p.classList.remove("surge"); });
+        if (surgeActive) return;
+        surgeActive = true;
+        surgeRunId = S.run;
+        surgeStartedAt = performance.now();
+        surgeTickCount = 0;
+        var fxS = fxApi();
+        pads.forEach(function (pad) {
+          var i = parseInt(pad.getAttribute("data-i"), 10) || 0;
+          /* Variabel cahaya dipasang LEMBUT dulu sebelum kelasnya,
+             supaya tidak ada kilatan penuh sesaat di awal */
+          pad.style.setProperty("--surge-i", "0.12");
+          pad.classList.add("surge");
+          surgeStartVibration(pad);
+          /* Semburan awal lembut dari tiap permata (mesin canvas) */
+          if (fxS) { var c = elCenter(pad); fxS.burst(c.x, c.y, RUNES[i].color, 3); }
+        });
+        surgeTickTimer = setInterval(surgeTick, 120);
+        surgeTick();
+      }
+      /* Getaran tombol: fase RAMP satu jalan WAAPI (±1,8 detik,
+         amplitudo mengikuti amplop lembut → kuat), lalu disambung
+         fase BERTAHAN: goyangan berulang tanpa henti pada amplitudo
+         penuh sampai stopGemSurge membatalkannya. Transform saja;
+         tombol tengah membawa translate(-50%,-50%) posisinya di
+         setiap keyframe supaya tidak melompat dari tempatnya */
+      function surgeStartVibration(pad) {
+        var base = pad.classList.contains("pad-center") ? "translate(-50%,-50%) " : "";
+        function frameAt(s, env) {
+          var dir = s % 2 === 0 ? 1 : -1;
+          var jx = dir * (1.6 + (s * 7 % 3) * 0.8) * env;
+          var jy = -dir * (0.9 + (s * 5 % 3) * 0.6) * env;
+          var rot = dir * 1.4 * env;
+          return base + "translate(" + jx.toFixed(2) + "px," + jy.toFixed(2) + "px) rotate(" + rot.toFixed(2) + "deg)";
+        }
+        var steps = 18, frames = [];
+        for (var s = 0; s <= steps; s++) {
+          var f = s / steps;
+          frames.push({ transform: frameAt(s, 0.12 + 0.88 * (f * f * (3 - 2 * f))), offset: f });
+        }
+        try {
+          var ramp = pad.animate(frames, { duration: SURGE_RAMP_MS, easing: "linear" });
+          surgeVibAnims.push(ramp);
+          ramp.onfinish = function () {
+            if (!surgeActive || S.run !== surgeRunId) return;
+            var seq = [0, 1, 2, 3, 0], loopFrames = [];
+            for (var q = 0; q < seq.length; q++) {
+              loopFrames.push({ transform: frameAt(seq[q], 1), offset: q / (seq.length - 1) });
+            }
+            try {
+              var loop = pad.animate(loopFrames, { duration: 400, easing: "linear", iterations: Infinity });
+              surgeVibAnims.push(loop);
+            } catch (e) {}
+          };
+        } catch (e) {}
+      }
+      /* Detak efek selama menyala (tiap 120ms): naikkan skala cahaya
+         mengikuti ramp, lahirkan partikel tombol → tongkat sesuai
+         intensitas, dan matikan diri sendiri bila run sudah berganti
+         (alur dibatalkan / game di-reset / mulai ulang) */
+      function surgeTick() {
+        if (!surgeActive) return;
+        if (S.run !== surgeRunId) { stopGemSurge(); return; }
+        surgeTickCount++;
+        var inten = surgeIntensity();
         var ar = arena.getBoundingClientRect();
         var orb = staffOrbPos();
         var tx = orb.x - ar.left, ty = orb.y - ar.top;
         var fxS = fxApi();
         pads.forEach(function (pad) {
+          pad.style.setProperty("--surge-i", inten.toFixed(3));
+          var expect = inten * 1.6;
+          var n = Math.floor(expect) + (Math.random() < expect - Math.floor(expect) ? 1 : 0);
+          if (!n) return;
           var i = parseInt(pad.getAttribute("data-i"), 10) || 0;
-          pad.classList.add("surge");
-          /* Getaran: goyangan kecil CEPAT lewat WAAPI (transform saja),
-             16 langkah dalam 1 detik. Amplitudo mengikuti amplop kuat →
-             kuat → melemah: naik penuh dalam ±80ms pertama, bertahan
-             penuh sampai 60% durasi, lalu mengecil sampai nol tepat di
-             akhir. Tombol tengah membawa translate(-50%,-50%) posisinya
-             di setiap keyframe supaya tidak melompat dari tempatnya */
-          var base = pad.classList.contains("pad-center") ? "translate(-50%,-50%) " : "";
-          var frames = [];
-          for (var s = 0; s <= 16; s++) {
-            var f = s / 16;
-            var env = f < 0.08 ? f / 0.08 : (f < 0.6 ? 1 : 1 - (f - 0.6) / 0.4);
-            var dir = s % 2 === 0 ? 1 : -1;
-            var jx = dir * (1.6 + (s * 7 % 3) * 0.8) * env;
-            var jy = -dir * (0.9 + (s * 5 % 3) * 0.6) * env;
-            var rot = dir * 1.4 * env;
-            frames.push({
-              transform: base + "translate(" + jx.toFixed(2) + "px," + jy.toFixed(2) + "px) rotate(" + rot.toFixed(2) + "deg)",
-              offset: f
-            });
-          }
-          try { pad.animate(frames, { duration: 1000, easing: "linear" }); } catch (e) {}
-          /* Semburan awal dari tiap permata (mesin canvas yang sudah ada) */
-          if (fxS) { var c = elCenter(pad); fxS.burst(c.x, c.y, RUNES[i].color, 8); }
+          var r = pad.getBoundingClientRect();
+          var sx = r.left - ar.left + r.width / 2, sy = r.top - ar.top + r.height / 2;
+          for (var k = 0; k < n; k++) surgeSpawnSpark(i, sx, sy, tx, ty, inten);
         });
-        /* Gelombang partikel tombol → bola tongkat penyihir: 4 gelombang
-           di dalam 1 detik yang sama. Dua gelombang pertama penuh
-           (kuat), gelombang ketiga mengecil, gelombang terakhir kecil &
-           redup dan mendarat sebelum detik ke-1 — fase melemahnya.
-           Tiap partikel terbang melengkung ringan (titik tengah terangkat)
-           dan menyusut saat tiba di tongkat, seperti tersedot masuk */
-        var waves = [
-          { at: 60,  n: 4, dur: 430, size: 9, op: 1 },
-          { at: 300, n: 4, dur: 430, size: 9, op: 1 },
-          { at: 540, n: 3, dur: 390, size: 7, op: .75 },
-          { at: 730, n: 2, dur: 250, size: 6, op: .5 }
-        ];
-        waves.forEach(function (w) {
-          surgeTimers.push(setTimeout(function () {
-            pads.forEach(function (pad) {
-              var i = parseInt(pad.getAttribute("data-i"), 10) || 0;
-              var r = pad.getBoundingClientRect();
-              var sx = r.left - ar.left + r.width / 2, sy = r.top - ar.top + r.height / 2;
-              var half = w.size / 2;
-              for (var k = 0; k < w.n; k++) {
-                var sp = document.createElement("div");
-                sp.className = "spark";
-                var col = RUNES[i].color;
-                sp.style.background = col;
-                sp.style.boxShadow = "0 0 10px " + col;
-                sp.style.width = w.size + "px"; sp.style.height = w.size + "px";
-                sp.style.left = sx + "px"; sp.style.top = sy + "px";
-                fxLayer.appendChild(sp);
-                var ex = (Math.random() - 0.5) * 22, ey = (Math.random() - 0.5) * 22;
-                var mx = (tx - sx) * 0.5 + (Math.random() - 0.5) * 30;
-                var my = (ty - sy) * 0.5 - 24 - Math.random() * 30;
-                var dx = tx - sx, dy = ty - sy;
-                var anim = sp.animate([
-                  { transform: "translate(" + (-half) + "px," + (-half) + "px) scale(1)", opacity: 0 },
-                  { transform: "translate(" + (ex * 0.3 - half) + "px," + (ey * 0.3 - half) + "px) scale(1.15)", opacity: w.op, offset: 0.18 },
-                  { transform: "translate(" + (mx - half) + "px," + (my - half) + "px) scale(.95)", opacity: w.op, offset: 0.62 },
-                  { transform: "translate(" + (dx - half) + "px," + (dy - half) + "px) scale(.3)", opacity: 0 }
-                ], { duration: w.dur + Math.random() * 70, easing: "cubic-bezier(.3,.6,.4,1)" });
-                (function (el, a) { a.onfinish = function () { el.remove(); }; })(sp, anim);
-              }
-            });
-            /* Percikan tiba di tongkat pada dua gelombang penuh */
-            if (fxS && w.op >= 1) fxS.burst(orb.x, orb.y, "#e9d5ff", 6);
-          }, w.at));
+        /* Percikan tiba di tongkat sesekali begitu efek sudah kuat */
+        if (fxS && inten >= 0.65 && surgeTickCount % 3 === 0) fxS.burst(orb.x, orb.y, "#e9d5ff", 5);
+      }
+      /* Satu partikel cahaya dari tombol (sx, sy) ke bola tongkat
+         (tx, ty), terbang melengkung ringan dan menyusut saat tiba
+         seperti tersedot masuk — elemennya diambil dari pool daur
+         ulang dan dikembalikan ke pool begitu penerbangannya selesai */
+      function surgeSpawnSpark(i, sx, sy, tx, ty, inten) {
+        if (surgeSparks.length >= SURGE_MAX_SPARKS) return;
+        var sp = surgeSparkPool.pop();
+        if (!sp) { sp = document.createElement("div"); sp.className = "spark"; }
+        var col = RUNES[i].color;
+        var size = 5 + inten * 4;
+        var half = size / 2;
+        var op = 0.3 + 0.7 * inten;
+        sp.style.background = col;
+        sp.style.boxShadow = "0 0 10px " + col;
+        sp.style.width = size + "px"; sp.style.height = size + "px";
+        sp.style.left = sx + "px"; sp.style.top = sy + "px";
+        fxLayer.appendChild(sp);
+        surgeSparks.push(sp);
+        var ex = (Math.random() - 0.5) * 22, ey = (Math.random() - 0.5) * 22;
+        var mx = (tx - sx) * 0.5 + (Math.random() - 0.5) * 30;
+        var my = (ty - sy) * 0.5 - 24 - Math.random() * 30;
+        var dx = tx - sx, dy = ty - sy;
+        var anim = sp.animate([
+          { transform: "translate(" + (-half) + "px," + (-half) + "px) scale(1)", opacity: 0 },
+          { transform: "translate(" + (ex * 0.3 - half) + "px," + (ey * 0.3 - half) + "px) scale(1.15)", opacity: op, offset: 0.18 },
+          { transform: "translate(" + (mx - half) + "px," + (my - half) + "px) scale(.95)", opacity: op, offset: 0.62 },
+          { transform: "translate(" + (dx - half) + "px," + (dy - half) + "px) scale(.3)", opacity: 0 }
+        ], { duration: 430 + inten * 70 + Math.random() * 70, easing: "cubic-bezier(.3,.6,.4,1)" });
+        sp._surgeAnim = anim;
+        anim.onfinish = function () { surgeRecycleSpark(sp); };
+      }
+      function surgeRecycleSpark(sp) {
+        var ix = surgeSparks.indexOf(sp);
+        if (ix >= 0) surgeSparks.splice(ix, 1);
+        sp._surgeAnim = null;
+        if (sp.parentNode) sp.parentNode.removeChild(sp);
+        if (surgeSparkPool.length < SURGE_MAX_SPARKS) surgeSparkPool.push(sp);
+      }
+      /* Mematikan surge SEPENUHNYA: detak berhenti, getaran dibatalkan,
+         kelas cahaya dilepas (memudar halus lewat transisi opacity
+         .24s yang sudah ada), dan semua partikel yang masih terbang
+         ditarik kembali ke pool. Dipanggil playUltimate tepat saat
+         video ultimate mulai diputar, dan oleh penjaga run di
+         surgeTick bila alurnya dibatalkan/di-reset */
+      function stopGemSurge() {
+        surgeActive = false;
+        if (surgeTickTimer) { clearInterval(surgeTickTimer); surgeTickTimer = null; }
+        surgeVibAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+        surgeVibAnims = [];
+        pads.forEach(function (p) {
+          p.classList.remove("surge");
+          p.style.removeProperty("--surge-i");
         });
-        /* Berhenti sendiri tepat 1 detik: kelas cahaya dilepas dan
-           memudar halus lewat transisi opacity .24s yang sudah ada */
-        surgeTimers.push(setTimeout(function () {
-          pads.forEach(function (p) { p.classList.remove("surge"); });
-        }, 1000));
+        var live = surgeSparks.slice();
+        live.forEach(function (sp) {
+          if (sp._surgeAnim) { try { sp._surgeAnim.cancel(); } catch (e) {} }
+          surgeRecycleSpark(sp);
+        });
       }
       function dmgNumber(amount) {
         var el = document.createElement("div");
@@ -6620,8 +6704,9 @@
              orb/sigil ronde ini baru saja tuntas (slotFlightToMantra di
              atas ditunggu sampai semua tiba) dan bagian mantra yang
              dinyalakan ronde ini BARU saja menyala (drawMantra di atas).
-             Bila itu bagian TERAKHIR, surge jalan sekarang — 1 detik,
-             kuat → kuat → melemah, murni visual (lihat gemSurgeFx) —
+             Bila itu bagian TERAKHIR, surge jalan sekarang — menyala
+             terus (ramp lembut → menguat → bertahan kuat) sampai video
+             ultimate mulai diputar, murni visual (lihat gemSurgeFx) —
              TIDAK lagi serentak dengan suara mantra yang sudah mulai
              lebih awal saat slot mengecil. Sekali per mantra saja
              (penjaga di fireGemSurgeOnce); syarat tidak mute sama
@@ -6859,6 +6944,12 @@
       }
       function playUltimate(id) {
         return new Promise(function (resolve) {
+          /* Surge permata DIMATIKAN tepat di sini: video ultimate mulai
+             diputar sekarang, dan efeknya memang hanya menyala dari
+             sigil terakhir masuk sampai momen ini (lihat gemSurgeFx).
+             Dipanggil sebelum semua jalur keluar fungsi ini supaya
+             efeknya tidak pernah tertinggal menyala */
+          stopGemSurge();
           var ov = $("ultOverlay"), v = $("ultVideo"), btn = $("ultPlayBtn");
           if (!v || ultBroken || v.networkState === 3) { resolve(); return; }
           /* Pilih video putaran ini: acak dari daftar ULT_VIDEOS,
