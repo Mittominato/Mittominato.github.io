@@ -1399,9 +1399,8 @@
          bertahan 1): efek mulai redup & lembut, berangsur kuat, lalu bertahan
          kuat — pada --surge-i penuh tampilannya persis surge sebelumnya.
          Muncul/hilangnya cahaya tetap lewat transisi opacity .24s yang sudah
-         ada di lapisan-lapisan itu. Getaran tombolnya sendiri BUKAN di sini:
-         digerakkan skrip lewat WAAPI (transform saja) supaya tombol tengah
-         tetap membawa translate(-50%,-50%) posisinya di tiap keyframe ---------- */
+         ada di lapisan-lapisan itu. Tombolnya SENDIRI tidak bergerak sama
+         sekali selama surge — efeknya murni cahaya & partikel ---------- */
       .pad.surge .pad-img {
         filter: saturate(1.15) brightness(1.25)
           drop-shadow(0 0 2px color-mix(in srgb, var(--c) 75%, transparent))
@@ -5316,7 +5315,7 @@
          Efek VISUAL MURNI atas permintaan Harith: suara mantra lengkap
          ("Rasakanlah kekuatan sihirku ini...") cukup panjang dan ada jeda
          menunggu ia selesai sebelum video ultimate — selama jeda itu,
-         kelima tombol permata BERGETAR dan BERCAHAYA PENUH dengan sinar,
+         kelima tombol permata BERCAHAYA PENUH dengan sinar,
          dan partikel cahaya sewarna tiap permata BERHAMBURAN HEBOH di
          sekitar tombolnya sendiri. TIDAK ada lagi partikel yang terbang
          dari tombol ke penyihir: efek ini murni PENANDA VISUAL bahwa ada
@@ -5335,13 +5334,13 @@
          dibatalkan/di-reset (penjaga run di surgeTick: semua jalur
          batal & reset menaikkan S.run). Intensitasnya NAIK PERLAHAN
          (amplop LEMBUT → MENGUAT → KUAT BERTAHAN): ramp halus ±1,8
-         detik dari getaran halus, cahaya redup & partikel sedikit,
+         detik dari cahaya redup & partikel sedikit,
          berangsur penuh, lalu BERTAHAN KUAT selama efek menyala —
          tidak ada fase melemah lagi.
          TIDAK menyentuh gameplay, suara, hitung mundur, fade, atau
          timing video ultimate sama sekali — tombol memang sudah tidak
          interaktif pada momen ini (ronde selesai).
-         Hemat di HP: getaran & partikel hanya memakai transform &
+         Hemat di HP: partikel hanya memakai transform &
          opacity (WAAPI — pola yang sama seperti castParticles &
          burstAtEl); partikel DOM DIDAUR ULANG dari pool dan jumlah
          yang hidup bersamaan DIBATASI (SURGE_MAX_SPARKS), jadi tidak
@@ -5357,7 +5356,6 @@
       var surgeStartedAt = 0;
       var surgeTickTimer = null;
       var surgeTickCount = 0;
-      var surgeVibAnims = [];
       var surgeSparks = [];
       var surgeSparkPool = [];
       /* Penjaga SEKALI PER MANTRA: id run yang surge-nya sudah dipicu.
@@ -5398,48 +5396,11 @@
              supaya tidak ada kilatan penuh sesaat di awal */
           pad.style.setProperty("--surge-i", "0.12");
           pad.classList.add("surge");
-          surgeStartVibration(pad);
           /* Semburan awal lembut dari tiap permata (mesin canvas) */
           if (fxS) { var c = elCenter(pad); fxS.burst(c.x, c.y, RUNES[i].color, 3); }
         });
         surgeTickTimer = setInterval(surgeTick, 120);
         surgeTick();
-      }
-      /* Getaran tombol: fase RAMP satu jalan WAAPI (±1,8 detik,
-         amplitudo mengikuti amplop lembut → kuat), lalu disambung
-         fase BERTAHAN: goyangan berulang tanpa henti pada amplitudo
-         penuh sampai stopGemSurge membatalkannya. Transform saja;
-         tombol tengah membawa translate(-50%,-50%) posisinya di
-         setiap keyframe supaya tidak melompat dari tempatnya */
-      function surgeStartVibration(pad) {
-        var base = pad.classList.contains("pad-center") ? "translate(-50%,-50%) " : "";
-        function frameAt(s, env) {
-          var dir = s % 2 === 0 ? 1 : -1;
-          var jx = dir * (1.6 + (s * 7 % 3) * 0.8) * env;
-          var jy = -dir * (0.9 + (s * 5 % 3) * 0.6) * env;
-          var rot = dir * 1.4 * env;
-          return base + "translate(" + jx.toFixed(2) + "px," + jy.toFixed(2) + "px) rotate(" + rot.toFixed(2) + "deg)";
-        }
-        var steps = 18, frames = [];
-        for (var s = 0; s <= steps; s++) {
-          var f = s / steps;
-          frames.push({ transform: frameAt(s, 0.12 + 0.88 * (f * f * (3 - 2 * f))), offset: f });
-        }
-        try {
-          var ramp = pad.animate(frames, { duration: SURGE_RAMP_MS, easing: "linear" });
-          surgeVibAnims.push(ramp);
-          ramp.onfinish = function () {
-            if (!surgeActive || S.run !== surgeRunId) return;
-            var seq = [0, 1, 2, 3, 0], loopFrames = [];
-            for (var q = 0; q < seq.length; q++) {
-              loopFrames.push({ transform: frameAt(seq[q], 1), offset: q / (seq.length - 1) });
-            }
-            try {
-              var loop = pad.animate(loopFrames, { duration: 400, easing: "linear", iterations: Infinity });
-              surgeVibAnims.push(loop);
-            } catch (e) {}
-          };
-        } catch (e) {}
       }
       /* Detak efek selama menyala (tiap 120ms): naikkan skala cahaya
          mengikuti ramp, lahirkan partikel heboh DI SEKITAR TIAP TOMBOL
@@ -5517,7 +5478,7 @@
         if (sp.parentNode) sp.parentNode.removeChild(sp);
         if (surgeSparkPool.length < SURGE_MAX_SPARKS) surgeSparkPool.push(sp);
       }
-      /* Mematikan surge SEPENUHNYA: detak berhenti, getaran dibatalkan,
+      /* Mematikan surge SEPENUHNYA: detak berhenti,
          kelas cahaya dilepas (memudar halus lewat transisi opacity
          .24s yang sudah ada), dan semua partikel yang masih terbang
          ditarik kembali ke pool. Dipanggil playUltimate tepat saat
@@ -5526,8 +5487,6 @@
       function stopGemSurge() {
         surgeActive = false;
         if (surgeTickTimer) { clearInterval(surgeTickTimer); surgeTickTimer = null; }
-        surgeVibAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
-        surgeVibAnims = [];
         pads.forEach(function (p) {
           p.classList.remove("surge");
           p.style.removeProperty("--surge-i");
