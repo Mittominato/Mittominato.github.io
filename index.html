@@ -1391,11 +1391,10 @@
       /* ---------- SURGE permata: keadaan menyala yang BERTAHAN sejak sigil terakhir
          selesai masuk & bagian mantra terakhir menyala sampai video ultimate
          mulai diputar — dipasang & dilepas skrip (gemSurgeFx/stopGemSurge). Tombol
-         seolah menyalurkan energi ke penyihir: gambar permata terang seperti
-         .lit (filter bertukar SEKALI, tidak dianimasikan per frame), halo &
-         glow lapisan .pad-fx, dan sinar .pad-rays yang berputar CEPAT
-         (5 detik/putaran, bandingkan 24 detik saat .lit) sebagai tanda energi
-         sedang mengalir kencang. Terang lapisan-lapisan itu diskala variabel
+         bercahaya penuh sebagai penanda mantra sedang diproses: gambar permata
+         terang seperti .lit (filter bertukar SEKALI, tidak dianimasikan per
+         frame), halo & glow lapisan .pad-fx, dan sinar .pad-rays yang berputar
+         CEPAT (5 detik/putaran, bandingkan 24 detik saat .lit). Terang lapisan-lapisan itu diskala variabel
          --surge-i yang ditulis skrip (0,12 → 1 selama ramp ±1,8 detik, lalu
          bertahan 1): efek mulai redup & lembut, berangsur kuat, lalu bertahan
          kuat — pada --surge-i penuh tampilannya persis surge sebelumnya.
@@ -5313,15 +5312,17 @@
           (function (el, a) { a.onfinish = function () { el.remove(); }; })(sp, anim);
         }
       }
-      /* ---------- SURGE ENERGI PERMATA (menyala terus sampai video ultimate) ----------
+      /* ---------- SURGE PERMATA (menyala terus sampai video ultimate) ----------
          Efek VISUAL MURNI atas permintaan Harith: suara mantra lengkap
          ("Rasakanlah kekuatan sihirku ini...") cukup panjang dan ada jeda
          menunggu ia selesai sebelum video ultimate — selama jeda itu,
-         kelima tombol permata BERGETAR dan MENYALURKAN ENERGI ke
-         penyihir: partikel cahaya sewarna tiap permata keluar dari
-         tombolnya lalu terbang melengkung ke bola tongkat penyihir
-         (kiri layar), seolah batu-batu sihir itu memberi tenaga ke
-         karakter. Dipicu TEPAT saat sigil ronde terakhir SELESAI masuk
+         kelima tombol permata BERGETAR dan BERCAHAYA PENUH dengan sinar,
+         dan partikel cahaya sewarna tiap permata BERHAMBURAN HEBOH di
+         sekitar tombolnya sendiri. TIDAK ada lagi partikel yang terbang
+         dari tombol ke penyihir: efek ini murni PENANDA VISUAL bahwa ada
+         action yang sedang bekerja (mantra sedang diproses), supaya
+         pemain yang main TANPA SUARA tetap tahu ada sesuatu yang sedang
+         berjalan. Dipicu TEPAT saat sigil ronde terakhir SELESAI masuk
          ke mantra — penerbangan orb tuntas dan bagian mantra terakhir
          menyala (lihat pemanggilnya: alur ronde mode cerita sesudah
          drawMantra, lewat fireGemSurgeOnce; jalur cadangan
@@ -5363,8 +5364,12 @@
          Pemicu utama (sigil terakhir masuk & bagian mantra terakhir
          menyala) dan jalur cadangan ultimateSequence sama-sama lewat
          fireGemSurgeOnce, jadi efeknya tidak pernah jalan dua kali
-         untuk mantra yang sama; run baru (id berbeda) bebas memicu
-         lagi untuk mantra berikutnya */
+         untuk mantra yang sama. PERBAIKAN BUG: id run TIDAK berubah
+         antar level/boss dalam satu permainan (S.run hanya naik saat
+         game mulai/selesai/keluar), jadi penjaga ini WAJIB direset di
+         tiap awal level/boss — setupBoss memasang surgeDoneRun = -1 —
+         kalau tidak, surge hanya menyala di boss level 1 lalu ditolak
+         selamanya di level-level berikutnya */
       var surgeDoneRun = -1;
       function fireGemSurgeOnce(id) {
         if (surgeDoneRun === id) return;
@@ -5437,17 +5442,16 @@
         } catch (e) {}
       }
       /* Detak efek selama menyala (tiap 120ms): naikkan skala cahaya
-         mengikuti ramp, lahirkan partikel tombol → tongkat sesuai
-         intensitas, dan matikan diri sendiri bila run sudah berganti
-         (alur dibatalkan / game di-reset / mulai ulang) */
+         mengikuti ramp, lahirkan partikel heboh DI SEKITAR TIAP TOMBOL
+         sesuai intensitas (tidak ada yang terbang ke penyihir), dan
+         matikan diri sendiri bila run sudah berganti (alur dibatalkan /
+         game di-reset / mulai ulang) */
       function surgeTick() {
         if (!surgeActive) return;
         if (S.run !== surgeRunId) { stopGemSurge(); return; }
         surgeTickCount++;
         var inten = surgeIntensity();
         var ar = arena.getBoundingClientRect();
-        var orb = staffOrbPos();
-        var tx = orb.x - ar.left, ty = orb.y - ar.top;
         var fxS = fxApi();
         pads.forEach(function (pad) {
           pad.style.setProperty("--surge-i", inten.toFixed(3));
@@ -5457,16 +5461,24 @@
           var i = parseInt(pad.getAttribute("data-i"), 10) || 0;
           var r = pad.getBoundingClientRect();
           var sx = r.left - ar.left + r.width / 2, sy = r.top - ar.top + r.height / 2;
-          for (var k = 0; k < n; k++) surgeSpawnSpark(i, sx, sy, tx, ty, inten);
+          for (var k = 0; k < n; k++) surgeSpawnSpark(i, sx, sy, r.width / 2, inten);
         });
-        /* Percikan tiba di tongkat sesekali begitu efek sudah kuat */
-        if (fxS && inten >= 0.65 && surgeTickCount % 3 === 0) fxS.burst(orb.x, orb.y, "#e9d5ff", 5);
+        /* Semburan canvas ekstra di sekitar satu tombol acak begitu
+           efek sudah kuat — tetap di tombol, bukan di penyihir */
+        if (fxS && inten >= 0.65 && surgeTickCount % 3 === 0 && pads.length) {
+          var pi = Math.floor(Math.random() * pads.length);
+          var pc = elCenter(pads[pi]);
+          var pri = parseInt(pads[pi].getAttribute("data-i"), 10) || 0;
+          fxS.burst(pc.x, pc.y, RUNES[pri].color, 5);
+        }
       }
-      /* Satu partikel cahaya dari tombol (sx, sy) ke bola tongkat
-         (tx, ty), terbang melengkung ringan dan menyusut saat tiba
-         seperti tersedot masuk — elemennya diambil dari pool daur
-         ulang dan dikembalikan ke pool begitu penerbangannya selesai */
-      function surgeSpawnSpark(i, sx, sy, tx, ty, inten) {
+      /* Satu partikel cahaya HEBOH DI SEKITAR TOMBOLNYA SENDIRI: lahir
+         di titik acak pada lingkaran permata (pusat sx, sy, jari-jari
+         rad), menyembur keluar menjauhi pusat sambil naik sedikit,
+         membesar sesaat lalu menyusut & memudar di tempat — TIDAK
+         pernah terbang ke penyihir. Elemennya diambil dari pool daur
+         ulang dan dikembalikan ke pool begitu animasinya selesai */
+      function surgeSpawnSpark(i, sx, sy, rad, inten) {
         if (surgeSparks.length >= SURGE_MAX_SPARKS) return;
         var sp = surgeSparkPool.pop();
         if (!sp) { sp = document.createElement("div"); sp.className = "spark"; }
@@ -5480,16 +5492,21 @@
         sp.style.left = sx + "px"; sp.style.top = sy + "px";
         fxLayer.appendChild(sp);
         surgeSparks.push(sp);
-        var ex = (Math.random() - 0.5) * 22, ey = (Math.random() - 0.5) * 22;
-        var mx = (tx - sx) * 0.5 + (Math.random() - 0.5) * 30;
-        var my = (ty - sy) * 0.5 - 24 - Math.random() * 30;
-        var dx = tx - sx, dy = ty - sy;
+        /* Titik lahir: acak di dalam/seputar lingkaran permata */
+        var a0 = Math.random() * Math.PI * 2;
+        var r0 = rad * (0.35 + Math.random() * 0.75);
+        var ox = Math.cos(a0) * r0, oy = Math.sin(a0) * r0;
+        /* Semburan: terus keluar mengikuti arah yang sama + naik
+           sedikit, sejauh belasan sampai ±30px dari titik lahir */
+        var out = 14 + Math.random() * 18 + inten * 8;
+        var dx = ox + Math.cos(a0) * out;
+        var dy = oy + Math.sin(a0) * out - (6 + Math.random() * 10);
+        var mx = ox + Math.cos(a0) * out * 0.55, my = oy + Math.sin(a0) * out * 0.55 - 4;
         var anim = sp.animate([
-          { transform: "translate(" + (-half) + "px," + (-half) + "px) scale(1)", opacity: 0 },
-          { transform: "translate(" + (ex * 0.3 - half) + "px," + (ey * 0.3 - half) + "px) scale(1.15)", opacity: op, offset: 0.18 },
-          { transform: "translate(" + (mx - half) + "px," + (my - half) + "px) scale(.95)", opacity: op, offset: 0.62 },
-          { transform: "translate(" + (dx - half) + "px," + (dy - half) + "px) scale(.3)", opacity: 0 }
-        ], { duration: 430 + inten * 70 + Math.random() * 70, easing: "cubic-bezier(.3,.6,.4,1)" });
+          { transform: "translate(" + (ox - half) + "px," + (oy - half) + "px) scale(.6)", opacity: 0 },
+          { transform: "translate(" + (mx - half) + "px," + (my - half) + "px) scale(1.2)", opacity: op, offset: 0.3 },
+          { transform: "translate(" + (dx - half) + "px," + (dy - half) + "px) scale(.35)", opacity: 0 }
+        ], { duration: 380 + Math.random() * 220 + inten * 60, easing: "cubic-bezier(.2,.6,.4,1)" });
         sp._surgeAnim = anim;
         anim.onfinish = function () { surgeRecycleSpark(sp); };
       }
@@ -6552,6 +6569,13 @@
            dimulai, sebelum ronde pertama — lalu tetap sama sepanjang
            level. Sigil terkumpul juga mulai bersih untuk boss baru */
         S.mantraLit = 0;
+        /* Penjaga surge DILEPAS untuk mantra level ini: surge harus
+           bisa menyala lagi di SETIAP level saat mantranya lengkap.
+           Tanpa reset ini penjaga sekali-per-mantra (surgeDoneRun,
+           dikunci id run yang sama sepanjang satu permainan) menolak
+           pemicu di semua level sesudah level 1 — itulah bug "surge
+           cuma aktif sekali di boss lv 1" */
+        surgeDoneRun = -1;
         pickMantra();
         /* Preload file SUARA mantra level ini (file bernama sesuai
            mantra yang baru dipilih pickMantra) supaya siap berbunyi
