@@ -1810,18 +1810,18 @@
         cursor: pointer;
         overflow: hidden;
         /* TRANSISI MASUK overlay (permintaan Harith): overlay tidak
-           lagi muncul mendadak — opacity bertransisi halus .5s
+           lagi muncul mendadak — opacity bertransisi halus .3s
            ease-out dari keadaan .ult-fade (opacity 0) ke tampil
            penuh. Transisi murni visual (opacity saja di overlay —
            transisi scale/"mengembang" pada video SUDAH DIHAPUS atas
            permintaan Harith): tanpa kilat, glow, partikel, rotasi,
            goyang, atau bounce */
-        transition: opacity .5s ease-out;
+        transition: opacity .3s ease-out;
       }
       .ult-overlay.hidden { display: none; }
       /* Keadaan AWAL transisi masuk: playUltimate melepas .hidden
          sambil memasang kelas ini, memaksa reflow, lalu melepasnya —
-         opacity pun beranimasi 0 → 1 selama .5s ease-out (transisi
+         opacity pun beranimasi 0 → 1 selama .3s ease-out (transisi
          pada aturan .ult-overlay di atas) */
       .ult-overlay.ult-fade { opacity: 0; }
       /* TRANSISI KELUAR: saat video selesai / dilewati, finish()
@@ -1890,7 +1890,7 @@
         mix-blend-mode: screen;
         /* Transisi scale/"mengembang" pada video SUDAH DIHAPUS atas
            permintaan Harith — video tampil pada ukuran penuh sejak
-           frame pertama; hanya fade opacity overlay (.5s masuk,
+           frame pertama; hanya fade opacity overlay (.3s masuk,
            .3s keluar) yang tersisa sebagai transisi masuk/keluar */
         display: block;
         z-index: 1;
@@ -3982,7 +3982,7 @@
             el.addEventListener("error", onPlayError);
             /* Timer pengaman mengikuti durasi file mantra ini */
             var d = (typeof el.duration === "number" && isFinite(el.duration) && el.duration > 0) ? el.duration : 0;
-            var guardMs = d > 0 ? Math.min(Math.round((d + 1) * 1000), 15000) : 8000;
+            var guardMs = d > 0 ? Math.min(Math.round((d + 0.25) * 1000), 15000) : 8000;
             safetyTimer = setTimeout(function () { finish(true); }, guardMs);
             try {
               el.currentTime = 0;
@@ -6664,7 +6664,7 @@
           /* TRANSISI MASUK (permintaan Harith): tampilkan overlay
              dalam keadaan .ult-fade (opacity 0), paksa reflow supaya
              keadaan awal itu tercatat, lalu lepas kelasnya — CSS
-             menganimasikan opacity 0 → 1 selama .5s ease-out (tanpa
+             menganimasikan opacity 0 → 1 selama .3s ease-out (tanpa
              scale pada video; transisi "mengembang" sudah dihapus).
              Video mulai diputar seperti biasa tepat sesudah ini
              (tryPlay di bawah): transisi murni visual, tidak menunda
