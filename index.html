@@ -1388,8 +1388,8 @@
       }
       .pad-center.lit { transform: translate(-50%, -50%) scale(1.12); }
       .pad:disabled { cursor: default; }
-      /* ---------- SURGE permata: keadaan menyala sesaat (1 detik) saat suara mantra
-         lengkap mulai berbunyi — dipasang & dilepas skrip (gemSurgeFx). Tombol
+      /* ---------- SURGE permata: keadaan menyala sesaat (1 detik) saat sigil terakhir
+         selesai masuk & bagian mantra terakhir menyala — dipasang & dilepas skrip (gemSurgeFx). Tombol
          seolah menyalurkan energi ke penyihir: gambar permata terang seperti
          .lit (filter bertukar SEKALI, tidak dianimasikan per frame), halo &
          glow lapisan .pad-fx menyala penuh, dan sinar .pad-rays berputar CEPAT
@@ -5317,10 +5317,14 @@
          MENYALURKAN ENERGI ke penyihir: partikel cahaya sewarna tiap
          permata keluar dari tombolnya lalu terbang melengkung ke bola
          tongkat penyihir (kiri layar), seolah batu-batu sihir itu memberi
-         tenaga ke karakter. Dipicu TEPAT saat suara mantra mulai diputar
-         (lihat pemanggilnya: slotFlightToMantra pada ronde terakhir &
-         jalur cadangan ultimateSequence) dan berhenti SENDIRI sesudah
-         1 detik. Intensitasnya beramplop KUAT → KUAT → MELEMAH: getaran,
+         tenaga ke karakter. Dipicu TEPAT saat sigil ronde terakhir
+         SELESAI masuk ke mantra — penerbangan orb tuntas dan bagian
+         mantra terakhir menyala (lihat pemanggilnya: alur ronde mode
+         cerita sesudah drawMantra, lewat fireGemSurgeOnce; jalur
+         cadangan ultimateSequence hanya memakainya bila pemicu utama
+         itu tidak jalan) — BUKAN lagi serentak dengan suara mantra,
+         yang tetap mulai lebih awal saat slot mengecil. Berhenti
+         SENDIRI sesudah 1 detik. Intensitasnya beramplop KUAT → KUAT → MELEMAH: getaran,
          cahaya & semburan penuh sejak awal dan tetap penuh di tengah,
          lalu mereda sampai hilang di akhir detik itu.
          TIDAK menyentuh gameplay, suara, hitung mundur, fade, atau
@@ -5334,6 +5338,18 @@
          filter animasi per frame), dan semburan canvas memakai mesin
          partikel yang sudah ada (fxApi().burst, pool-nya terbatas) */
       var surgeTimers = [];
+      /* Penjaga SEKALI PER MANTRA: id run yang surge-nya sudah dipicu.
+         Pemicu utama (sigil terakhir masuk & bagian mantra terakhir
+         menyala) dan jalur cadangan ultimateSequence sama-sama lewat
+         fireGemSurgeOnce, jadi efeknya tidak pernah jalan dua kali
+         untuk mantra yang sama; run baru (id berbeda) bebas memicu
+         lagi untuk mantra berikutnya */
+      var surgeDoneRun = -1;
+      function fireGemSurgeOnce(id) {
+        if (surgeDoneRun === id) return;
+        surgeDoneRun = id;
+        gemSurgeFx();
+      }
       function gemSurgeFx() {
         if (reducedMotion) return;
         /* Jaga-jaga pemanggilan tumpang tindih: bersihkan sisa efek lama */
@@ -6394,14 +6410,14 @@
            pun di sini — tidak ada suara mantra sebelum mantra lengkap */
         if (!S.muted && S.mantraLit + 1 >= mantraParts().length) {
           earlyMantraSound = { run: id, promise: playBerhasil(id) };
-          /* EFEK SURGE PERMATA mulai TEPAT di titik ini juga — suara
-             mantra mulai berbunyi di baris di atas, jadi getaran kelima
-             tombol + aliran partikel energi ke penyihir berjalan
-             bersamaan dengan awal suaranya (1 detik, kuat → kuat →
-             melemah, berhenti sendiri; murni visual, lihat gemSurgeFx —
-             tidak mengubah suara, janji earlyMantraSound, atau timing
-             video ultimate sama sekali) */
-          gemSurgeFx();
+          /* EFEK SURGE PERMATA TIDAK lagi dipicu di titik ini: suara
+             mantra memang mulai di baris di atas (tetap lebih awal,
+             seperti sebelumnya), tapi surge-nya SENGAJA ditunda —
+             ia baru dipicu oleh alur ronde sesudah penerbangan orb
+             di bawah ini TUNTAS dan bagian mantra terakhir menyala
+             (lihat fireGemSurgeOnce sesudah drawMantra di pemanggil
+             fungsi ini). Suara, janji earlyMantraSound, dan timing
+             video ultimate tidak berubah sama sekali */
         }
         if (!(await sleep(250, id))) { window.__slotFlightBusy = false; return false; }
         /* (3) MELEBUR JADI CAHAYA: mengecilnya DITERUSKAN (.fly-melt) —
@@ -6600,6 +6616,18 @@
           S.mantraLit = Math.min(mantraParts().length, S.mantraLit + 1);
           drawMantra(S.mantraLit - 1);
           drawHud();
+          /* PEMICU UTAMA EFEK SURGE PERMATA — tepat DI SINI: penerbangan
+             orb/sigil ronde ini baru saja tuntas (slotFlightToMantra di
+             atas ditunggu sampai semua tiba) dan bagian mantra yang
+             dinyalakan ronde ini BARU saja menyala (drawMantra di atas).
+             Bila itu bagian TERAKHIR, surge jalan sekarang — 1 detik,
+             kuat → kuat → melemah, murni visual (lihat gemSurgeFx) —
+             TIDAK lagi serentak dengan suara mantra yang sudah mulai
+             lebih awal saat slot mengecil. Sekali per mantra saja
+             (penjaga di fireGemSurgeOnce); syarat tidak mute sama
+             seperti pemicu lamanya. Ronde bukan terakhir tidak memicu
+             apa pun di sini */
+          if (S.mantraLit >= mantraParts().length && !S.muted) fireGemSurgeOnce(id);
           /* Bendera sibuk canvas DIPERPANJANG melewati jendela mantra
              menyala + bar terisi (~0,5 detik): slotFlightToMantra
              melepasnya tepat saat bola cahaya tiba, padahal persis di
@@ -6688,10 +6716,14 @@
           earlyMantraSound = null;
           /* Jalur cadangan: suara mantra baru mulai dari playBerhasil
              di bawah (janji awal tidak ada — mode gerak dikurangi /
-             run berbeda), jadi efek surge permata ikut dimulai tepat
-             di titik suara mulai ini juga, sekali ini saja (bila janji
-             awal ada, efeknya sudah dipicu dari slotFlightToMantra) */
-          if (!S.muted) gemSurgeFx();
+             run berbeda). Efek surge permata di sini HANYA cadangan:
+             pemicu utamanya sudah jalan lebih dulu di alur ronde,
+             tepat saat sigil terakhir selesai masuk & bagian mantra
+             terakhir menyala — fireGemSurgeOnce menolak panggilan ini
+             bila pemicu utama itu sudah jalan, jadi surge tetap
+             sekali per mantra dan jalur ini hanya terpakai bila
+             pemicu utama tidak jalan */
+          if (!S.muted) fireGemSurgeOnce(id);
           berhasilOk = await playBerhasil(id);
         }
         if (!berhasilOk) { box.classList.remove("complete"); return; }
