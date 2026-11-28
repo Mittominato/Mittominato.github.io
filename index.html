@@ -2788,7 +2788,7 @@
         ];
         /* Video ultimate (ketiganya): lewat fetch supaya masuk cache */
         var FETCHES = ["ult-05s.mp4", "ult-05s-b.mp4", "ult-05s-c.mp4"];
-        /* SELURUH file suara game: 11 suara × 2 format (utama .ogg +
+        /* SELURUH file suara game: 12 suara × 2 format (utama .ogg +
            cadangan .mp3). Keduanya diunduh semua — format yang dipilih
            browser lewat canPlayType maupun format cadangan yang dicoba
            bila yang utama gagal, dua-duanya sudah di cache */
@@ -2803,11 +2803,12 @@
           "ketawa-lvl4-v1.ogg", "ketawa-lvl4-v1.mp3",
           "sihir-hidup-v1.ogg", "sihir-hidup-v1.mp3",
           "tidak-kalah-v1.ogg", "tidak-kalah-v1.mp3",
-          "tidak-takut-v1.ogg", "tidak-takut-v1.mp3"
+          "tidak-takut-v1.ogg", "tidak-takut-v1.mp3",
+          "bgm-loop-v1.ogg", "bgm-loop-v1.mp3"
         ];
-        /* Total gerbang: 41 gambar + 3 video + 22 file suara + gambar
-           loading (inline, sudah tiba bersama HTML) = 67 data */
-        var TOTAL = 67;
+        /* Total gerbang: 41 gambar + 3 video + 24 file suara + gambar
+           loading (inline, sudah tiba bersama HTML) = 69 data */
+        var TOTAL = 69;
         var done = 0, finished = false;
         /* Titik "hampir selesai" (±99%): beri tahu skrip game SEKALI
            supaya suara latar (musik + ambience) DICOBA dimulai sekarang,
@@ -2919,7 +2920,7 @@
         }
         render();
         /* Titik mulai unduhan: dipanggil SEKALI, otomatis, tepat di
-           bawah ini — unduhan 67 data langsung berjalan saat halaman
+           bawah ini — unduhan 69 data langsung berjalan saat halaman
            dimuat, tanpa gerbang atau klik apa pun sebelumnya */
         var mulaiJalan = false;
         window.__startPreload = function () {
