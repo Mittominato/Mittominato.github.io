@@ -1765,9 +1765,9 @@
       /* ---------- Overlay video ULTIMATE (mode cerita saja) ----------
          Lapisan fullscreen di atas papan (z-index 30: di atas hitung mundur
          15 & overlay menu 20, di bawah layar loading 999). Videonya
-         TUNGGAL: "ult-04s-v2.mp4" — file EKSTERNAL di samping index.html
+         TUNGGAL: "ult-05s.mp4" — file EKSTERNAL di samping index.html
          (bukan di assets/, supaya tidak ter-inline base64 saat
-         export), POTRET 720x1280, durasi ±3 detik. Video ultimate
+         export), POTRET 720x1280, durasi ±5 detik. Video ultimate
          lama (ult-03s.mp4) sudah dihapus dan tidak direferensikan
          lagi di mana pun.
          Video tampil DI ATAS gambar latar kiriman Harith
@@ -1864,7 +1864,7 @@
         z-index: 0;
       }
       /* Video DI ATAS latar game, MEMENUHI overlay tepat di
-         tepi-tepinya (permintaan Harith untuk video ult-04s):
+         tepi-tepinya (permintaan Harith untuk video ult-05s):
          left 0, top 0, lebar 100% dan tinggi 100% dari overlay —
          tepi video pas di tepi layar dari atas sampai bawah,
          tanpa margin dan tanpa dipusatkan vertikal.
@@ -2577,7 +2577,7 @@
 
       <!-- Overlay video ULTIMATE (mode cerita): muncul fullscreen saat mantra
            satu boss lengkap, sebelum rentetan sigil menghantam boss. Videonya
-           TUNGGAL dari file EKSTERNAL "ult-04s-v2.mp4" di
+           TUNGGAL dari file EKSTERNAL "ult-05s.mp4" di
            samping index.html (bukan asset artifact — dipasangkan terpisah
            saat deploy); video ultimate lama sudah dihapus dan tidak
            direferensikan lagi. preload="auto" memuatnya di latar belakang sejak game
@@ -2588,7 +2588,7 @@
            "Mulai Bermain" untuk membuka kunci suara webview, dan sesudah
            itu elemen tidak pernah di-mute lagi supaya suara video
            terdengar penuh saat ultimate diputar.
-           Video POTRET (720x1280, ±3 detik)
+           Video POTRET (720x1280, ±5 detik)
            tampil DI ATAS gambar latar kiriman
            Harith (ultimate-bg-v3.webp — penyihir chibi +
            teks komik "ULTIMATE!" + planet warna-warni, kotak gelap
@@ -2612,7 +2612,7 @@
              (ultimate-bg-v3.webp) memenuhi overlay; video utama di
              bawah ini duduk DI ATASNYA, di tengah layar -->
         <img class="ult-bgimg" src="ultimate-bg-v3.webp" alt="" aria-hidden="true">
-        <video id="ultVideo" src="ult-04s-v2.mp4" preload="auto" muted playsinline webkit-playsinline></video>
+        <video id="ultVideo" src="ult-05s.mp4" preload="auto" muted playsinline webkit-playsinline></video>
         <button type="button" class="ult-play" id="ultPlayBtn"><span class="ult-play-ic" aria-hidden="true">▶</span> Putar Ultimate</button>
         <div class="ult-skip">Ketuk untuk lewati</div>
       </div>
@@ -2716,7 +2716,7 @@
          tampil, hitung mundur tidak mulai) sebelum SELURUH 43 data game
          selesai diunduh ke cache browser:
            - 41 gambar .webp eksternal (diunduh lewat Image),
-           - video ult-04s-v2.mp4 (lewat fetch),
+           - video ult-05s.mp4 (lewat fetch),
            - gambar layar loading sendiri — TIDAK diunduh terpisah karena
              sudah ditanam inline (data URI) di HTML, jadi datanya sudah
              tiba bersama halaman dan langsung dihitung selesai.
@@ -2769,7 +2769,7 @@
           "wizard.webp"
         ];
         /* Video ultimate: lewat fetch supaya masuk cache */
-        var FETCHES = ["ult-04s-v2.mp4"];
+        var FETCHES = ["ult-05s.mp4"];
         /* Total gerbang: 41 gambar + video + gambar
            loading (inline, sudah tiba bersama HTML) = 43 data */
         var TOTAL = 43;
@@ -3283,7 +3283,7 @@
          bukan angka lepas. Pengecualian yang SENGAJA tidak masuk
          tabel: suara salah tekan (sfxWrong) kini memutar file
          kiriman pemilik "sfx-salah-v1" bervolume elemen 0,8, dan
-         audio video ultimate (ult-04s)
+         audio video ultimate (ult-05s)
          tetap volume penuh — keduanya tidak diubah. */
       var VOL = { bgm: 0.35, magic: 0.80, click: 0.45, gem: 0.60, win: 0.85, amb: 0.10, heart: 0.50 };
       function tone(freq, dur, type, vol, slideTo, delay) {
@@ -6469,7 +6469,7 @@
       }
       /* Video ultimate: janji yang selesai saat video berakhir, dilewati
          pemain (ketuk overlay SETELAH video jalan), ATAU gagal dimuat.
-         FALLBACK WAJIB: file video ultimate ("ult-04s-v2.mp4") — di tempat file itu tidak ada (mis. tautan share), video
+         FALLBACK WAJIB: file video ultimate ("ult-05s.mp4") — di tempat file itu tidak ada (mis. tautan share), video
          ditandai rusak sejak awal dan fungsi ini langsung selesai tanpa
          menampilkan overlay, jadi game lanjut ke rentetan sigil tanpa macet
          dan tanpa error.
@@ -6497,11 +6497,11 @@
          pemain adalah gestur, jadi video berbunyi dari tombol itu */
       var ultBroken = false;
       var ultPrimed = false;
-      /* Video ultimate kini TUNGGAL: "ult-04s-v2.mp4" — file EKSTERNAL
+      /* Video ultimate kini TUNGGAL: "ult-05s.mp4" — file EKSTERNAL
          di samping index.html (bukan asset artifact, tidak
-         di-inline), video kiriman Harith (potret 720x1280, ±3
+         di-inline), video kiriman Harith (potret 720x1280, ±5
          detik) yang tampil POLOS tanpa masker. Tidak ada pemilihan
-         video oleh JS: playUltimate memutar ult-04s langsung dari
+         video oleh JS: playUltimate memutar ult-05s langsung dari
          src markup. Video ultimate lama (ult-03s.mp4) sudah dihapus
          dan tidak direferensikan lagi */
       /* Membuka kunci pemutaran DARI DALAM gestur pengguna (ketukan
@@ -6607,7 +6607,7 @@
             }, 320);
             /* Elemen sudah kembali ke awal (currentTime 0 di atas),
                siap diputar lagi oleh playUltimate berikutnya — video
-               ultimate hanya satu (ult-04s), jadi tidak ada yang
+               ultimate hanya satu (ult-05s), jadi tidak ada yang
                perlu dipilih ulang */
           }
           function onError() { ultBroken = true; finish(); }
@@ -7630,7 +7630,7 @@
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layoutSprites(); });
       /* Video ultimate dimuat di latar belakang sejak game dibuka
          (preload="auto" pada elemennya). Bila file video ultimate
-         ("ult-04s-v2.mp4")
+         ("ult-05s.mp4")
          tidak ada atau gagal dimuat di tempat game ini dibuka, tandai
          rusak sejak awal supaya playUltimate melewatinya tanpa
          menampilkan overlay sama sekali */
