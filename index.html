@@ -1895,6 +1895,23 @@
         display: block;
         z-index: 1;
       }
+      /* VINYET ultimate (permintaan Harith): tepi-tepi overlay
+         sedikit gelap hitam, halus dan subtle — radial-gradient
+         transparan di tengah dan hanya ~10% hitam di tepi
+         (intensitas sekitar 10). Lapisan ::after duduk DI ATAS
+         video (z-index 2, di bawah tombol Putar z-index 3),
+         menutupi seluruh overlay (inset 0), pointer-events none
+         supaya ketukan tetap jatuh ke overlay/video. TANPA
+         mix-blend-mode screen — hitamnya benar-benar menggelapkan
+         tepi. Sebagai bagian dari .ult-overlay, vinyet ikut fade
+         bersama overlay saat masuk (.5s) dan keluar (.3s) */
+      .ult-overlay::after {
+        content: "";
+        position: absolute; inset: 0;
+        background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.10) 100%);
+        pointer-events: none;
+        z-index: 2;
+      }
       /* JEDA animasi game selama video ultimate (permintaan Harith):
          kelas .ult-playing dipasang playUltimate pada .stage selama
          overlay tampil dan dilepas saat video selesai/dilewati. Semua
